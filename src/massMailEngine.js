@@ -1,6 +1,23 @@
 const crypto = require("crypto");
 const dns = require("dns");
 const nodemailer = require("nodemailer");
+const sheetsWriteback = require("./sheetsWriteback");
+
+/* Helper para extraer _sheetMeta de un contacto y enviarlo a writeback. */
+const writebackForEmail = (dataStoreRef, email, status) => {
+  if (!dataStoreRef) return;
+  try {
+    const all = dataStoreRef.listContacts({ search: email });
+    const c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email).toLowerCase());
+    if (!c) return;
+    let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
+    if (typeof meta === "string") {
+      try { meta = JSON.parse(meta); } catch (_e) { meta = null; }
+    }
+    if (!meta) return;
+    sheetsWriteback.enqueue(meta, status, email);
+  } catch (e) { /* nunca fallar el envio por writeback */ }
+};
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const dnsPromises = dns.promises;
@@ -819,6 +836,8 @@ const createMassMailEngine = (config) => {
       /* Registramos en el cap diario solo en envios EXITOSOS. */
       recordSend();
       markSentForDomain(recipient.email);
+      /* Writeback "enviado" en columna Merge status de la hoja CRM */
+      writebackForEmail(config.dataStoreRef, recipient.email, "enviado");
       recipient.providerMessageId = result.messageId || null;
       recipient.error = null;
 
@@ -846,6 +865,8 @@ const createMassMailEngine = (config) => {
       if (isPermanentBounce) {
         recipient.status = "bounced";
         recipient.bouncedAt = new Date().toISOString();
+        /* Writeback "rebotado" en columna Merge status (fondo negro) */
+        writebackForEmail(config.dataStoreRef, recipient.email, "rebotado");
         job.failed += 1;
         job.queued -= 1;
         addHistory({

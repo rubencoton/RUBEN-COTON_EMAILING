@@ -102,6 +102,18 @@ async function scanReplies() {
           },
           occurredAt: new Date(Number(get.data.internalDate || Date.now())).toISOString()
         });
+        /* Writeback "respondido" en columna Merge status (verde oscuro
+         * + texto blanco bold). Sobreescribe estados anteriores. */
+        try {
+          const sheetsWriteback = require("./sheetsWriteback");
+          const all = _dataStoreRef.listContacts({ search: senderEmail });
+          const c = (all || []).find((x) => String(x.email || "").toLowerCase() === senderEmail.toLowerCase());
+          if (c) {
+            let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
+            if (typeof meta === "string") { try { meta = JSON.parse(meta); } catch (_e) { meta = null; } }
+            if (meta) sheetsWriteback.enqueue(meta, "respondido", senderEmail);
+          }
+        } catch (_e) { /* no fallar el scan por writeback */ }
         registered += 1;
       } catch (err) {
         console.warn("[replyTracker] error mensaje:", err.message);

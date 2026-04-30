@@ -26,6 +26,19 @@ const replyTracker = require("./replyTracker");
 const localAgent = require("./localAgent");
 const spamShield = require("./spamShield");
 const driveScheduler = require("./driveScheduler");
+const sheetsWriteback = require("./sheetsWriteback");
+
+/* Helper writeback: busca _sheetMeta del contacto y encola update */
+const wbForEmail = (email, status) => {
+  try {
+    const all = dataStore.listContacts({ search: email });
+    const c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email || "").toLowerCase());
+    if (!c) return;
+    let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
+    if (typeof meta === "string") { try { meta = JSON.parse(meta); } catch (_e) { meta = null; } }
+    if (meta) sheetsWriteback.enqueue(meta, status, email);
+  } catch (_e) {}
+};
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -1775,6 +1788,17 @@ app.get("/api/campaigns/report/executive.pdf", async (_req, res) => {
   }
 });
 
+/* Sheets writeback: estado de cola + flush manual */
+app.get("/api/sheets/writeback", (_req, res) => {
+  return apiOk(res, { queueSize: sheetsWriteback.getQueueSize() });
+});
+app.post("/api/sheets/writeback/flush", async (_req, res) => {
+  try {
+    const r = await sheetsWriteback.flush();
+    return apiOk(res, r);
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
 /* Drive Scheduler: estado y administracion */
 app.get("/api/drive/scheduler", (_req, res) => {
   try {
@@ -3158,6 +3182,11 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
           occurredAt: new Date().toISOString()
         });
       } catch (err) { console.warn("[tracking][open] addEvent:", err.message); }
+      /* Writeback "abierto" en columna Merge status (verde claro) — solo
+       * humanos reales, no proxies de imagen. */
+      if (!isMachineOpen) {
+        try { wbForEmail(email, "abierto"); } catch (_e) {}
+      }
     }
   } catch (_e) { /* nunca fallar */ }
   /* Headers que fuerzan image response sin cache del ISP */
@@ -3205,6 +3234,9 @@ app.get("/t/c/:cid/:eb64", (req, res) => {
           source: "implicit_from_click",
           occurredAt: new Date().toISOString()
         });
+        /* Writeback "clicado" (verde medio + texto blanco). Sobreescribe
+         * "abierto" porque clic tiene mas prioridad en sheetsWriteback. */
+        try { wbForEmail(email, "clicado"); } catch (_e) {}
       }
     } catch (err) { console.warn("[tracking][click] addEvent:", err.message); }
   }

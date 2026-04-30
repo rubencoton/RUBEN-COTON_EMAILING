@@ -136,13 +136,14 @@ const syncState = {
 };
 
 /* ─── Email column detection (case-insensitive) ─── */
-const EMAIL_HEADERS = ["email", "correo", "correo electrónico", "correo electronico", "e-mail"];
+const EMAIL_HEADERS = ["email", "correo", "correo electrónico", "correo electronico", "e-mail", "correo electrónico"];
 const NAME_HEADERS = ["nombre contacto", "nombre completo", "nombre de contacto"];
-const COMPANY_HEADERS = ["nombre", "nombre festival", "nombre discografica", "nombre discográfica", "medio o empresa", "nombre influencer"];
+const COMPANY_HEADERS = ["nombre", "nombre festival", "nombre discografica", "nombre discográfica", "medio o empresa", "nombre influencer", "nombre grupo", "nombre discoteca"];
 const PHONE_HEADERS = ["telefono", "teléfono"];
 const PROVINCE_HEADERS = ["provincia"];
 const CCAA_HEADERS = ["ccaa", "c.c.a.", "comunidad autónoma", "comunidad autonoma"];
 const CITY_HEADERS = ["municipio", "ubicacion", "ubicación"];
+const MERGE_STATUS_HEADERS = ["merge status", "estado", "estado envio", "estado envío"];
 
 const findHeader = (headers, candidates) => {
   const lower = headers.map((h) => (h || "").toLowerCase().trim());
@@ -197,7 +198,13 @@ const readSheet = async (sheets, spreadsheetId) => {
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const title = meta.data.properties?.title || spreadsheetId;
   const crmSlug = slugify(title.replace(/^🚀\s*CRM:\s*/i, ""));
-  const tabNames = (meta.data.sheets || []).map((s) => s.properties.title);
+  /* Mapeo nombre pestaña -> sheetId numérico (gid). Necesario para
+   * sheetsWriteback: la API batchUpdate exige gid, no nombre. */
+  const sheetsByName = {};
+  for (const s of (meta.data.sheets || [])) {
+    sheetsByName[s.properties.title] = s.properties.sheetId;
+  }
+  const tabNames = Object.keys(sheetsByName);
 
   const tabResults = [];
 
@@ -220,14 +227,29 @@ const readSheet = async (sheets, spreadsheetId) => {
       const provinceIdx = findHeader(headers, PROVINCE_HEADERS);
       const ccaaIdx = findHeader(headers, CCAA_HEADERS);
       const cityIdx = findHeader(headers, CITY_HEADERS);
+      /* Columna 'Merge status' donde el writeback escribe el estado
+       * del envio. Si la pestaña no la tiene, _sheetMeta queda sin col
+       * y el writeback la ignora silenciosamente. */
+      const mergeStatusIdx = findHeader(headers, MERGE_STATUS_HEADERS);
 
       const segSlug = slugify(tabName);
       const dataRows = rows.slice(1);
+      const tabGid = sheetsByName[tabName];
       const contacts = [];
 
-      for (const row of dataRows) {
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
         const email = (row[emailIdx] || "").trim();
         if (!email || !email.includes("@")) continue;
+
+        const sheetMeta = {
+          sheetId: spreadsheetId,
+          gid: tabGid,
+          tabName,
+          /* row 0 es header, así que data row i corresponde a fila i+1 */
+          row: i + 1,
+          col: mergeStatusIdx >= 0 ? mergeStatusIdx : null
+        };
 
         contacts.push({
           email,
@@ -238,7 +260,8 @@ const readSheet = async (sheets, spreadsheetId) => {
             telefono: phoneIdx !== -1 ? (row[phoneIdx] || "").trim() : "",
             provincia: provinceIdx !== -1 ? (row[provinceIdx] || "").trim() : "",
             ccaa: ccaaIdx !== -1 ? (row[ccaaIdx] || "").trim() : "",
-            municipio: cityIdx !== -1 ? (row[cityIdx] || "").trim() : ""
+            municipio: cityIdx !== -1 ? (row[cityIdx] || "").trim() : "",
+            _sheetMeta: sheetMeta
           }
         });
       }
@@ -305,7 +328,8 @@ const runSync = async (dataStore) => {
       const mapping = {
         email: "email", firstName: "firstName", company: "company", tags: "tags",
         "custom:telefono": "custom:telefono", "custom:provincia": "custom:provincia",
-        "custom:ccaa": "custom:ccaa", "custom:municipio": "custom:municipio"
+        "custom:ccaa": "custom:ccaa", "custom:municipio": "custom:municipio",
+        "custom:_sheetMeta": "custom:_sheetMeta"
       };
 
       /* Marcar esta hoja como "leida OK" en el snapshot (aunque no tenga contactos).
@@ -335,7 +359,10 @@ const runSync = async (dataStore) => {
             email: c.email, firstName: c.firstName, company: c.company,
             tags: c.tags.join(","),
             "custom:telefono": c.custom.telefono, "custom:provincia": c.custom.provincia,
-            "custom:ccaa": c.custom.ccaa, "custom:municipio": c.custom.municipio
+            "custom:ccaa": c.custom.ccaa, "custom:municipio": c.custom.municipio,
+            /* JSON-stringify para que importContacts lo guarde como string
+             * que luego parseamos al leer en sheetsWriteback. */
+            "custom:_sheetMeta": c.custom._sheetMeta ? JSON.stringify(c.custom._sheetMeta) : ""
           }));
 
           /* Importar en lotes de BATCH_SIZE */
