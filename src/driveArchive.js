@@ -68,11 +68,10 @@ async function ensureFolder(drive, name, parentId) {
   return created.data.id;
 }
 
-/* Carpeta oficial del usuario (Drive > Compartido conmigo > CRM 2026 >
- * INFORMES ENVIOS). ID real confirmado por URL compartida por el usuario:
- * https://drive.google.com/drive/folders/1-MEdFyWKjdgEShJlrFHwBn8PvQ07qk5O
- * Nota: el carácter 16 es 'l' (L minúscula), NO 'I' (i mayúscula). */
-const DEFAULT_DRIVE_ROOT_FOLDER_ID = "1-MEdFyWKjdgEShJlrFHwBn8PvQ07qk5O";
+/* Carpeta oficial del usuario (Drive del owner manager@rubencoton.com).
+ * URL compartida 2026-04-30:
+ * https://drive.google.com/drive/folders/1HNxywrecpNWcXgkvyezmbNFD0ROkB8tI */
+const DEFAULT_DRIVE_ROOT_FOLDER_ID = "1HNxywrecpNWcXgkvyezmbNFD0ROkB8tI";
 
 async function getOrCreateRootFolder(drive) {
   /* 1) Prioridad env var */
@@ -168,30 +167,29 @@ async function uploadCampaignPack({ code, folder, files }) {
   const rootId = await getOrCreateRootFolder(drive);
   const folderId = await ensureFolder(drive, folder, rootId);
 
+  /* Petición usuario 2026-04-30: solo CORREO (.html) + INFORME (.pdf).
+   * Sin datos.json ni ficha.txt en cada subcarpeta de campaña. */
   const results = [];
   const emailName = `CORREO_${code}.html`;
-  const reportName = `INFORME_${code}.html`;
   const reportPdfName = `INFORME_${code}.pdf`;
-  const dataName = `DATOS_${code}.json`;
-  const fichaName = `FICHA_${code}.txt`;
 
   results.push({ type: "correo", ...(await uploadStringFile(drive, folderId, emailName, files.email, "text/html")) });
-  results.push({ type: "informe", ...(await uploadStringFile(drive, folderId, reportName, files.report, "text/html")) });
 
-  /* PDF del informe generado con Chromium headless. Si chromium no está
-   * disponible (dev local sin instalar), simplemente omitimos el PDF. */
+  /* PDF del informe generado con Chromium headless. Fallback a HTML si
+   * chromium no está disponible (dev local sin instalar). */
   try {
     const pdfBuf = await pdfGen.htmlToPdf(files.report, { format: "A4" });
     if (pdfBuf && pdfBuf.length > 0) {
       results.push({ type: "informe-pdf", ...(await uploadBinaryFile(drive, folderId, reportPdfName, pdfBuf, "application/pdf")) });
+    } else {
+      console.warn("[driveArchive] PDF vacío, subiendo HTML como fallback.");
+      const reportName = `INFORME_${code}.html`;
+      results.push({ type: "informe-html", ...(await uploadStringFile(drive, folderId, reportName, files.report, "text/html")) });
     }
   } catch (err) {
     console.warn("[driveArchive] PDF no generado:", err.message);
-  }
-
-  results.push({ type: "datos", ...(await uploadStringFile(drive, folderId, dataName, JSON.stringify(files.data, null, 2), "application/json")) });
-  if (files.ficha) {
-    results.push({ type: "ficha", ...(await uploadStringFile(drive, folderId, fichaName, files.ficha, "text/plain")) });
+    const reportName = `INFORME_${code}.html`;
+    results.push({ type: "informe-html", ...(await uploadStringFile(drive, folderId, reportName, files.report, "text/html")) });
   }
 
   /* Link público a la carpeta */
