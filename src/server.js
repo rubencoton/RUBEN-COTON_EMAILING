@@ -1701,15 +1701,19 @@ app.post("/api/campaigns/:id/upload-to-drive", async (req, res) => {
   }
 });
 
-/* PDF directo: informe de UNA campaña como descarga PDF
- * Usado por boton "⬇ PDF" en cada fila del listado de campañas. */
+/* PDF directo: informe de UNA campaña como descarga PDF.
+ * Usa reportRenderer.renderCampaignReport (server-side, sin JS) para
+ * que el PDF tenga TODOS los datos pre-renderizados. Drive no ejecuta
+ * JS al convertir HTML->PDF, así que el HTML que pasamos a pdfGen
+ * debe tener los datos ya inyectados. */
+const reportRenderer = require("./reportRenderer");
 app.get("/api/campaigns/:id/report.pdf", async (req, res) => {
   try {
     syncCampaignsWithEngine();
     const campaign = dataStore.getCampaign(req.params.id);
     if (!campaign) return res.status(404).send("Campaña no encontrada");
     const data = buildCampaignReportData(campaign);
-    const html = buildStandaloneReportHtml(data);
+    const html = reportRenderer.renderCampaignReport(data, campaign.id);
     const pdf = await pdfGen.htmlToPdf(html, { format: "A4" });
     if (!pdf || pdf.length === 0) {
       return res.status(503).send("PDF no disponible (Google Drive no configurado).");

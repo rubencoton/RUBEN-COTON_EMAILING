@@ -22,6 +22,7 @@ const path = require("path");
 const { Readable } = require("stream");
 const { clients, isGoogleReady } = require("./googleHub");
 const pdfGen = require("./pdfGen");
+const reportRenderer = require("./reportRenderer");
 
 const ROOT_FOLDER_NAME = "ENVIO MASIVO · Histórico de campañas";
 const STATE_DIR = path.resolve(__dirname, "..", "data");
@@ -209,11 +210,17 @@ async function uploadCampaignPack({ code, folder, files }) {
   /* CORREO: solo se sube si no existe (no se actualiza, es fijo). */
   results.push({ type: "correo", ...(await uploadStringFile(drive, folderId, emailName, files.email, "text/html")) });
 
-  /* INFORME PDF: se sobreescribe en cada llamada. Siempre intentamos PDF;
-   * si pdfGen falla, dejamos el último PDF válido y NO subimos HTML como
-   * fallback (peticion usuario: solo PDF en la carpeta). */
+  /* INFORME PDF: se sobreescribe en cada llamada. Generamos HTML
+   * server-side con renderCampaignReport — Drive Docs no ejecuta JS,
+   * así que el HTML debe llegar con datos pre-inyectados.
+   *
+   * files.data es el reportData {campaign, stats, recipients, generatedAt}
+   * que viene de buildCampaignReportData en server.js. */
   try {
-    const pdfBuf = await pdfGen.htmlToPdf(files.report, { format: "A4" });
+    const printReadyHtml = files.data
+      ? reportRenderer.renderCampaignReport(files.data, files.data.campaign?.id || code)
+      : files.report; /* fallback al HTML viejo si no hay data */
+    const pdfBuf = await pdfGen.htmlToPdf(printReadyHtml, { format: "A4" });
     if (pdfBuf && pdfBuf.length > 0) {
       results.push({ type: "informe-pdf", ...(await uploadBinaryFile(drive, folderId, reportPdfName, pdfBuf, "application/pdf")) });
     } else {
