@@ -200,28 +200,27 @@ async function uploadCampaignPack({ code, folder, files }) {
   const folderId = await ensureFolder(drive, folder, rootId);
 
   /* Petición usuario 2026-04-30: solo CORREO (.html) + INFORME (.pdf).
-   * Sin datos.json ni ficha.txt en cada subcarpeta de campaña. */
+   * El INFORME se actualiza periódicamente vía driveScheduler con stats
+   * frescas (1h/2h/3h/4h/5h/6h, días 1-7, después semanal). */
   const results = [];
   const emailName = `CORREO_${code}.html`;
   const reportPdfName = `INFORME_${code}.pdf`;
 
+  /* CORREO: solo se sube si no existe (no se actualiza, es fijo). */
   results.push({ type: "correo", ...(await uploadStringFile(drive, folderId, emailName, files.email, "text/html")) });
 
-  /* PDF del informe generado con Chromium headless. Fallback a HTML si
-   * chromium no está disponible (dev local sin instalar). */
+  /* INFORME PDF: se sobreescribe en cada llamada. Siempre intentamos PDF;
+   * si pdfGen falla, dejamos el último PDF válido y NO subimos HTML como
+   * fallback (peticion usuario: solo PDF en la carpeta). */
   try {
     const pdfBuf = await pdfGen.htmlToPdf(files.report, { format: "A4" });
     if (pdfBuf && pdfBuf.length > 0) {
       results.push({ type: "informe-pdf", ...(await uploadBinaryFile(drive, folderId, reportPdfName, pdfBuf, "application/pdf")) });
     } else {
-      console.warn("[driveArchive] PDF vacío, subiendo HTML como fallback.");
-      const reportName = `INFORME_${code}.html`;
-      results.push({ type: "informe-html", ...(await uploadStringFile(drive, folderId, reportName, files.report, "text/html")) });
+      console.warn(`[driveArchive] PDF vacío para ${code}, INFORME no actualizado.`);
     }
   } catch (err) {
-    console.warn("[driveArchive] PDF no generado:", err.message);
-    const reportName = `INFORME_${code}.html`;
-    results.push({ type: "informe-html", ...(await uploadStringFile(drive, folderId, reportName, files.report, "text/html")) });
+    console.warn(`[driveArchive] PDF error para ${code}:`, err.message);
   }
 
   /* Link público a la carpeta */
@@ -235,7 +234,8 @@ async function uploadCampaignPack({ code, folder, files }) {
     folderId,
     folderName: folder,
     folderLink: folderInfo.data.webViewLink,
-    files: results
+    files: results,
+    updatedAt: new Date().toISOString()
   };
 }
 

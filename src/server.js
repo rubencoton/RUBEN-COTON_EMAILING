@@ -25,6 +25,7 @@ const executiveReports = require("./executiveReports");
 const replyTracker = require("./replyTracker");
 const localAgent = require("./localAgent");
 const spamShield = require("./spamShield");
+const driveScheduler = require("./driveScheduler");
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -1674,11 +1675,47 @@ app.post("/api/campaigns/:id/upload-to-drive", async (req, res) => {
       }
     });
 
+    /* Activar trazabilidad periódica del informe (1h/2h/.../6h, dia 1-7,
+     * después semanal). El scheduler actualizará el PDF en la carpeta. */
+    try {
+      driveScheduler.trackCampaign(campaign.id, campaign.sentAt || campaign.createdAt);
+    } catch (e) { console.warn("[drive] tracking no iniciado:", e.message); }
+
     return apiOk(res, { uploaded: true, code: pack.code, folder: pack.folder, folderLink: result.folderLink, files: result.files });
   } catch (e) {
     console.error("[drive upload] ERROR:", e);
     return apiError(res, 500, e.message);
   }
+});
+
+/* Drive Scheduler: estado y administracion */
+app.get("/api/drive/scheduler", (_req, res) => {
+  try {
+    const state = driveScheduler.readState();
+    const tracked = state.tracked || {};
+    const out = Object.values(tracked).map((entry) => {
+      const campaign = dataStore.getCampaign(entry.campaignId);
+      return {
+        campaignId: entry.campaignId,
+        name: campaign?.name || "(borrada en app, carpeta Drive conservada)",
+        sentAt: entry.sentAt,
+        lastUpdateAt: entry.lastUpdateAt,
+        hourlyDone: entry.hourlyDone,
+        dailyDone: entry.dailyDone,
+        weeklyDone: entry.weeklyDone,
+        lastSlot: entry.lastSlot,
+        existsInApp: Boolean(campaign)
+      };
+    });
+    return apiOk(res, { count: out.length, tracked: out });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
+app.post("/api/drive/scheduler/untrack/:cid", (req, res) => {
+  try {
+    driveScheduler.untrackCampaign(req.params.cid);
+    return apiOk(res, { untracked: req.params.cid });
+  } catch (e) { return apiError(res, 500, e.message); }
 });
 
 /* Sincroniza TODAS las campañas al Drive */
@@ -3228,6 +3265,18 @@ const startServer = async () => {
           replyTracker.start({ dataStore });
         } catch (e) {
           console.error("[replyTracker] no se pudo arrancar:", e.message);
+        }
+        /* Drive scheduler: actualiza informes PDF a 1h/2h/3h/4h/5h/6h,
+         * dias 1-7 y despues semanal hasta MAX_TRACKING_DAYS. */
+        try {
+          driveScheduler.setRefs({
+            dataStore,
+            driveArchive,
+            serverHelpers: { calcCampaignSeq, buildCampaignPackForDrive }
+          });
+          driveScheduler.start();
+        } catch (e) {
+          console.error("[driveScheduler] no se pudo arrancar:", e.message);
         }
         /* Backup auto store.json a Drive cada hora.
          * Sustituye al PostgreSQL como recovery layer (refactor 2026-04-25).
