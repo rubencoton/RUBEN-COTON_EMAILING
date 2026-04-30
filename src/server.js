@@ -1718,6 +1718,27 @@ app.post("/api/drive/scheduler/untrack/:cid", (req, res) => {
   } catch (e) { return apiError(res, 500, e.message); }
 });
 
+/* Restore manual: descarga el ultimo backup de Drive y lo aplica al
+ * store.json. Util tras perdida de volumen o para rollback. */
+app.post("/api/drive/restore-store", async (req, res) => {
+  try {
+    if (!googleHub.isGoogleReady()) return apiError(res, 503, "Google no configurado");
+    const dataFile = process.env.DATA_STORE_FILE
+      ? path.resolve(process.env.DATA_STORE_FILE)
+      : path.join(__dirname, "..", "data", "store.json");
+    /* Si el cliente fuerza, ignora el guard de "store ya tiene datos" */
+    if (req.body?.force === true && fs.existsSync(dataFile)) {
+      try { fs.unlinkSync(dataFile); } catch (_e) {}
+    }
+    const r = await driveArchive.restoreStoreFromDrive(dataFile);
+    if (r.ok) {
+      /* Reload dataStore en memoria sin reiniciar */
+      try { dataStore.store = null; dataStore.read(); } catch (_e) {}
+    }
+    return apiOk(res, r);
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
 /* Sincroniza TODAS las campañas al Drive */
 app.post("/api/campaigns/sync-all-to-drive", async (_req, res) => {
   try {
@@ -3235,6 +3256,28 @@ app.get("*", (_req, res) => {
 let server = null;
 
 const startServer = async () => {
+  /* AUTO-RESTORE: si store.json no existe o esta vacio (volumen perdido,
+   * primer arranque), intenta descargar el ultimo backup de Drive antes
+   * de inicializar el dataStore. Si Google no esta listo o no hay backup,
+   * arranca con store vacio (comportamiento normal). */
+  try {
+    if (googleHub.isGoogleReady()) {
+      const dataFile = process.env.DATA_STORE_FILE
+        ? path.resolve(process.env.DATA_STORE_FILE)
+        : path.join(__dirname, "..", "data", "store.json");
+      const r = await driveArchive.restoreStoreFromDrive(dataFile);
+      if (r.ok) {
+        console.log(`[restore] store.json recuperado de Drive: ${r.restored} (${r.size} bytes)`);
+      } else if (r.reason === "store_already_has_data") {
+        /* normal, no log */
+      } else if (r.reason !== "google_not_ready") {
+        console.log(`[restore] no recuperado: ${r.reason}`);
+      }
+    }
+  } catch (e) {
+    console.warn("[restore] error:", e.message);
+  }
+
   await dataStore.init();
 
   /* Insertar borradores estandar RUBEN COTON si no existen (idempotente). */

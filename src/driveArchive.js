@@ -378,11 +378,89 @@ async function backupStoreToDrive(dataFilePath) {
   }
 }
 
+/**
+ * Auto-restore: si el store.json local esta vacio o no existe, descarga el
+ * backup mas reciente de Drive (BACKUPS/store-YYYY-MM-DD-HH.json) y lo
+ * escribe al disco. Failsafe ante perdida de volumen.
+ *
+ * @param {string} dataFilePath ruta absoluta donde escribir store.json
+ * @returns {Promise<{ok:boolean, restored?:string, reason?:string}>}
+ */
+async function restoreStoreFromDrive(dataFilePath) {
+  if (!isGoogleReady()) {
+    return { ok: false, reason: "google_not_ready" };
+  }
+  /* Solo restauramos si NO existe o esta vacio. Si tiene contenido,
+   * no hacemos nada (los datos locales son la verdad). */
+  try {
+    if (fs.existsSync(dataFilePath)) {
+      const stat = fs.statSync(dataFilePath);
+      if (stat.size > 256) {
+        /* > 256 bytes = parece tener datos reales */
+        return { ok: false, reason: "store_already_has_data" };
+      }
+    }
+  } catch (_e) { /* sigue */ }
+
+  try {
+    const drive = clients.drive();
+    const rootId = await getOrCreateRootFolder(drive);
+    /* Listar backups y elegir el mas reciente */
+    const list = await drive.files.list({
+      q: `'${rootId}' in parents and trashed = false and name contains 'store-'`,
+      fields: "files(id,name,createdTime)",
+      orderBy: "createdTime desc",
+      pageSize: 5,
+      corpora: "allDrives",
+      ...SHARED_DRIVE_FLAGS
+    }).catch(async () => {
+      /* Si la carpeta raiz no contiene los backups, busca BACKUPS subfolder */
+      const backupsId = await ensureFolder(drive, "BACKUPS", rootId);
+      return drive.files.list({
+        q: `'${backupsId}' in parents and trashed = false and name contains 'store-'`,
+        fields: "files(id,name,createdTime)",
+        orderBy: "createdTime desc",
+        pageSize: 5,
+        corpora: "allDrives",
+        ...SHARED_DRIVE_FLAGS
+      });
+    });
+    let candidates = list.data.files || [];
+    if (candidates.length === 0) {
+      /* Reintenta dentro de BACKUPS folder */
+      const backupsId = await ensureFolder(drive, "BACKUPS", rootId);
+      const list2 = await drive.files.list({
+        q: `'${backupsId}' in parents and trashed = false`,
+        fields: "files(id,name,createdTime)",
+        orderBy: "createdTime desc",
+        pageSize: 5,
+        corpora: "allDrives",
+        ...SHARED_DRIVE_FLAGS
+      });
+      candidates = list2.data.files || [];
+    }
+    if (candidates.length === 0) return { ok: false, reason: "no_backup_found" };
+
+    const latest = candidates[0];
+    const dl = await drive.files.get(
+      { fileId: latest.id, alt: "media", supportsAllDrives: true },
+      { responseType: "arraybuffer" }
+    );
+    const content = Buffer.from(dl.data).toString("utf8");
+    fs.mkdirSync(path.dirname(dataFilePath), { recursive: true });
+    fs.writeFileSync(dataFilePath, content, "utf8");
+    return { ok: true, restored: latest.name, fileId: latest.id, size: content.length };
+  } catch (err) {
+    return { ok: false, reason: err.message || "restore_failed" };
+  }
+}
+
 module.exports = {
   uploadCampaignPack,
   uploadExecutiveReport,
   listArchivedCampaigns,
   getOrCreateRootFolder,
   backupStoreToDrive,
+  restoreStoreFromDrive,
   ROOT_FOLDER_NAME
 };
