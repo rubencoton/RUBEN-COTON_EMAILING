@@ -40,6 +40,13 @@ function writeState(state) {
   } catch (_e) { /* ignore */ }
 }
 
+/* Flags Shared Drives: la carpeta raíz puede vivir en una unidad compartida
+ * (parentId tipo "0AKZ-..."). Sin estos flags la API devuelve 404. */
+const SHARED_DRIVE_FLAGS = {
+  supportsAllDrives: true,
+  includeItemsFromAllDrives: true
+};
+
 /* Busca una carpeta por nombre dentro de un parent (o root si parent=null).
  * Si no existe, la crea. Devuelve el id. */
 async function ensureFolder(drive, name, parentId) {
@@ -52,7 +59,11 @@ async function ensureFolder(drive, name, parentId) {
   ].filter(Boolean).join(" and ");
 
   const found = await drive.files.list({
-    q, fields: "files(id,name)", spaces: "drive", pageSize: 1
+    q,
+    fields: "files(id,name)",
+    pageSize: 1,
+    corpora: "allDrives",
+    ...SHARED_DRIVE_FLAGS
   });
   if (found.data.files && found.data.files.length) {
     return found.data.files[0].id;
@@ -63,7 +74,8 @@ async function ensureFolder(drive, name, parentId) {
       mimeType: "application/vnd.google-apps.folder",
       parents: parentId ? [parentId] : undefined
     },
-    fields: "id"
+    fields: "id",
+    supportsAllDrives: true
   });
   return created.data.id;
 }
@@ -82,7 +94,11 @@ async function getOrCreateRootFolder(drive) {
   const state = readState();
   if (state.rootFolderId && state.rootFolderId === DEFAULT_DRIVE_ROOT_FOLDER_ID) {
     try {
-      await drive.files.get({ fileId: state.rootFolderId, fields: "id,trashed" });
+      await drive.files.get({
+        fileId: state.rootFolderId,
+        fields: "id,trashed",
+        supportsAllDrives: true
+      });
       return state.rootFolderId;
     } catch (_e) { /* not found, fallback a default */ }
   }
@@ -90,7 +106,8 @@ async function getOrCreateRootFolder(drive) {
   try {
     const check = await drive.files.get({
       fileId: DEFAULT_DRIVE_ROOT_FOLDER_ID,
-      fields: "id,name,trashed"
+      fields: "id,name,trashed",
+      supportsAllDrives: true
     });
     if (check.data && check.data.id && !check.data.trashed) {
       writeState({ ...state, rootFolderId: check.data.id });
@@ -110,7 +127,13 @@ async function uploadStringFile(drive, parentId, filename, content, mimeType) {
   /* Busca existente */
   const escName = String(filename).replace(/'/g, "\\'");
   const q = `name = '${escName}' and '${parentId}' in parents and trashed = false`;
-  const existing = await drive.files.list({ q, fields: "files(id,name)", spaces: "drive", pageSize: 1 });
+  const existing = await drive.files.list({
+    q,
+    fields: "files(id,name)",
+    pageSize: 1,
+    corpora: "allDrives",
+    ...SHARED_DRIVE_FLAGS
+  });
 
   const body = Readable.from(Buffer.from(content, "utf8"));
   const media = { mimeType: mimeType || "text/plain", body };
@@ -118,14 +141,16 @@ async function uploadStringFile(drive, parentId, filename, content, mimeType) {
   if (existing.data.files && existing.data.files.length) {
     const fileId = existing.data.files[0].id;
     const upd = await drive.files.update({
-      fileId, media, fields: "id,name,webViewLink"
+      fileId, media, fields: "id,name,webViewLink",
+      supportsAllDrives: true
     });
     return { updated: true, ...upd.data };
   } else {
     const created = await drive.files.create({
       requestBody: { name: filename, parents: [parentId] },
       media,
-      fields: "id,name,webViewLink"
+      fields: "id,name,webViewLink",
+      supportsAllDrives: true
     });
     return { created: true, ...created.data };
   }
@@ -143,17 +168,24 @@ async function uploadStringFile(drive, parentId, filename, content, mimeType) {
 async function uploadBinaryFile(drive, parentId, filename, buffer, mimeType) {
   const escName = String(filename).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   const q = `name = '${escName}' and '${parentId}' in parents and trashed = false`;
-  const existing = await drive.files.list({ q, fields: "files(id,name)", spaces: "drive", pageSize: 1 });
+  const existing = await drive.files.list({
+    q, fields: "files(id,name)", pageSize: 1,
+    corpora: "allDrives", ...SHARED_DRIVE_FLAGS
+  });
   const body = Readable.from(buffer);
   const media = { mimeType: mimeType || "application/octet-stream", body };
   if (existing.data.files && existing.data.files.length) {
     const fileId = existing.data.files[0].id;
-    const upd = await drive.files.update({ fileId, media, fields: "id,name,webViewLink" });
+    const upd = await drive.files.update({
+      fileId, media, fields: "id,name,webViewLink",
+      supportsAllDrives: true
+    });
     return { updated: true, ...upd.data };
   } else {
     const created = await drive.files.create({
       requestBody: { name: filename, parents: [parentId] },
-      media, fields: "id,name,webViewLink"
+      media, fields: "id,name,webViewLink",
+      supportsAllDrives: true
     });
     return { created: true, ...created.data };
   }
@@ -193,7 +225,10 @@ async function uploadCampaignPack({ code, folder, files }) {
   }
 
   /* Link público a la carpeta */
-  const folderInfo = await drive.files.get({ fileId: folderId, fields: "id,name,webViewLink" });
+  const folderInfo = await drive.files.get({
+    fileId: folderId, fields: "id,name,webViewLink",
+    supportsAllDrives: true
+  });
 
   return {
     rootFolderId: rootId,
@@ -213,7 +248,9 @@ async function listArchivedCampaigns() {
     q: `'${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: "files(id,name,webViewLink,modifiedTime)",
     pageSize: 500,
-    orderBy: "name"
+    orderBy: "name",
+    corpora: "allDrives",
+    ...SHARED_DRIVE_FLAGS
   });
   return (r.data.files || []).map((f) => ({
     id: f.id,
@@ -267,7 +304,10 @@ async function uploadExecutiveReport({ scope, period, html, data }) {
   }
   files.push({ type: "datos", ...(await uploadStringFile(drive, subId, jsonName, JSON.stringify(data, null, 2), "application/json")) });
 
-  const folderInfo = await drive.files.get({ fileId: subId, fields: "id,name,webViewLink" });
+  const folderInfo = await drive.files.get({
+    fileId: subId, fields: "id,name,webViewLink",
+    supportsAllDrives: true
+  });
   return {
     rootFolderId: rootId,
     folderId: subId,
