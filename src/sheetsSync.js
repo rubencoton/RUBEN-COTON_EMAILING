@@ -25,6 +25,48 @@ const SHEET_IDS_FROM_ENV = (process.env.SHEETS_SYNC_IDS || "").split(",").map((s
 const SHEET_IDS_BUILTIN = [
   "1_VK6eXqsBuxzvkEJ-uoCIOrsgz-ivpzYKiwwKWzxCtA" /* VENTA BOOKING (pestana ***PRUEVA***) */
 ];
+
+/* Carpeta Drive donde el usuario deja las hojas CRM. Cualquier spreadsheet
+ * dentro de esta carpeta se sincroniza automaticamente — el usuario solo
+ * tiene que arrastrar/crear la hoja alli y el sync la coge en el siguiente
+ * tick (peticion 2026-04-30). */
+const SHEETS_FOLDER_ID = process.env.SHEETS_SYNC_FOLDER_ID || "";
+
+/* Cache para los IDs descubiertos en la carpeta. Se invalida cada N min
+ * para que las hojas nuevas aparezcan automaticamente. */
+let _folderCache = { ids: [], at: 0 };
+const FOLDER_CACHE_MS = 5 * 60 * 1000; /* 5 min */
+
+const discoverSheetsInFolder = async () => {
+  if (!SHEETS_FOLDER_ID) return [];
+  const now = Date.now();
+  if (_folderCache.ids.length && now - _folderCache.at < FOLDER_CACHE_MS) {
+    return _folderCache.ids;
+  }
+  try {
+    const auth = getAuth();
+    if (!auth) return _folderCache.ids;
+    const drive = google.drive({ version: "v3", auth });
+    const r = await drive.files.list({
+      q: `'${SHEETS_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`,
+      fields: "files(id,name,modifiedTime)",
+      pageSize: 100,
+      corpora: "allDrives",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      orderBy: "name"
+    });
+    const ids = (r.data.files || []).map((f) => f.id);
+    _folderCache = { ids, at: now };
+    if (ids.length > 0 && _folderCache.ids.length !== ids.length) {
+      console.log(`[sheetsSync] auto-detect carpeta: ${ids.length} hojas encontradas`);
+    }
+    return ids;
+  } catch (e) {
+    console.warn("[sheetsSync] discoverSheetsInFolder error:", e.message);
+    return _folderCache.ids;
+  }
+};
 /* dataStore-managed (anadidas desde UI). Se resuelven en runtime. */
 let _dataStoreRef = null;
 const getExtraIdsFromDataStore = () => {
@@ -36,9 +78,25 @@ const getExtraIdsFromDataStore = () => {
   } catch { return []; }
 };
 const getActiveSheetIds = () => {
-  const set = new Set([...SHEET_IDS_FROM_ENV, ...SHEET_IDS_BUILTIN, ...getExtraIdsFromDataStore()]);
+  /* Sync: incluye los del cache de la carpeta (puede estar vacio si aun
+   * no se hizo discover). El sync principal hace discoverSheetsInFolder
+   * antes de llamar a esto, asi que el cache estara fresco. */
+  const set = new Set([
+    ...SHEET_IDS_FROM_ENV,
+    ...SHEET_IDS_BUILTIN,
+    ...getExtraIdsFromDataStore(),
+    ..._folderCache.ids
+  ]);
   return [...set];
 };
+
+/* Async: descubre hojas en la carpeta + devuelve lista completa. Usar
+ * desde el sync principal para asegurar que tenemos la lista mas reciente. */
+const getActiveSheetIdsFresh = async () => {
+  await discoverSheetsInFolder();
+  return getActiveSheetIds();
+};
+
 /* Back-compat: getter que siempre devuelve array dinamico. */
 const getSheetIds = () => getActiveSheetIds();
 const setDataStoreRef = (ds) => { _dataStoreRef = ds; };
@@ -206,6 +264,10 @@ const runSync = async (dataStore) => {
     return { status: "error", message: "Configura GOOGLE_SHEETS_API_KEY o GOOGLE_SHEETS_CREDENTIALS" };
   }
 
+  /* Refresca cache de la carpeta CRM SHEETS antes de calcular activos:
+   * asi cualquier hoja añadida/quitada por el usuario en Drive entra en
+   * el sync siguiente sin reiniciar la app. */
+  await discoverSheetsInFolder();
   const activeIds = getActiveSheetIds();
   if (!activeIds.length) {
     return { status: "error", message: "SHEETS_SYNC_IDS vacio — no hay hojas configuradas" };
@@ -405,6 +467,9 @@ module.exports = {
       builtinIds: SHEET_IDS_BUILTIN,
       envIds: SHEET_IDS_FROM_ENV,
       extraIds: getExtraIdsFromDataStore(),
+      folderId: SHEETS_FOLDER_ID,
+      folderDiscovered: _folderCache.ids,
+      folderCacheAt: _folderCache.at ? new Date(_folderCache.at).toISOString() : null,
       intervalHours: SYNC_INTERVAL_HOURS,
       mirrorMode: MIRROR_MODE,
       ...syncState
@@ -413,7 +478,10 @@ module.exports = {
   SYNC_INTERVAL_HOURS,
   get SHEET_IDS() { return getActiveSheetIds(); },
   getSheetIds,
+  getActiveSheetIdsFresh,
+  discoverSheetsInFolder,
   setDataStoreRef,
   addExtraSheetId,
-  removeExtraSheetId
+  removeExtraSheetId,
+  SHEETS_FOLDER_ID
 };
