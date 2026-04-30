@@ -21,10 +21,14 @@ const OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || "";
 const OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || "";
 const OAUTH_REFRESH_TOKEN = process.env.GOOGLE_OAUTH_REFRESH_TOKEN || "";
 const SHEET_IDS_FROM_ENV = (process.env.SHEETS_SYNC_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
-/* Hojas hard-coded siempre activas (ademas de las de env). */
-const SHEET_IDS_BUILTIN = [
-  "1_VK6eXqsBuxzvkEJ-uoCIOrsgz-ivpzYKiwwKWzxCtA" /* VENTA BOOKING (pestana ***PRUEVA***) */
-];
+/* Hojas hard-coded — vaciado 2026-04-30 (peticion usuario):
+ * "los antiguos los desconectamos y te conectas a la nueva carpeta".
+ * A partir de ahora SOLO se sincroniza lo que el usuario pone en la
+ * carpeta SHEETS_SYNC_FOLDER_ID. Cada pestaña = una lista.
+ *
+ * Se mantiene la lista por si en el futuro se quiere fijar alguna hoja
+ * fuera de la carpeta auto-detect. */
+const SHEET_IDS_BUILTIN = [];
 
 /* Carpeta Drive donde el usuario deja las hojas CRM. Cualquier spreadsheet
  * dentro de esta carpeta se sincroniza automaticamente — el usuario solo
