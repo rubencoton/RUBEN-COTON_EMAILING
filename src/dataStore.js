@@ -1559,8 +1559,13 @@ class DataStore {
     if (!segment) {
       return [];
     }
+    /* FIX C5 (audit 2026-04-30): usar Set para lookup O(1) en vez de
+     * Array.includes O(N). Con segmentos de 10K IDs y 41K contactos,
+     * el filter previo costaba 410M operaciones bloqueando el event-loop
+     * varios segundos. Con Set, lookup es O(1) -> 41K ops totales. */
     const ids = this.resolveSegmentContactIdsFromStore(store, segment);
-    return store.contacts.filter((contact) => ids.includes(contact.id));
+    const idSet = new Set(ids);
+    return store.contacts.filter((contact) => idSet.has(contact.id));
   }
 
   getEligibleRecipientsForCampaign(campaignId) {

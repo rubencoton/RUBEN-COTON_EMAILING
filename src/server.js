@@ -71,6 +71,11 @@ if (!accessPasswordRaw) {
 const accessPassword = normalizePasswordValue(accessPasswordRaw);
 const authSecret =
   process.env.APP_ACCESS_SECRET || "ruben-coton-emailing-default-secret";
+/* FIX A9 audit 2026-04-30: el default es predecible. Avisar fuerte en
+ * arranque si no se ha configurado un secret propio. */
+if (!process.env.APP_ACCESS_SECRET) {
+  console.warn("[SEGURIDAD] APP_ACCESS_SECRET no configurado. Usando default predecible. Configura uno propio en Coolify env vars.");
+}
 const authCookieName = "app_auth";
 const loginHtmlPath = path.join(__dirname, "..", "public", "login.html");
 const appHtmlPath = path.join(__dirname, "..", "public", "index.html");
@@ -2695,8 +2700,10 @@ app.post("/api/campaigns/:id/send", (req, res) => {
   } catch (error) {
     return apiError(res, 400, error.message || "No se pudo enviar campana");
   } finally {
-    /* Liberar el lock tras 5s para dar tiempo al estado a propagarse. */
-    setTimeout(() => sendCampaignLocks.delete(campaignId), 5000);
+    /* FIX A10 audit 2026-04-30: 5s era insuficiente con 30K destinatarios
+     * (snapshot + mutate + enqueue puede tardar > 5s). Subimos a 30s para
+     * evitar doble enqueue accidental. */
+    setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
   }
 });
 
@@ -3172,24 +3179,30 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
     const email = decodeB64url(String(req.params.eb64 || "").replace(/\.gif$/, "")).toLowerCase();
     if (campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       const ua = (req.headers["user-agent"] || "").slice(0, 200);
+      const ip = (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80);
       const isMachineOpen = /GoogleImageProxy|YahooMailProxy|Outlook-iOS|MicrosoftPreview/i.test(ua)
         || !ua;
-      try {
-        dataStore.addEvent({
-          type: "open",
-          campaignId,
-          email,
-          source: "tracking_pixel",
-          userAgent: ua,
-          ip: (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80),
-          isMachineOpen,
-          occurredAt: new Date().toISOString()
-        });
-      } catch (err) { console.warn("[tracking][open] addEvent:", err.message); }
-      /* Writeback "abierto" en columna Merge status (verde claro) — solo
-       * humanos reales, no proxies de imagen. */
-      if (!isMachineOpen) {
-        try { wbForEmail(email, "abierto"); } catch (_e) {}
+      /* FIX C3 audit 2026-04-30: rate limit por (cid, email, ip).
+       * Sólo registramos un evento por minuto para evitar que un
+       * atacante con la URL pueda inflar stats. */
+      if (trackingAllowEvent("open", campaignId, email, ip)) {
+        try {
+          dataStore.addEvent({
+            type: "open",
+            campaignId,
+            email,
+            source: "tracking_pixel",
+            userAgent: ua,
+            ip,
+            isMachineOpen,
+            occurredAt: new Date().toISOString()
+          });
+        } catch (err) { console.warn("[tracking][open] addEvent:", err.message); }
+        /* Writeback "abierto" en columna Merge status (verde claro) — solo
+         * humanos reales, no proxies de imagen. */
+        if (!isMachineOpen) {
+          try { wbForEmail(email, "abierto"); } catch (_e) {}
+        }
       }
     }
   } catch (_e) { /* nunca fallar */ }
@@ -3201,23 +3214,69 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
   res.status(200).end(TRACKING_PIXEL_PNG);
 });
 
+/* Tracking rate limit en memoria (FIX C3 audit 2026-04-30) — evita
+ * que un atacante con la URL del pixel pueda inflar stats sin freno.
+ * Ventana: 1 evento (cid+email+kind) por minuto desde la misma IP. */
+const trackingRateLimit = new Map();
+const TRACKING_RL_WINDOW_MS = 60000;
+const TRACKING_RL_MAX = 1;
+setInterval(() => {
+  const cutoff = Date.now() - TRACKING_RL_WINDOW_MS;
+  for (const [k, ts] of trackingRateLimit.entries()) {
+    if (ts < cutoff) trackingRateLimit.delete(k);
+  }
+}, TRACKING_RL_WINDOW_MS).unref();
+
+const trackingAllowEvent = (kind, cid, email, ip) => {
+  const key = `${kind}|${cid}|${email}|${ip}`;
+  const now = Date.now();
+  const last = trackingRateLimit.get(key) || 0;
+  if (now - last < TRACKING_RL_WINDOW_MS) return false;
+  trackingRateLimit.set(key, now);
+  return true;
+};
+
+/* Hosts no redirigibles desde /t/c/ (FIX C4 audit 2026-04-30):
+ * IPs privadas, localhost, dominios de typo-squat conocidos. */
+const BLOCKED_REDIRECT_HOSTS = new Set([
+  "localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254"
+]);
+const isPrivateIP = (host) => {
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
+  const o = host.split(".").map(Number);
+  return (o[0] === 10) ||
+         (o[0] === 172 && o[1] >= 16 && o[1] <= 31) ||
+         (o[0] === 192 && o[1] === 168) ||
+         (o[0] === 127);
+};
+
 /* GET /t/c/:cid/:eb64?u=URL_B64 — registra click y redirige a URL real. */
 app.get("/t/c/:cid/:eb64", (req, res) => {
   const campaignId = String(req.params.cid || "").slice(0, 100);
   const email = decodeB64url(String(req.params.eb64 || "")).toLowerCase();
   const urlB64 = String(req.query.u || "");
   const targetUrl = decodeB64url(urlB64);
-  /* Validar URL destino para no crear open redirect */
+  /* Validar URL destino para no crear open redirect (FIX C4) */
   let finalUrl = "/";
   try {
     const parsed = new URL(targetUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+    const host = (parsed.hostname || "").toLowerCase();
+    const okProtocol = parsed.protocol === "http:" || parsed.protocol === "https:";
+    const okHost = host && !BLOCKED_REDIRECT_HOSTS.has(host) && !isPrivateIP(host);
+    if (okProtocol && okHost) {
       finalUrl = parsed.toString();
+    } else if (okProtocol && !okHost) {
+      console.warn(`[tracking][click] redirect bloqueado a host sospechoso: ${host}`);
     }
   } catch (_e) { /* URL inválida, cae al fallback */ }
   if (campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && finalUrl !== "/") {
     const ua = (req.headers["user-agent"] || "").slice(0, 200);
+    const ip = (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80);
     const isBotSuspected = /bot|crawler|spider|preview|fetch|headless/i.test(ua);
+    /* FIX C3 audit: rate limit click events */
+    if (!trackingAllowEvent("click", campaignId, email, ip)) {
+      return res.redirect(302, finalUrl);
+    }
     try {
       dataStore.addEvent({
         type: "click",
