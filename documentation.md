@@ -43,8 +43,8 @@
   - Cookie segura remota en `APP_AUTH_COOKIE_SECURE=auto`.
   - Limpieza de variable de prueba `TEST_TEMP_DELETE`.
 - Verificacion publica de dominio:
-  - `https://emailing.artesbuhomanagement.com/health` responde 200.
-  - `https://emailing.artesbuhomanagement.com/login` responde 200.
+  - `https://emailing.rubencoton.com/health` responde 200.
+  - `https://emailing.rubencoton.com/login` responde 200.
   - Login + cookie + dashboard autenticado responden correctamente.
 - Rediseño corporativo profesional aplicado:
   - logo oficial integrado en `/public/assets/logo-artes-buho.jpg`.
@@ -72,7 +72,7 @@
 - Prueba real de envio en produccion:
   - login remoto OK.
   - job `job_2b1f97ef8e007b8c` finalizado en `completed`.
-  - resultado: `sent=1`, `failed=0` hacia `booking@artesbuhomanagement.com`.
+  - resultado: `sent=1`, `failed=0` hacia `manager@rubencoton.com`.
 
 ### PENDIENTE
 
@@ -186,7 +186,7 @@
   - `warn: 1`
   - `error: 0`
 - Unico warning tecnico pendiente:
-  - PTR inverso aun resuelve a `srv1533630.hstgr.cloud` en vez de `mailer.artesbuhomanagement.com`.
+  - PTR inverso aun resuelve a `srv1533630.hstgr.cloud` en vez de `mailer.rubencoton.com`.
 - Base de datos en produccion:
   - sigue en modo opcional con error de auth PostgreSQL (`postgres`), sin bloquear la app.
 
@@ -211,7 +211,7 @@
 - Prueba real de envio post-fix:
   - job `job_ce9ec1314707eb12`.
   - estado `completed`.
-  - `sent=1`, `failed=0` a `booking@artesbuhomanagement.com`.
+  - `sent=1`, `failed=0` a `manager@rubencoton.com`.
 - Stress final post-redeploy:
   - 1000 requests concurrentes (health/dashboard/checklist).
   - 0 errores 5xx.
@@ -226,7 +226,7 @@
 ### PENDIENTE
 
 - Configurar rDNS/PTR en proveedor VPS:
-  - `187.77.166.84 -> mailer.artesbuhomanagement.com`.
+  - `187.77.166.84 -> mailer.rubencoton.com`.
 - Revisar credenciales PostgreSQL de produccion si se quiere usar DB real (ahora la app funciona con DB opcional).
 
 ## 2026-03-31 (continuacion 5 - correccion motor directo)
@@ -267,7 +267,7 @@
   - resultado: 5700/5700 correctas, 0 bad, 0 netErr.
 - Prueba funcional real de envio en produccion:
   - endpoint: `POST /api/mass-mail/send-test`.
-  - destino: `booking@artesbuhomanagement.com`.
+  - destino: `manager@rubencoton.com`.
   - job: `job_fc4820dbc90fffb0`.
   - estado final: `completed`.
   - destinatario final: `sent`.
@@ -293,6 +293,6 @@
 ### SIGUIENTE PASO TECNICO
 
 - Ajustar PTR/rDNS en Hostinger:
-  - `187.77.166.84 -> mailer.artesbuhomanagement.com`.
+  - `187.77.166.84 -> mailer.rubencoton.com`.
 - Si se quiere persistencia SQL real:
   - revisar credenciales de `DATABASE_URL` para quitar `dbOptional`.

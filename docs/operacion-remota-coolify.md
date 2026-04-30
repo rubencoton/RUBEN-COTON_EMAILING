@@ -65,10 +65,10 @@ powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File .\scripts\coolify-c
   -CoolifyToken "TU_TOKEN_TEMPORAL" `
   -AppName "APP_ARTES-BUHO_EMAILING" `
   -AccessPassword "+artesbuho26" `
-  -FromEmail "booking@artesbuhomanagement.com" `
-  -ReplyTo "booking@artesbuhomanagement.com" `
+  -FromEmail "manager@rubencoton.com" `
+  -ReplyTo "manager@rubencoton.com" `
   -RatePerMinute 5 `
-  -DirectHostname "mailer.artesbuhomanagement.com"
+  -DirectHostname "mailer.rubencoton.com"
 ```
 
 Resultado:
@@ -87,8 +87,8 @@ powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File .\scripts\coolify-c
   -CoolifyToken "TU_TOKEN_TEMPORAL" `
   -AppName "APP_ARTES-BUHO_EMAILING" `
   -TransportMode "botavia" `
-  -FromEmail "booking@artesbuhomanagement.com" `
-  -ReplyTo "booking@artesbuhomanagement.com" `
+  -FromEmail "manager@rubencoton.com" `
+  -ReplyTo "manager@rubencoton.com" `
   -RatePerMinute 5 `
   -BotaviaApiBaseUrl "https://api.tu-botavia.com" `
   -BotaviaApiKey "TU_API_KEY" `

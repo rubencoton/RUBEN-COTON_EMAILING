@@ -106,7 +106,7 @@ const massMailEngine = createMassMailEngine({
   /* URL base para pixel + click-redirect. Si no se define, cae a COOLIFY_FQDN. */
   trackingBaseUrl: process.env.MAIL_TRACKING_BASE_URL
     || (process.env.COOLIFY_FQDN ? `https://${process.env.COOLIFY_FQDN}` : "")
-    || "https://emailing.artesbuhomanagement.com",
+    || "https://emailing.rubencoton.com",
   directHostName: process.env.MAIL_DIRECT_HOSTNAME || "",
   dkimDomainName: process.env.MAIL_DKIM_DOMAIN || "",
   dkimKeySelector: process.env.MAIL_DKIM_SELECTOR || "",
@@ -2934,14 +2934,18 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
     const campaignId = String(req.params.cid || "").slice(0, 100);
     const email = decodeB64url(String(req.params.eb64 || "").replace(/\.gif$/, "")).toLowerCase();
     if (campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const ua = (req.headers["user-agent"] || "").slice(0, 200);
+      const isMachineOpen = /GoogleImageProxy|YahooMailProxy|Outlook-iOS|MicrosoftPreview/i.test(ua)
+        || !ua;
       try {
         dataStore.addEvent({
           type: "open",
           campaignId,
           email,
           source: "tracking_pixel",
-          userAgent: (req.headers["user-agent"] || "").slice(0, 200),
+          userAgent: ua,
           ip: (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80),
+          isMachineOpen,
           occurredAt: new Date().toISOString()
         });
       } catch (err) { console.warn("[tracking][open] addEvent:", err.message); }
@@ -2970,6 +2974,8 @@ app.get("/t/c/:cid/:eb64", (req, res) => {
     }
   } catch (_e) { /* URL inválida, cae al fallback */ }
   if (campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && finalUrl !== "/") {
+    const ua = (req.headers["user-agent"] || "").slice(0, 200);
+    const isBotSuspected = /bot|crawler|spider|preview|fetch|headless/i.test(ua);
     try {
       dataStore.addEvent({
         type: "click",
@@ -2977,10 +2983,20 @@ app.get("/t/c/:cid/:eb64", (req, res) => {
         email,
         url: finalUrl,
         source: "tracking_redirect",
-        userAgent: (req.headers["user-agent"] || "").slice(0, 200),
+        userAgent: ua,
         ip: (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80),
+        isBotSuspected,
         occurredAt: new Date().toISOString()
       });
+      if (!isBotSuspected) {
+        dataStore.addEvent({
+          type: "open",
+          campaignId,
+          email,
+          source: "implicit_from_click",
+          occurredAt: new Date().toISOString()
+        });
+      }
     } catch (err) { console.warn("[tracking][click] addEvent:", err.message); }
   }
   res.redirect(302, finalUrl);

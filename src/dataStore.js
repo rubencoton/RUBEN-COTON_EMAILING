@@ -48,7 +48,7 @@ const sortByCreatedDesc = (list) =>
   [...list].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
 
 /* ════════════════════════════════════════════════════════════════
-   BORRADORES ESTANDAR ARTES BUHO (plantillas seed)
+   BORRADORES ESTANDAR RUBEN COTON (plantillas seed)
    Colores corporativos OFICIALES: ROJO #D62828, AMARILLO #F4B400,
    BLANCO #ffffff.
    Bump SEED_VERSION + SEED_RESET_VERSION para forzar limpieza total.
@@ -98,9 +98,9 @@ const getDefaultBuhoDrafts = () => {
           <tr>
             <td style="background-color:#D62828; padding:28px 40px 22px; text-align:center;">
               <img src="https://lh3.googleusercontent.com/d/1yvary28jzeD8nQyul9iSYqFPXKTn9Hyw=w240"
-                   alt="ARTES BÚHO" width="90"
+                   alt="RUBEN COTON" width="90"
                    style="display:block; margin:0 auto 10px; width:90px; height:auto; border:0; background-color:#ffffff; border-radius:50%; padding:6px;" border="0">
-              <h1 style="margin:4px 0 2px; color:#ffffff; font-size:24px; font-weight:bold; letter-spacing:4px;">ARTES BÚHO</h1>
+              <h1 style="margin:4px 0 2px; color:#ffffff; font-size:24px; font-weight:bold; letter-spacing:4px;">RUBEN COTON</h1>
               <p style="margin:0; color:#F4B400; font-size:11px; letter-spacing:5px; text-transform:uppercase; font-weight:700;">Management</p>
             </td>
           </tr>
@@ -169,7 +169,7 @@ const getDefaultBuhoDrafts = () => {
           <tr>
             <td style="padding:10px 40px 10px;">
               <p style="margin:0 0 14px; color:#444444; font-size:15px; line-height:1.6;">
-                Soy Román, CEO de <strong>ARTES BÚHO Management</strong>. Noches de Neón es una formación de
+                Soy Rubén, CEO de <strong>RUBEN COTON</strong>. Noches de Neón es una formación de
                 <strong>músicos de sesión</strong> que han acompañado a Operación Triunfo, Antonio Orozco, Rozalén,
                 La Pegatina, Andrés Suárez, Funambulista y Sara Socas, entre otros.
               </p>
@@ -263,7 +263,7 @@ const getDefaultBuhoDrafts = () => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="background-color:#D62828; border-radius:6px;">
-                    <a href="mailto:booking@artesbuhomanagement.com"
+                    <a href="mailto:manager@rubencoton.com"
                        style="display:block; padding:16px 20px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:bold;">
                       Responder a este correo
                     </a>
@@ -279,7 +279,7 @@ const getDefaultBuhoDrafts = () => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="background-color:#F4B400; border-radius:6px;">
-                    <a href="https://wa.me/34649635907" target="_blank"
+                    <a href="https://wa.me/34613009336" target="_blank"
                        style="display:block; padding:16px 20px; color:#1a1a1a; text-decoration:none; font-size:16px; font-weight:bold;">
                       Escribir por WhatsApp
                     </a>
@@ -295,11 +295,11 @@ const getDefaultBuhoDrafts = () => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="background-color:#ffffff; border:2px solid #D62828; border-radius:6px;">
-                    <a href="tel:+34649635907"
+                    <a href="tel:+34613009336"
                        style="display:block; padding:14px 20px; color:#1a1a1a; text-decoration:none;">
                       <span style="display:block; font-size:12px; font-weight:bold; color:#888888; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Llamar o WhatsApp</span>
-                      <span style="display:block; font-size:22px; font-weight:bold; color:#D62828; letter-spacing:1px;">+34 649 63 59 07</span>
-                      <span style="display:block; font-size:11px; color:#888888; margin-top:4px;">Román · CEO ARTES BÚHO</span>
+                      <span style="display:block; font-size:22px; font-weight:bold; color:#D62828; letter-spacing:1px;">+34 613 00 93 36</span>
+                      <span style="display:block; font-size:11px; color:#888888; margin-top:4px;">Rubén · CEO RUBEN COTON</span>
                     </a>
                   </td>
                 </tr>
@@ -310,8 +310,8 @@ const getDefaultBuhoDrafts = () => {
           <!-- FIRMA -->
           <tr>
             <td style="padding:0 40px 34px;">
-              <p style="margin:0 0 2px; color:#1a1a1a; font-size:15px; font-weight:bold;">Román</p>
-              <p style="margin:0; color:#666666; font-size:13px;">CEO · ARTES BÚHO Management</p>
+              <p style="margin:0 0 2px; color:#1a1a1a; font-size:15px; font-weight:bold;">Rubén</p>
+              <p style="margin:0; color:#666666; font-size:13px;">CEO · RUBEN COTON</p>
             </td>
           </tr>
 
@@ -319,21 +319,21 @@ const getDefaultBuhoDrafts = () => {
           <tr>
             <td style="background-color:#D62828; padding:24px 40px; text-align:center;">
               <img src="https://lh3.googleusercontent.com/d/16UZKQnCW0J9qqd9yLZ9t4jukrp3p9hcj=w160"
-                   alt="ARTES BÚHO" width="72"
+                   alt="RUBEN COTON" width="72"
                    style="display:block; margin:0 auto 10px; width:72px; height:auto; border:0; background-color:#ffffff; border-radius:50%; padding:5px;" border="0">
               <p style="margin:0 0 6px; color:#ffffff; font-size:13px; font-weight:700; letter-spacing:2px;">
-                ARTES BÚHO MANAGEMENT
+                RUBEN COTON
               </p>
               <p style="margin:0 0 10px; color:#ffe8a8; font-size:11px;">
                 Booking &amp; Management de artistas
               </p>
               <p style="margin:0 0 4px; font-size:12px;">
-                <a href="mailto:booking@artesbuhomanagement.com"
-                   style="color:#ffffff; text-decoration:none; font-weight:bold;">booking@artesbuhomanagement.com</a>
+                <a href="mailto:manager@rubencoton.com"
+                   style="color:#ffffff; text-decoration:none; font-weight:bold;">manager@rubencoton.com</a>
               </p>
               <p style="margin:0 0 10px; font-size:12px;">
-                <a href="tel:+34649635907"
-                   style="color:#ffffff; text-decoration:none; font-weight:bold;">Tel. y WhatsApp · +34 649 63 59 07</a>
+                <a href="tel:+34613009336"
+                   style="color:#ffffff; text-decoration:none; font-weight:bold;">Tel. y WhatsApp · +34 613 00 93 36</a>
               </p>
               <p style="margin:12px 0 0; color:#ffd6a0; font-size:10px; line-height:1.5;">
                 Si no desea seguir recibiendo comunicaciones comerciales, responda a este correo con la palabra BAJA.
@@ -351,7 +351,7 @@ const getDefaultBuhoDrafts = () => {
 
   const nochesText = `Fiestas patronales 2026: quedan pocas fechas — Noches de Neón
 
-ARTES BÚHO MANAGEMENT
+RUBEN COTON
 Artista representado: NOCHES DE NEÓN — El show de las 5 décadas (60 · 70 · 80 · 90 · 2000)
 
 ¿Tiene ya cerrada la banda para las fiestas patronales de 2026?
@@ -1803,8 +1803,16 @@ class DataStore {
     };
 
     store.events.unshift(payload);
-    if (store.events.length > 5000) {
-      store.events.length = 5000;
+    /* Retención basada en tiempo: mínimo 7 días de historial.
+     * Solo purgamos eventos > 7 días si superamos 25000 entradas. */
+    const EVENT_MAX = 25000;
+    const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+    if (store.events.length > EVENT_MAX) {
+      const cutoff = new Date(Date.now() - RETENTION_MS).toISOString();
+      const withinRetention = store.events.filter(e => (e.occurredAt || e.createdAt) >= cutoff);
+      store.events = withinRetention.length >= EVENT_MAX
+        ? withinRetention.slice(0, EVENT_MAX)
+        : withinRetention;
     }
 
     const contact = store.contacts.find((item) => item.email === payload.email);

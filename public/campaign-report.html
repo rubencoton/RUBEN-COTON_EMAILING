@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Informe de Campaña · ARTES BÚHO MANAGEMENT</title>
+<title>Informe de Campaña · RUBEN COTON</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -498,7 +498,7 @@ tr:hover td { background: var(--rojo-soft); }
     size: A4 portrait;
     margin: 15mm 14mm 18mm 14mm;
     @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #a81117; }
-    @bottom-left { content: "ARTES BÚHO · Informe de campaña"; font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #999; }
+    @bottom-left { content: "RUBEN COTON · Informe de campaña"; font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #999; }
   }
   @page :first {
     margin: 0;
@@ -668,9 +668,9 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="cover">
     <div class="cover-inner">
       <div class="cover-header">
-        <img class="cover-logo" src="/assets/logo-artes-buho.jpg" alt="Logo ARTES BÚHO">
+        <img class="cover-logo" src="/assets/logo-artes-buho.jpg" alt="Logo RUBEN COTON">
         <div class="cover-brand">
-          <h1>ARTES BÚHO</h1>
+          <h1>RUBEN COTON</h1>
           <div class="tagline">Management · Booking de Artistas</div>
         </div>
       </div>
@@ -701,7 +701,7 @@ tr:hover td { background: var(--rojo-soft); }
       </div>
 
       <div class="cover-footer">
-        <div>📍 Madrid, España · booking@artesbuhomanagement.com</div>
+        <div>📍 Madrid, España · manager@rubencoton.com</div>
         <div class="conf">Confidencial</div>
       </div>
     </div>
@@ -734,10 +734,10 @@ tr:hover td { background: var(--rojo-soft); }
 
   <!-- ========= FOOTER ========= -->
   <div class="footer">
-    <img src="/assets/logo-artes-buho.jpg" alt="ARTES BÚHO">
-    <p><strong>🦉 ARTES BÚHO MANAGEMENT</strong></p>
+    <img src="/assets/logo-artes-buho.jpg" alt="RUBEN COTON">
+    <p><strong>RUBEN COTON</strong></p>
     <p>Booking &amp; Management de Artistas</p>
-    <p style="margin-top:8px">📧 booking@artesbuhomanagement.com <span class="sep">·</span> 📍 Madrid</p>
+    <p style="margin-top:8px">📧 manager@rubencoton.com <span class="sep">·</span> 📍 Madrid</p>
     <p style="margin-top:14px;font-size:9pt;opacity:0.75">Este informe respeta el RGPD. No se comparten datos personales de contacto (emails, teléfonos, nombres de personas físicas).</p>
     <p style="margin-top:6px;font-size:9pt;opacity:0.55">Documento generado automáticamente por la plataforma ENVÍO MASIVO</p>
   </div>
@@ -825,7 +825,7 @@ function pageHeader(title, pg) {
       <img src="/assets/logo-artes-buho.jpg" alt="">
       <div>
         <div class="ph-title">${esc(title)}</div>
-        <div class="ph-sub">ARTES BÚHO · Informe de Campaña</div>
+        <div class="ph-sub">RUBEN COTON · Informe de Campaña</div>
       </div>
       <div class="ph-right">pág. ${pg}</div>
     </div>`;
@@ -942,8 +942,8 @@ function render(d) {
       <div class="meta-grid">
         <div class="meta-item"><div class="lbl">📛 Nombre interno</div><div class="val">${esc(c.name)}</div></div>
         <div class="meta-item"><div class="lbl">✉️ Asunto</div><div class="val">${esc(c.subject)}</div></div>
-        <div class="meta-item"><div class="lbl">👤 Remitente</div><div class="val">${esc(c.fromName || "ARTES BÚHO MANAGEMENT")}</div></div>
-        <div class="meta-item"><div class="lbl">📧 Email envío</div><div class="val">${esc(c.fromEmail || "booking@artesbuhomanagement.com")}</div></div>
+        <div class="meta-item"><div class="lbl">👤 Remitente</div><div class="val">${esc(c.fromName || "RUBEN COTON")}</div></div>
+        <div class="meta-item"><div class="lbl">📧 Email envío</div><div class="val">${esc(c.fromEmail || "manager@rubencoton.com")}</div></div>
         <div class="meta-item"><div class="lbl">🏷 Estado</div><div class="val">${esc(tStatus(c.status))}</div></div>
         <div class="meta-item"><div class="lbl">🆔 ID campaña</div><div class="val" style="font-family:monospace;font-size:10pt">${esc(campaignId)}</div></div>
         <div class="meta-item"><div class="lbl">📅 Creada</div><div class="val">${c.createdAt ? new Date(c.createdAt).toLocaleString("es-ES") : "—"}</div></div>
@@ -958,7 +958,7 @@ function render(d) {
       <p class="intro">Reproducción fiel del correo electrónico tal como lo recibió cada destinatario.</p>
       <div class="email-preview">
         <div class="email-head">
-          <div class="row"><span class="tag">DE</span><span class="val">${esc(c.fromName || "ARTES BÚHO MANAGEMENT")} &lt;<em>${esc(c.fromEmail || "booking@artesbuhomanagement.com")}</em>&gt;</span></div>
+          <div class="row"><span class="tag">DE</span><span class="val">${esc(c.fromName || "RUBEN COTON")} &lt;<em>${esc(c.fromEmail || "manager@rubencoton.com")}</em>&gt;</span></div>
           <div class="row"><span class="tag">PARA</span><span class="val">${fmt(recipients.length)} destinatarios (ver sección 4)</span></div>
           <div class="row"><span class="tag">ASUNTO</span><span class="val"><strong>${esc(c.subject || "—")}</strong></span></div>
           <div class="row"><span class="tag">FECHA</span><span class="val">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente de envío"}</span></div>

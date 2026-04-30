@@ -2,13 +2,13 @@
 
 /**
  * replyTracker — detecta respuestas (inbound) a las campañas leyendo la
- * bandeja de booking@artesbuhomanagement.com vía Gmail API.
+ * bandeja de manager@rubencoton.com vía Gmail API.
  *
  * Lógica:
  *   1. Cada N minutos, lee los mensajes de Gmail con label INBOX y
  *      newer_than:7d.
  *   2. Para cada mensaje: mira si el In-Reply-To o References contiene
- *      un Message-Id con dominio @artesbuhomanagement.com (los que genera
+ *      un Message-Id con dominio @rubencoton.com (los que genera
  *      nuestro motor).
  *   3. Extrae el campaignId del Message-Id (formato "jobid-ts-rand@dom"
  *      donde jobid incluye campaignId implícitamente, alternativamente
@@ -31,7 +31,7 @@ async function scanReplies() {
   try {
     const list = await gmail.users.messages.list({
       userId: "me",
-      q: `in:inbox newer_than:${LOOKBACK_DAYS}d -from:booking@artesbuhomanagement.com`,
+      q: `in:inbox newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com`,
       maxResults: 50
     });
     const msgs = list.data.messages || [];
@@ -68,7 +68,7 @@ async function scanReplies() {
         const inReplyTo = String(headers["in-reply-to"] || "");
         const references = String(headers["references"] || "");
         const relevantHeader = (inReplyTo + " " + references).toLowerCase();
-        const looksLikeReply = relevantHeader.includes("@artesbuhomanagement.com");
+        const looksLikeReply = relevantHeader.includes("@rubencoton.com");
 
         /* Matching por recipient: si el sender es un recipient de alguna
          * campaña, registramos reply aunque el header no esté. */

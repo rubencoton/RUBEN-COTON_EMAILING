@@ -538,7 +538,7 @@ const createMassMailEngine = (config) => {
          *   - List-Id: identifica la campaña como "lista de correo legítima"
          *   - Feedback-ID: ayuda a Gmail/Yahoo trackear reputación por segmento
          *   - Precedence: bulk indica que es correo masivo legítimo
-         *   - Message-Id propio con dominio artesbuhomanagement.com
+         *   - Message-Id propio con dominio rubencoton.com
          *     (alinea DKIM y mejora reputación)
          *   - X-Entity-Ref-ID: tracking interno por job+recipient
          *   - Auto-Submitted: auto-generated (RFC 3834)
@@ -554,14 +554,14 @@ const createMassMailEngine = (config) => {
         const listIdSafe = String(job.name || "campana").toLowerCase()
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "campana";
-        perRecipientHeaders["List-Id"] = `<${listIdSafe}.artesbuhomanagement.com>`;
+        perRecipientHeaders["List-Id"] = `<${listIdSafe}.rubencoton.com>`;
         perRecipientHeaders["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
         /* Feedback-ID = "campaign:sub:mailer:domain" (Google format) */
-        perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:artesbuho:artesbuhomanagement.com`;
+        perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:rubencoton:rubencoton.com`;
         perRecipientHeaders["Precedence"] = "bulk";
         perRecipientHeaders["Auto-Submitted"] = "auto-generated";
         perRecipientHeaders["X-Entity-Ref-ID"] = `${job.id}-${Buffer.from(recipient.email).toString("base64url").slice(0, 12)}`;
-        perRecipientHeaders["X-Mailer"] = "ARTES-BUHO_EMAILING/1.0";
+        perRecipientHeaders["X-Mailer"] = "RUBEN-COTON_EMAILING/1.0";
         /* HEADERS ANTI-SPAM v2 (2026-04-22 · actualización experta):
          *   - Organization: identifica la marca (mejor scoring en Outlook/Yahoo)
          *   - X-Report-Abuse: canal oficial de abuse reports (Gmail lo aprecia)
@@ -571,9 +571,9 @@ const createMassMailEngine = (config) => {
          *   - Importance: Normal (RFC)
          *   - MIME-Version (redundante pero explícito, nodemailer ya lo pone)
          */
-        perRecipientHeaders["Organization"] = "ARTES BUHO MANAGEMENT";
-        perRecipientHeaders["X-Report-Abuse"] = `Please report abuse to abuse@artesbuhomanagement.com`;
-        perRecipientHeaders["X-Complaints-To"] = "abuse@artesbuhomanagement.com";
+        perRecipientHeaders["Organization"] = "RUBEN COTON";
+        perRecipientHeaders["X-Report-Abuse"] = `Please report abuse to abuse@rubencoton.com`;
+        perRecipientHeaders["X-Complaints-To"] = "abuse@rubencoton.com";
         perRecipientHeaders["X-Priority"] = "3";
         perRecipientHeaders["X-MSMail-Priority"] = "Normal";
         perRecipientHeaders["Importance"] = "Normal";
@@ -583,9 +583,9 @@ const createMassMailEngine = (config) => {
           const emailB64b = Buffer.from(recipient.email).toString("base64url");
           perRecipientHeaders["X-Unsubscribe-Web"] = `${unsubBase}?email=${emailB64b}`;
         }
-        /* Message-Id explicito para alinear DKIM d=artesbuhomanagement.com */
+        /* Message-Id explicito para alinear DKIM d=rubencoton.com */
         const msgIdLocal = `${job.id}-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
-        const messageId = `<${msgIdLocal}@artesbuhomanagement.com>`;
+        const messageId = `<${msgIdLocal}@rubencoton.com>`;
 
         /* Garantizar que SIEMPRE hay versión texto plano (ratio text/html
          * alto = mejor score antispam). Si el job no tiene text, generamos
@@ -865,7 +865,7 @@ const createMassMailEngine = (config) => {
     }
 
     const id = `job_${crypto.randomBytes(8).toString("hex")}`;
-    const fromName = String(payload.fromName || config.fromName || "APP ARTES BUHO")
+    const fromName = String(payload.fromName || config.fromName || "RUBEN COTON")
       .trim()
       .slice(0, 120);
     const fromEmail = normalizeEmail(payload.fromEmail || config.fromEmail);

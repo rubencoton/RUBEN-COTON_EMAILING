@@ -62,9 +62,9 @@ SMTP_HOST=...
 SMTP_PORT=587
 SMTP_USER=...
 SMTP_PASS=...
-SMTP_FROM_EMAIL=booking@artesbuhomanagement.com
-SMTP_FROM_NAME=ARTES BUHO MANAGEMENT
-SMTP_REPLY_TO=booking@artesbuhomanagement.com
+SMTP_FROM_EMAIL=manager@rubencoton.com
+SMTP_FROM_NAME=RUBEN COTON
+SMTP_REPLY_TO=manager@rubencoton.com
 ```
 
 ### IA cascada (AL MENOS UNA)
@@ -108,7 +108,7 @@ Si `store.json` se pierde (volumen recreado), restaurar desde Drive:
    - `APP_ARTES-BUHO_EMAILING listening on port 3000`
    - `[drive] ecosistema Google listo`
    - A los 60s: `[backup] store.json subido a Drive: store-XXXX.json`
-3. Abre: `https://emailing.artesbuhomanagement.com/api/health/full`
+3. Abre: `https://emailing.rubencoton.com/api/health/full`
 4. Debe devolver:
 
 ```json

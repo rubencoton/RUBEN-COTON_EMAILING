@@ -188,7 +188,7 @@ const CLOUD_LEVELS = [
     model: () => env("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
     available: () => Boolean(env("OPENROUTER_API_KEY")),
     call: (p) => openaiCompatCall("https://openrouter.ai/api/v1", env("OPENROUTER_API_KEY"), env("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"), p,
-      { extraHeaders: { "HTTP-Referer": "https://emailing.artesbuhomanagement.com", "X-Title": "ARTES BUHO Emailing" } })
+      { extraHeaders: { "HTTP-Referer": "https://emailing.rubencoton.com", "X-Title": "RUBEN COTON Emailing" } })
   },
   {
     name: "groq", rank: 6, displayName: "Groq llama-3.3-70b", power: 3,

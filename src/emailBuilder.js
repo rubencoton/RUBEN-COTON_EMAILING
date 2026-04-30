@@ -21,7 +21,7 @@ const esc = (s) => String(s == null ? "" : s)
 
 const markdownToHtml = (s) => String(s || "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
-/* Plantilla HTML email ARTES BUHO (header negro + barra roja + footer) */
+/* Plantilla HTML email RUBEN COTON (header negro + barra roja + footer) */
 const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubUrl }) => {
   const videoBlock = videoId ? `
     <tr><td style="padding:0 40px 24px;text-align:center">
@@ -32,8 +32,8 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
   const photoBlock = photoUrl ? `
     <tr><td style="padding:0"><img src="${esc(photoUrl)}" width="600" alt="" style="display:block;width:100%;max-width:600px;border:0"></td></tr>` : "";
 
-  const whatsapp = "https://wa.me/34649635907?text=" + encodeURIComponent("Hola, me interesa " + (asunto || ""));
-  const replyMailto = "mailto:booking@artesbuhomanagement.com?subject=" + encodeURIComponent("Re: " + (asunto || ""));
+  const whatsapp = "https://wa.me/34613009336?text=" + encodeURIComponent("Hola, me interesa " + (asunto || ""));
+  const replyMailto = "mailto:manager@rubencoton.com?subject=" + encodeURIComponent("Re: " + (asunto || ""));
 
   return `<!DOCTYPE html>
 <html lang="es"><head>
@@ -47,8 +47,8 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
   <tr><td align="center" style="padding:20px 0">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden">
       <tr><td style="background:#1a1a1a;padding:24px 40px 18px;text-align:center">
-        <img src="${LOGO_COMPLETO_URL}" width="90" alt="ARTES BUHO" style="display:block;margin:0 auto 8px;border:0">
-        <h1 style="margin:4px 0 2px;color:#fff;font-size:22px;font-weight:bold;letter-spacing:4px">ARTES BUHO</h1>
+        <img src="${LOGO_COMPLETO_URL}" width="90" alt="RUBEN COTON" style="display:block;margin:0 auto 8px;border:0">
+        <h1 style="margin:4px 0 2px;color:#fff;font-size:22px;font-weight:bold;letter-spacing:4px">RUBEN COTON</h1>
         <p style="margin:0;color:#F4B400;font-size:11px;letter-spacing:5px;text-transform:uppercase;font-weight:700">Management</p>
       </td></tr>
       <tr><td style="height:3px;background:#D62828"></td></tr>
@@ -70,12 +70,12 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
             </td>
           </tr>
         </table>
-        <p style="margin:12px 0 0;color:#888;font-size:12px;text-align:center">+34 649 63 59 07</p>
+        <p style="margin:12px 0 0;color:#888;font-size:12px;text-align:center">+34 613 00 93 36</p>
       </td></tr>
       <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center">
-        <p style="margin:0 0 6px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px">ARTES BUHO MANAGEMENT</p>
+        <p style="margin:0 0 6px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px">RUBEN COTON</p>
         <p style="margin:0 0 8px;color:#aaa;font-size:11px">Booking &amp; Management de Artistas</p>
-        <p style="margin:0 0 6px;font-size:11px"><a href="mailto:booking@artesbuhomanagement.com" style="color:#F4B400;text-decoration:none">booking@artesbuhomanagement.com</a></p>
+        <p style="margin:0 0 6px;font-size:11px"><a href="mailto:manager@rubencoton.com" style="color:#F4B400;text-decoration:none">manager@rubencoton.com</a></p>
         ${unsubUrl ? `<p style="margin:0;font-size:10px"><a href="${esc(unsubUrl)}" style="color:#777;text-decoration:underline">Darse de baja</a></p>` : ""}
       </td></tr>
     </table>
@@ -93,7 +93,7 @@ const generateEmail = async (opts = {}) => {
   const { audience, objective, offer = "", photoUrl, videoId, tone = "profesional cercano" } = opts;
   if (!audience || !objective) throw new Error("Faltan audience u objective");
 
-  const system = `Eres copywriter senior de email marketing para ARTES BUHO MANAGEMENT
+  const system = `Eres copywriter senior de email marketing para RUBEN COTON
 (booking & management de artistas en Madrid, Espana).
 Escribes en castellano de Espana con tildes, n y signos de apertura.
 
@@ -105,7 +105,7 @@ REGLAS:
 - saludo: saludo corto personalizado a la audiencia (sin coma final).
 - intro: 2 frases impactantes. Puedes usar **palabra** para negrita.
 - body: 4-6 frases adaptadas al perfil. **bold** en datos clave.
-- cta: 1-2 frases con llamada a accion clara hacia booking@artesbuhomanagement.com.
+- cta: 1-2 frases con llamada a accion clara hacia manager@rubencoton.com.
 - TOTAL max 180 palabras.
 - NO inventar cifras, artistas ni fechas.`;
 
@@ -126,14 +126,14 @@ Genera el JSON ahora.`;
   const saludo = String(j.saludo || "Hola").trim();
   const intro = String(j.intro || "").trim();
   const body = String(j.body || "").trim();
-  const cta = String(j.cta || "Responde a booking@artesbuhomanagement.com").trim();
+  const cta = String(j.cta || "Responde a manager@rubencoton.com").trim();
 
   if (!subject || !intro) {
     throw new Error("La IA no devolvio JSON valido: " + String(r.text || "").slice(0, 200));
   }
 
   const html = buildHtml({ asunto: subject, saludo, intro, body, cta, photoUrl, videoId });
-  const text = `${saludo},\n\n${intro.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${body.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${cta}\n\n—\nARTES BUHO MANAGEMENT\nbooking@artesbuhomanagement.com\nhttps://wa.me/34649635907`;
+  const text = `${saludo},\n\n${intro.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${body.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${cta}\n\n—\nRUBEN COTON\nmanager@rubencoton.com\nhttps://wa.me/34613009336`;
 
   return {
     subject,

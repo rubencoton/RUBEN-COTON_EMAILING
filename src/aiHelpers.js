@@ -96,9 +96,9 @@ const summarizeReply = async (replyText) => {
 
 /** Genera email completo (subject + intro + body + cta). */
 const generateEmail = async ({ audience, objective, offer, tone = "profesional cercano" }) => {
-  const system = `Eres copywriter senior de email marketing para ARTES BUHO MANAGEMENT
+  const system = `Eres copywriter senior de email marketing para RUBEN COTON
 (booking & management de artistas). Castellano de Espana con tildes y n.
-Responde SOLO JSON valido: {"subject":"max 70 chars","intro":"2 frases","body":"4-6 frases","cta":"1 llamada accion hacia booking@artesbuhomanagement.com"}.
+Responde SOLO JSON valido: {"subject":"max 70 chars","intro":"2 frases","body":"4-6 frases","cta":"1 llamada accion hacia manager@rubencoton.com"}.
 Sin emojis, sin palabras spam (gratis/urgente/oferta).`;
   const prompt = `AUDIENCIA: ${audience}\nOBJETIVO: ${objective}\n${offer ? `OFERTA: ${offer}\n` : ""}TONO: ${tone}`;
   const r = await aiRouter.classifyJson(prompt, { system, tier: "alta", maxTokens: 800 });
@@ -119,7 +119,7 @@ const optimizeCopy = async ({ original, goal = "aumentar clics" }) => {
 
 /** Redacta propuesta comercial formal para un cliente exigente. */
 const draftProposal = async ({ client, service, price, context = "" }) => {
-  const system = `Eres director comercial senior de ARTES BUHO MANAGEMENT. Redacta propuesta formal en espanol, tono profesional alto, cerrador. Incluye introduccion, descripcion servicio, precio, condiciones, call to action.`;
+  const system = `Eres director comercial senior de RUBEN COTON. Redacta propuesta formal en espanol, tono profesional alto, cerrador. Incluye introduccion, descripcion servicio, precio, condiciones, call to action.`;
   const prompt = `CLIENTE: ${client}\nSERVICIO: ${service}\nPRECIO: ${price}\n${context ? `CONTEXTO: ${context}` : ""}`;
   const r = await aiRouter.chat(prompt, { system, tier: "critica", maxTokens: 2000 });
   return { proposal: r.text, provider: r.provider, tier: r.tier };
@@ -127,7 +127,7 @@ const draftProposal = async ({ client, service, price, context = "" }) => {
 
 /** Responde a una queja delicada de cliente. */
 const complaintReply = async ({ complaint, context = "" }) => {
-  const system = `Eres director de atencion al cliente de ARTES BUHO. Redacta respuesta empatica, profesional, que resuelva la queja sin comprometer a la empresa. Nunca admitas culpa explicita. Castellano cuidado.`;
+  const system = `Eres director de atencion al cliente de RUBEN COTON. Redacta respuesta empatica, profesional, que resuelva la queja sin comprometer a la empresa. Nunca admitas culpa explicita. Castellano cuidado.`;
   const prompt = `QUEJA DEL CLIENTE:\n${complaint}\n${context ? `\nCONTEXTO INTERNO:\n${context}` : ""}`;
   const r = await aiRouter.chat(prompt, { system, tier: "critica", maxTokens: 1500 });
   return { reply: r.text, provider: r.provider, tier: r.tier };
