@@ -760,11 +760,8 @@ const renderCampaigns = (campaigns) => {
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}
             <a class="mini-btn act-btn act-view" href="/campaigns/${esc(c.id)}/preview" target="_blank">👁 Ver email</a>
             <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank">📄 Informe</a>
-            <a class="mini-btn act-btn act-pdf" href="/campaigns/${esc(c.id)}/report?autoprint=1" target="_blank">⬇ PDF</a>
-            <a class="mini-btn act-btn act-zip" href="/api/campaigns/${esc(c.id)}/download-pack">⬇ Pack ZIP</a>
-            <button class="mini-btn act-btn act-drive" data-upload-drive="${esc(c.id)}" type="button">☁ Subir Drive</button>
+            <a class="mini-btn act-btn act-pdf" href="/api/campaigns/${esc(c.id)}/report.pdf" target="_blank">⬇ PDF</a>
             ${c.drive && c.drive.folderLink ? `<a class="mini-btn act-btn act-drive-view" href="${esc(c.drive.folderLink)}" target="_blank">📁 Ver Drive</a>` : ""}
-            <button class="mini-btn act-btn act-send-report" data-send-report="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button">✉️ Informe email</button>
             <button class="mini-btn act-btn act-delete" data-delete-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button">🗑 Eliminar</button>
           </div>
         </td>

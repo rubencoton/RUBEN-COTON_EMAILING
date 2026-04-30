@@ -1688,6 +1688,93 @@ app.post("/api/campaigns/:id/upload-to-drive", async (req, res) => {
   }
 });
 
+/* PDF directo: informe de UNA campaña como descarga PDF
+ * Usado por boton "⬇ PDF" en cada fila del listado de campañas. */
+app.get("/api/campaigns/:id/report.pdf", async (req, res) => {
+  try {
+    syncCampaignsWithEngine();
+    const campaign = dataStore.getCampaign(req.params.id);
+    if (!campaign) return res.status(404).send("Campaña no encontrada");
+    const data = buildCampaignReportData(campaign);
+    const html = buildStandaloneReportHtml(data);
+    const pdf = await pdfGen.htmlToPdf(html, { format: "A4" });
+    if (!pdf || pdf.length === 0) {
+      return res.status(503).send("PDF no disponible (Google Drive no configurado).");
+    }
+    const code = buildCampaignCode(campaign, calcCampaignSeq(campaign.id));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="INFORME_${code}.pdf"`);
+    return res.end(pdf);
+  } catch (err) {
+    return res.status(500).send("Error generando PDF: " + err.message);
+  }
+});
+
+/* PDF directo: informe ejecutivo global (todas las campañas)
+ * Usado por boton "📊 Informe ejecutivo (PDF)" en Estado campañas.
+ * Genera HTML standalone con datos embebidos y lo convierte a PDF. */
+app.get("/api/campaigns/report/executive.pdf", async (_req, res) => {
+  try {
+    syncCampaignsWithEngine();
+    /* Datos agregados (mismo formato que /api/campaigns/report/executive). */
+    const all = dataStore.listCampaigns();
+    const totalCampaigns = all.length;
+    let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsub = 0;
+    const items = [];
+    for (const c of all) {
+      const seq = calcCampaignSeq(c.id);
+      const data = buildCampaignReportData(c);
+      totalSent += data.stats.sent;
+      totalOpened += data.stats.opened;
+      totalClicked += data.stats.clicked;
+      totalBounced += data.stats.bounced;
+      totalUnsub += data.stats.unsubscribed;
+      items.push({
+        code: buildCampaignCode(c, seq),
+        name: c.name || "(sin nombre)",
+        subject: c.subject || "—",
+        status: c.status,
+        sentAt: c.sentAt || c.createdAt,
+        stats: data.stats
+      });
+    }
+
+    /* Carga template y embebe datos (similar a buildStandaloneReportHtml) */
+    const tplPath = path.join(__dirname, "..", "public", "executive-report.html");
+    let tpl = fs.readFileSync(tplPath, "utf8");
+    const payload = {
+      stats: {
+        totalCampaigns,
+        totalSent,
+        totalOpened,
+        totalClicked,
+        totalBounced,
+        totalUnsub
+      },
+      items,
+      generatedAt: new Date().toISOString()
+    };
+    const safeJson = JSON.stringify(payload).replace(/</g, "\\u003c");
+    const inject = `<script>window.__EMBEDDED_EXECUTIVE_REPORT = ${safeJson};</script>`;
+    if (tpl.includes("</body>")) {
+      tpl = tpl.replace("</body>", `${inject}</body>`);
+    } else {
+      tpl = tpl + inject;
+    }
+
+    const pdf = await pdfGen.htmlToPdf(tpl, { format: "A4" });
+    if (!pdf || pdf.length === 0) {
+      return res.status(503).send("PDF no disponible (Google Drive no configurado).");
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="INFORME-EJECUTIVO-${today}.pdf"`);
+    return res.end(pdf);
+  } catch (err) {
+    return res.status(500).send("Error generando PDF ejecutivo: " + err.message);
+  }
+});
+
 /* Drive Scheduler: estado y administracion */
 app.get("/api/drive/scheduler", (_req, res) => {
   try {
