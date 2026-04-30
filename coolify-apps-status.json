@@ -1,0 +1,14 @@
+﻿{
+    "name":  "APP_ARTES-BUHO_EMAILING",
+    "uuid":  "rsqknw9bq6jrisiok39jcgfs",
+    "fqdn":  "https://emailing.artesbuhomanagement.com",
+    "git_repository":  "rubencoton/APP_ARTES-BUHO_EMAILING",
+    "git_branch":  "main",
+    "source_type":  "App\\Models\\GithubApp",
+    "auto_deploy_mode":  "github_app_auto",
+    "health_check_enabled":  true,
+    "health_check_path":  "/health",
+    "redirect":  "both",
+    "status":  "running:healthy",
+    "updated_at":  "2026-04-06T11:47:51.000000Z"
+}

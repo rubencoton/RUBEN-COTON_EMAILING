@@ -1,18 +1,23 @@
-# OS
-Thumbs.db
-.DS_Store
-
-# Editor
-.vscode/
-*.swp
-*.swo
-
-# Temp
-*.tmp
-
-# Node
 node_modules/
-
-# Env
 .env
-.env.local
+.env.*
+!.env.example
+npm-debug.log*
+yarn-error.log*
+
+# Datos locales de la app (no se suben al repo)
+data/reports/
+data/store.json
+data/store.json.*
+data/drive-state.json
+data/attachments/
+data/test_crm_*.json
+
+# Artefactos de IDE y SO
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+data/backups/
+logs/
+scripts/cloudflared.exe

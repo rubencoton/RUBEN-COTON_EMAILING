@@ -1,0 +1,849 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aplicaciones de Artes Búho | Envío Masivo</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-nav">
+        <div class="side-brand">
+          <img class="brand-logo" src="/assets/logo-artes-buho.jpg" alt="Logo de Artes Búho" />
+          <div>
+            <p class="badge">APLICACIONES DE ARTES BÚHO</p>
+            <p class="side-brand-note">Plataforma oficial de gestión de emailing.</p>
+          </div>
+        </div>
+
+        <nav class="side-tabs" id="tabs">
+          <button data-tab="dashboard" class="tab is-active" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Inicio
+          </button>
+          <button data-tab="folders" class="tab" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            CRM
+          </button>
+          <button data-tab="campaigns" class="tab" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Crear campaña
+          </button>
+          <button data-tab="campaignStatus" class="tab" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Estado campañas
+          </button>
+          <!-- Tabs ocultos pero activos (accesibles via links internos) -->
+          <button data-tab="templates" class="tab" type="button" style="display:none"></button>
+          <button data-tab="contacts" class="tab" type="button" style="display:none"></button>
+          <button data-tab="segments" class="tab" type="button" style="display:none"></button>
+          <button data-tab="analytics" class="tab" type="button" style="display:none"></button>
+          <button data-tab="workflows" class="tab" type="button" style="display:none"></button>
+          <button data-tab="settings" class="tab" type="button">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configuración
+          </button>
+        </nav>
+
+        <a href="/manual" target="_blank" class="side-manual" title="Abrir manual completo en nueva pestaña">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Manual de uso
+        </a>
+        <div id="localAgentStatus" class="side-agent" data-state="unknown" title="Estado del PC local con Qwen 14B">
+          <span class="side-agent-dot"></span>
+          <span class="side-agent-label">PC: comprobando…</span>
+        </div>
+        <p class="side-dev">Desarrollo técnico: <strong>RUBEN COTON</strong></p>
+      </aside>
+
+      <section class="app-content">
+        <section class="hero">
+          <div class="hero-top">
+            <div>
+              <h1>Envío Masivo</h1>
+              <p class="subtitle">
+                Crea campañas. Envía a tus CRMs. Mira aperturas y clics.
+              </p>
+            </div>
+            <button id="logoutButton" class="logout-btn" type="button">Cerrar sesión</button>
+          </div>
+        </section>
+
+        <section class="grid" id="kpiGrid">
+          <article class="card">
+            <h2>Estado de app</h2>
+            <p id="appStatus" class="value">Cargando...</p>
+          </article>
+          <article class="card">
+            <h2>Base de datos</h2>
+            <p id="dbStatus" class="value">Cargando...</p>
+          </article>
+          <article class="card">
+            <h2>Contactos</h2>
+            <p id="kpiContacts" class="value">--</p>
+          </article>
+          <article class="card">
+            <h2>Campañas</h2>
+            <p id="kpiCampaigns" class="value">--</p>
+          </article>
+          <article class="card">
+            <h2>Motor</h2>
+            <p id="engineStatus" class="value">--</p>
+          </article>
+          <article class="card">
+            <h2>Ritmo / cola</h2>
+            <p id="engineQueue" class="value">--</p>
+          </article>
+        </section>
+
+        <section class="tab-panel is-active" data-panel="dashboard">
+          <div class="dash-grid">
+            <div class="dash-card">
+              <h3>Campañas enviadas</h3>
+              <div class="dash-big-number" id="dashSent">0</div>
+              <p class="muted">emails enviados en total</p>
+            </div>
+            <div class="dash-card">
+              <h3>Tasa de apertura</h3>
+              <div class="dash-big-number" id="dashOpenRate">--%</div>
+              <p class="muted">de los emails abiertos</p>
+            </div>
+            <div class="dash-card">
+              <h3>Tasa de clics</h3>
+              <div class="dash-big-number" id="dashClickRate">--%</div>
+              <p class="muted">de los emails con clic</p>
+            </div>
+            <div class="dash-card">
+              <h3>Rebotes</h3>
+              <div class="dash-big-number" id="dashBounces">0</div>
+              <p class="muted">emails rebotados</p>
+            </div>
+            <div class="dash-card dash-card-wide">
+              <h3>Actividad reciente</h3>
+              <div id="dashActivity" class="dash-activity">Sin actividad reciente.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="contacts">
+          <h2>Contactos</h2>
+          <p class="muted">Los contactos se sincronizan automáticamente desde Google Sheets. No se pueden introducir manualmente.</p>
+          <div class="row">
+            <input id="contactSearch" type="text" placeholder="Buscar por email, nombre, empresa o etiqueta" />
+            <button id="refreshContactsBtn" type="button">Actualizar</button>
+          </div>
+          <table class="table" id="contactsTable">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th>Etiquetas</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="contactsPagination" class="pagination-bar"></div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="folders">
+          <div id="foldersBreadcrumb" class="folders-breadcrumb">
+            <span class="crumb-active">📂 CRMs</span>
+          </div>
+          <h2 id="foldersTitle">Tus CRMs</h2>
+          <p class="muted" id="foldersSubtitle">Haz clic en un CRM para ver sus listas.</p>
+          <div id="foldersGrid" class="folders-grid">Cargando...</div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="templates">
+          <h2>Borradores</h2>
+          <p class="muted" style="margin-top:-8px;margin-bottom:16px">
+            Crea, edita y guarda tus correos estándar. Todos los borradores
+            se pueden usar en campañas; marca como <strong>validado</strong>
+            los que ya has revisado para distinguirlos en el selector.
+          </p>
+          <div class="split-grid">
+            <div>
+              <form id="templateForm" class="mail-form">
+                <input type="hidden" id="templateEditingId" value="" />
+                <div id="templateEditBanner" class="template-edit-banner" style="display:none">
+                  <span>Editando borrador</span>
+                  <button type="button" id="templateEditCancel" class="template-edit-cancel">Cancelar</button>
+                </div>
+                <input name="name" type="text" placeholder="Nombre del borrador" required />
+                <input name="subject" type="text" placeholder="Asunto" required />
+                <div class="template-editor-tabs">
+                  <button type="button" class="tpl-tab" data-tpl-view="ai">🤖 Crear con IA</button>
+                  <button type="button" class="tpl-tab is-active" data-tpl-view="code">Código HTML</button>
+                  <button type="button" class="tpl-tab" data-tpl-view="preview">Vista previa</button>
+                  <button type="button" class="tpl-tab" data-tpl-view="text">Texto plano</button>
+                </div>
+                <div id="tplAiView" class="tpl-view">
+                  <div class="ai-builder-wrap">
+                    <div class="ai-builder-header">
+                      <div>
+                        <h3>Email Builder con IA</h3>
+                        <p class="muted">Genera emails HTML profesionales con inteligencia artificial. Cuando tengas el email listo, haz clic en "Usar en campaña" dentro del builder.</p>
+                      </div>
+                      <span class="ai-builder-badge">Qwen 2.5 14B</span>
+                    </div>
+                    <iframe id="aiBuilderFrame" class="ai-builder-frame" src="about:blank" allow="clipboard-write"></iframe>
+                    <div class="ai-builder-footer">
+                      <button type="button" id="aiBuilderLoadBtn" class="btn-ai-load">Cargar Email Builder</button>
+                      <p id="aiBuilderStatus" class="muted">Comprobando disponibilidad de IA local…</p>
+                    </div>
+                  </div>
+                </div>
+                <div id="tplCodeView" class="tpl-view is-active">
+                  <div class="html-dropzone" data-html-dropzone="tpl">
+                    <div class="tpl-code-toolbar">
+                      <label for="tplHtmlFile" class="tpl-upload-btn" title="Sube un archivo .html o arrástralo aquí">
+                        📎 Adjuntar archivo HTML
+                      </label>
+                      <input type="file" id="tplHtmlFile" accept=".html,.htm,text/html" style="display:none">
+                      <span id="tplHtmlFileInfo" class="tpl-upload-info muted">o arrastra el archivo aquí</span>
+                    </div>
+                    <textarea id="tplHtmlEditor" name="html" rows="14" placeholder="Pega aquí tu código HTML… o arrastra un archivo .html sobre esta zona"></textarea>
+                  </div>
+                </div>
+                <div id="tplPreviewView" class="tpl-view">
+                  <div class="tpl-preview-frame-wrap">
+                    <div class="tpl-preview-toolbar">
+                      <button type="button" class="tpl-device-btn is-active" data-width="100%">Desktop</button>
+                      <button type="button" class="tpl-device-btn" data-width="375px">Mobile</button>
+                    </div>
+                    <div class="tpl-preview-container" id="tplPreviewContainer">
+                      <iframe id="tplPreviewFrame" class="tpl-preview-frame" sandbox="allow-same-origin"></iframe>
+                    </div>
+                  </div>
+                </div>
+                <div id="tplTextView" class="tpl-view">
+                  <textarea name="text" rows="14" placeholder="Texto plano (alternativa sin HTML)"></textarea>
+                </div>
+                <button type="submit" id="templateSubmitBtn">Guardar borrador</button>
+                <p id="templateResult" class="mail-form-result">-</p>
+              </form>
+            </div>
+            <div>
+              <h3>Tus borradores</h3>
+              <p class="muted" style="margin-top:-4px;margin-bottom:10px;font-size:0.85rem">
+                <span class="status-pill status-borrador">borrador</span> Pendiente de revisión ·
+                <span class="status-pill status-validado">validado</span> Ya revisado (se puede usar igualmente en campañas)
+              </p>
+              <table class="table" id="templatesTable">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Asunto</th>
+                    <th>Estado</th>
+                    <th>Actualizada</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Modal preview borrador -->
+        <div id="tplPreviewModal" class="tpl-preview-modal" style="display:none">
+          <div class="tpl-preview-modal-content">
+            <div class="tpl-preview-modal-header">
+              <div>
+                <h3 id="tplPreviewModalTitle">Borrador</h3>
+                <p class="muted" style="margin:4px 0 0 0;font-size:0.9rem">
+                  <strong>Asunto:</strong> <span id="tplPreviewModalSubject">—</span>
+                  &nbsp;&nbsp;
+                  <span id="tplPreviewModalStatus" class="status-pill status-borrador">borrador</span>
+                </p>
+              </div>
+              <button id="tplPreviewModalClose" class="tpl-preview-modal-close" title="Cerrar (ESC)">✕</button>
+            </div>
+            <iframe id="tplPreviewModalFrame" class="tpl-preview-modal-frame" sandbox="allow-same-origin" srcdoc=""></iframe>
+          </div>
+        </div>
+
+        <section class="panel tab-panel" data-panel="segments">
+          <h2>Segmentos</h2>
+          <div class="split-grid">
+            <form id="segmentForm" class="mail-form">
+              <input name="name" type="text" placeholder="Nombre de segmento" required />
+              <select name="field" required>
+                <option value="status">status</option>
+                <option value="tags">tags</option>
+                <option value="company">company</option>
+                <option value="neverOpened">neverOpened</option>
+                <option value="neverClicked">neverClicked</option>
+              </select>
+              <select name="op" required>
+                <option value="equals">equals</option>
+                <option value="contains">contains</option>
+                <option value="is_empty">is_empty</option>
+              </select>
+              <input name="value" type="text" placeholder="Valor (vacío si is_empty)" />
+              <button type="submit">Crear segmento</button>
+              <p id="segmentResult" class="mail-form-result">-</p>
+            </form>
+            <table class="table" id="segmentsTable">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Regla</th>
+                  <th>Contactos</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="campaigns">
+          <h2>Crear campaña</h2>
+          <p class="muted">Rellena los 2 pasos y guarda. Después envías desde "Estado campañas".</p>
+
+          <div class="campaign-wizard">
+            <!-- PASO 1: Destinatarios (CRM + Lista) -->
+            <div class="wizard-step">
+              <div class="wizard-step-header">
+                <span class="wizard-step-num">1</span>
+                <h3>A quién enviar</h3>
+              </div>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Carpeta (CRM)</label>
+              <select id="campaignCrmSelect" class="wizard-select" style="margin-bottom:12px">
+                <option value="">— Selecciona carpeta —</option>
+              </select>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Lista</label>
+              <select name="segmentId" id="campaignSegmentSelect" class="wizard-select" disabled>
+                <option value="">— Primero selecciona carpeta —</option>
+              </select>
+              <p id="campaignRecipientCount" class="wizard-hint" style="margin-top:8px">Selecciona carpeta y lista para ver los destinatarios.</p>
+            </div>
+
+            <!-- PASO 2: El email (con editor HTML + preview) -->
+            <div class="wizard-step">
+              <div class="wizard-step-header">
+                <span class="wizard-step-num">2</span>
+                <h3>El email</h3>
+              </div>
+              <form id="campaignForm" class="mail-form">
+                <input name="name" type="text" placeholder="Nombre interno de la campaña" required />
+                <input name="subject" type="text" placeholder="Asunto del email (lo que ve el destinatario)" required />
+
+                <!-- Selector de modo de composición -->
+                <div class="mode-selector">
+                  <div class="mode-selector-label">¿Cómo quieres crear el email?</div>
+                  <div class="mode-tabs">
+                    <button type="button" class="mode-tab is-active" data-mode="gmail">
+                      <span class="mode-ico">✍️</span>
+                      <span class="mode-txt"><strong>Editor Gmail</strong><br><small>Escribir y formatear</small></span>
+                    </button>
+                    <button type="button" class="mode-tab" data-mode="ai-form">
+                      <span class="mode-ico">📝</span>
+                      <span class="mode-txt"><strong>IA · Formulario</strong><br><small>Rellena campos</small></span>
+                    </button>
+                    <button type="button" class="mode-tab" data-mode="ai-chat">
+                      <span class="mode-ico">💬</span>
+                      <span class="mode-txt"><strong>IA · Chat</strong><br><small>Conversación y retoques</small></span>
+                    </button>
+                    <button type="button" class="mode-tab" data-mode="html">
+                      <span class="mode-ico">📋</span>
+                      <span class="mode-txt"><strong>Pegar HTML</strong><br><small>Ya lo tengo hecho</small></span>
+                    </button>
+                    <button type="button" class="mode-tab" data-mode="preview">
+                      <span class="mode-ico">👁</span>
+                      <span class="mode-txt"><strong>Vista previa</strong><br><small>Cómo se verá</small></span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- MODO 1: Editor tipo Gmail (WYSIWYG) -->
+                <div id="modeGmail" class="camp-mode is-active">
+                  <div class="gmail-toolbar">
+                    <select class="gm-font" data-cmd="fontName" title="Tipografía">
+                      <option value="Arial">Arial</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Times New Roman">Times</option>
+                      <option value="Courier New">Courier</option>
+                      <option value="Tahoma">Tahoma</option>
+                      <option value="Trebuchet MS">Trebuchet</option>
+                      <option value="Helvetica">Helvetica</option>
+                    </select>
+                    <select class="gm-size" data-cmd="fontSize" title="Tamaño">
+                      <option value="1">10</option>
+                      <option value="2">12</option>
+                      <option value="3" selected>14</option>
+                      <option value="4">16</option>
+                      <option value="5">18</option>
+                      <option value="6">24</option>
+                      <option value="7">32</option>
+                    </select>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn" data-cmd="bold" title="Negrita"><b>B</b></button>
+                    <button type="button" class="gm-btn" data-cmd="italic" title="Cursiva"><i>I</i></button>
+                    <button type="button" class="gm-btn" data-cmd="underline" title="Subrayado"><u>U</u></button>
+                    <button type="button" class="gm-btn" data-cmd="strikeThrough" title="Tachado"><s>S</s></button>
+                    <span class="gm-sep"></span>
+                    <input type="color" class="gm-color" data-cmd="foreColor" value="#1a1a1a" title="Color texto">
+                    <input type="color" class="gm-color" data-cmd="hiliteColor" value="#ffff00" title="Color fondo">
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn" data-cmd="justifyLeft" title="Izquierda">⇤</button>
+                    <button type="button" class="gm-btn" data-cmd="justifyCenter" title="Centrado">≡</button>
+                    <button type="button" class="gm-btn" data-cmd="justifyRight" title="Derecha">⇥</button>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn" data-cmd="insertUnorderedList" title="Lista">• —</button>
+                    <button type="button" class="gm-btn" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn" id="gmLinkBtn" title="Insertar enlace">🔗</button>
+                    <button type="button" class="gm-btn" id="gmImageBtn" title="Insertar imagen">🖼</button>
+                    <button type="button" class="gm-btn" data-cmd="removeFormat" title="Quitar formato">✕ formato</button>
+                  </div>
+                  <div id="gmailEditor" class="gmail-editor" contenteditable="true" spellcheck="true">
+                    <p>Escribe aquí tu email como si lo estuvieras redactando en Gmail…</p>
+                  </div>
+                </div>
+
+                <!-- MODO 2: IA Formulario (reusa el modal aiBuildBtn) -->
+                <div id="modeAiForm" class="camp-mode">
+                  <div class="mode-empty">
+                    <div class="mode-empty-ico">🤖</div>
+                    <h3>Generar email con IA — Formulario</h3>
+                    <p>Rellena un formulario guiado con audiencia, objetivo, oferta, vídeo y foto. La IA genera el HTML completo automáticamente usando la cascada de 9 cerebros.</p>
+                    <button type="button" id="aiBuildBtn" class="mode-cta">
+                      ⚡ Abrir formulario IA
+                    </button>
+                    <p class="mode-hint">El resultado se guardará automáticamente en este editor y podrás verlo en Vista previa.</p>
+                  </div>
+                </div>
+
+                <!-- MODO 3: IA Chat con selección -->
+                <div id="modeAiChat" class="camp-mode">
+                  <div class="ai-chat-layout">
+                    <div class="ai-chat-preview">
+                      <div class="ai-chat-preview-bar">
+                        <span>🖱 Selecciona el texto del email que quieras modificar y escribe en el chat</span>
+                      </div>
+                      <iframe id="aiChatFrame" class="ai-chat-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+                    </div>
+                    <div class="ai-chat-panel">
+                      <div class="ai-chat-header">💬 Chat con IA</div>
+                      <div id="aiChatHistory" class="ai-chat-history">
+                        <div class="ai-chat-msg ai-chat-bot">
+                          <strong>🤖 Asistente IA</strong>
+                          <p>Hola. Puedo ayudarte a redactar o modificar este email. Dime qué quieres hacer:</p>
+                          <ul>
+                            <li>"Crea un email para festivales de música urbana."</li>
+                            <li>Selecciona un párrafo y dime "hazlo más corto" o "cámbialo a tono formal".</li>
+                            <li>"Añade un botón rojo con el texto Reservar fecha."</li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="ai-chat-selected" id="aiChatSelected" style="display:none">
+                        <strong>🎯 Seleccionado:</strong>
+                        <span id="aiChatSelectedText"></span>
+                      </div>
+                      <div class="ai-chat-input-wrap">
+                        <textarea id="aiChatInput" placeholder="Escribe tu instrucción y pulsa Enter…" rows="2"></textarea>
+                        <button type="button" id="aiChatSendBtn" class="ai-chat-send">Enviar ⚡</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MODO 4: Pegar HTML propio -->
+                <div id="modeHtml" class="camp-mode">
+                  <p class="mode-hint" style="margin-bottom:8px">Pega aquí tu HTML ya maquetado, <strong>adjunta un archivo .html</strong> o <strong>arrástralo a esta zona</strong>. Incluye inline-styles para mejor compatibilidad con clientes de correo.</p>
+                  <div class="html-dropzone" data-html-dropzone="camp">
+                    <div class="tpl-code-toolbar">
+                      <label for="campHtmlFile" class="tpl-upload-btn" title="Sube un archivo .html o arrástralo aquí">
+                        📎 Adjuntar archivo HTML
+                      </label>
+                      <input type="file" id="campHtmlFile" accept=".html,.htm,text/html" style="display:none">
+                      <span id="campHtmlFileInfo" class="tpl-upload-info muted">o arrastra el archivo aquí</span>
+                    </div>
+                    <textarea id="campHtmlEditor" name="html" rows="18" placeholder="<!DOCTYPE html>&#10;<html>&#10;  <body>…</body>&#10;</html>&#10;&#10;También puedes arrastrar un archivo .html sobre esta zona."></textarea>
+                  </div>
+                </div>
+
+                <!-- MODO 5: Vista previa -->
+                <div id="modePreview" class="camp-mode">
+                  <div class="tpl-preview-frame-wrap">
+                    <div class="tpl-preview-toolbar">
+                      <button type="button" class="camp-device-btn is-active" data-width="100%">🖥 Desktop</button>
+                      <button type="button" class="camp-device-btn" data-width="375px">📱 Móvil</button>
+                    </div>
+                    <div class="tpl-preview-container">
+                      <iframe id="campPreviewFrame" class="tpl-preview-frame" sandbox="allow-same-origin"></iframe>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Textarea oculto para texto plano (se rellena automáticamente) -->
+                <textarea name="text" style="display:none"></textarea>
+
+                <!-- Adjuntos (max 10 MB total) -->
+                <div style="margin-top:16px;padding:14px;border:1px solid var(--panel-border);border-radius:8px;background:#f9fafb">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <strong style="font-size:13px">📎 Adjuntos</strong>
+                    <span id="attachTotalSize" class="muted" style="font-size:12px">0 MB / 10 MB</span>
+                  </div>
+                  <input type="file" id="campAttachInput" style="display:none" multiple />
+                  <button type="button" id="campAttachBtn" class="btn-secondary" style="width:100%;padding:10px;border:2px dashed #d1d5db;background:#fff;border-radius:8px;cursor:pointer;font-size:13px">
+                    + Añadir archivos (imágenes, PDF, docs…)
+                  </button>
+                  <ul id="campAttachList" style="list-style:none;padding:0;margin:10px 0 0;font-size:12px"></ul>
+                  <p class="muted" style="font-size:11px;margin-top:6px">Máximo 10 MB total. Las imágenes se comprimen automáticamente si superan 1 MB. Puedes añadirlos AHORA: se subirán automáticamente al guardar o lanzar la campaña.</p>
+                </div>
+
+                <div class="camp-actions">
+                  <button type="submit" name="action" value="draft" class="btn-draft">
+                    💾 <strong>Guardar como borrador</strong>
+                    <small>No envía. Podrás lanzarla luego desde "Estado campañas".</small>
+                  </button>
+                  <button type="submit" name="action" value="send" class="btn-launch">
+                    🚀 <strong>Lanzar campaña ahora</strong>
+                    <small>Guarda y empieza a enviar ya a los destinatarios.</small>
+                  </button>
+                </div>
+                <p id="campaignResult" class="mail-form-result">-</p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ESTADO CAMPAÑAS -->
+        <section class="panel tab-panel" data-panel="campaignStatus">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="margin:0 0 4px 0">Estado campañas</h2>
+              <p class="muted" style="margin:0">Todas tus campañas creadas. Pulsa "Enviar" para lanzarlas.</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a href="/campaigns/report/executive" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#D62828,#a81117);color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+                📊 Ver informe ejecutivo
+              </a>
+              <a href="/campaigns/report/executive?autoprint=1" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#F4B400;color:#a81117;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+                🖨 Imprimir / PDF
+              </a>
+              <a href="/api/campaigns/download-all" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#7a0b10;color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+                ⬇ Histórico ZIP
+              </a>
+              <button type="button" id="btn-sync-drive" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#a81117;border:2px solid #a81117;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+                ☁ Sincronizar al Drive
+              </button>
+              <button type="button" id="btn-report-weekly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#7a0b10;border:2px solid #F4B400;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+                📅 Generar semanal
+              </button>
+              <button type="button" id="btn-report-monthly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#7a0b10;border:2px solid #F4B400;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+                🗓 Generar mensual
+              </button>
+            </div>
+          </div>
+          <div style="margin:12px 0 18px;display:none">
+            <span id="seedDemoStatus" class="muted"></span>
+          </div>
+          <table class="table" id="campaignsTable">
+            <thead>
+              <tr>
+                <th>Campaña</th>
+                <th>Estado</th>
+                <th>Destinatarios</th>
+                <th>Enviados</th>
+                <th>Aperturas</th>
+                <th>Clics</th>
+                <th>Respuestas</th>
+                <th>Rebotes</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <p class="muted small-gap">Los emails se envían al ritmo configurado en el motor (ver tarjeta "Ritmo / cola"). El motor puede pausarse en Configuración.</p>
+        </section>
+
+        <section class="panel tab-panel" data-panel="analytics">
+          <h2>Analítica de campaña</h2>
+          <div class="row">
+            <select id="analyticsCampaignSelect"></select>
+            <button id="loadAnalyticsBtn" type="button">Ver analítica</button>
+            <button id="simulateOpenBtn" type="button">Simular aperturas</button>
+            <button id="simulateClickBtn" type="button">Simular clics</button>
+            <button id="simulateUnsubBtn" type="button">Simular bajas</button>
+          </div>
+          <pre id="analyticsJson" class="json-box">Selecciona una campaña.</pre>
+        </section>
+
+        <section class="panel tab-panel" data-panel="workflows">
+          <h2>Automatizaciones</h2>
+          <div class="split-grid">
+            <form id="workflowForm" class="mail-form">
+              <input name="name" type="text" placeholder="Nombre de workflow" required />
+              <select name="type" required>
+                <option value="no_open_after_hours">No abrió tras X horas</option>
+                <option value="opened_no_click_after_hours">Abrió y no hizo clic tras X horas</option>
+              </select>
+              <input name="delayHours" type="number" min="1" value="24" required />
+              <select name="templateId" id="workflowTemplateSelect"></select>
+              <input name="subjectOverride" type="text" placeholder="Asunto follow-up (opcional)" />
+              <textarea name="textOverride" rows="4" placeholder="Texto follow-up (opcional)"></textarea>
+              <button type="submit">Crear workflow</button>
+              <button id="runWorkflowsBtn" type="button">Ejecutar workflows ahora</button>
+              <p id="workflowResult" class="mail-form-result">-</p>
+            </form>
+            <div>
+              <table class="table" id="workflowsTable">
+                <thead>
+                  <tr>
+                    <th>Workflow</th>
+                    <th>Tipo</th>
+                    <th>Delay</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <pre id="workflowRunsJson" class="json-box">Sin ejecuciones recientes.</pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-panel="settings">
+          <h2>Configuración técnica</h2>
+          <p class="muted">
+            Controla el canal de envío, valida DNS clave y manda una prueba sin salir del panel.
+          </p>
+          <div class="split-grid">
+            <div class="mail-form">
+              <h3>Checklist de producción</h3>
+              <div class="row">
+                <button id="refreshChecklistBtn" type="button">Actualizar checklist</button>
+                <button id="testProviderBtn" type="button">Probar proveedor</button>
+              </div>
+              <div class="row">
+                <button id="pauseEngineBtn" type="button">Pausar motor</button>
+                <button id="resumeEngineBtn" type="button">Reanudar motor</button>
+              </div>
+              <p id="settingsActionResult" class="mail-form-result">-</p>
+              <pre id="setupChecklistJson" class="json-box">Cargando checklist...</pre>
+            </div>
+
+            <form id="quickSendForm" class="mail-form">
+              <h3>Envío de prueba</h3>
+              <input id="quickSendTo" name="to" type="email" placeholder="Email destino" required />
+              <input id="quickSendSubject" name="subject" type="text" placeholder="Asunto de prueba" required />
+              <textarea id="quickSendText" name="text" rows="5" placeholder="Texto de prueba" required></textarea>
+              <button type="submit">Enviar prueba ahora</button>
+              <p class="muted small-gap">Usa el ritmo del motor (ej. 5/min).</p>
+              <p id="quickSendResult" class="mail-form-result">-</p>
+            </form>
+          </div>
+        </section>
+
+        <!-- AI status panel -->
+        <section class="panel tab-panel" data-panel="settings" style="margin-top:0">
+          <h2>🤖 Inteligencia artificial (cascada)</h2>
+          <p class="muted">3 IAs en cascada. Si una falla, la siguiente toma el relevo.</p>
+          <div id="aiStatusList" class="ai-status-list">Cargando estado...</div>
+          <div class="row" style="margin-top:14px">
+            <button id="aiRefreshBtn" type="button">Refrescar estado</button>
+            <button id="aiTestBtn" type="button" class="btn-secondary">Generar email de prueba</button>
+          </div>
+          <p id="aiTestResult" class="mail-form-result">-</p>
+          <pre id="aiTestJson" class="json-box" style="display:none"></pre>
+        </section>
+
+        <!-- Sheets Sync panel -->
+        <section class="panel tab-panel" data-panel="settings" id="sheetsSyncPanel" style="margin-top:0">
+          <h2>Sincronización CRM (Google Sheets)</h2>
+          <p class="muted">Lee automáticamente tus hojas de cálculo CRM para alimentar la base de contactos. Solo lectura.</p>
+          <div class="row">
+            <button id="sheetsSyncBtn" type="button">Sincronizar CRMs ahora</button>
+            <button id="sheetsStatusBtn" type="button" class="btn-secondary">Ver estado</button>
+          </div>
+          <p id="sheetsSyncResult" class="mail-form-result">-</p>
+
+          <div style="margin:18px 0 12px;padding:14px;background:#fff8e1;border:1px solid #ffd84d;border-radius:8px">
+            <h3 style="margin:0 0 8px;color:#a81117;font-size:15px">📋 CRMs configurados</h3>
+            <div id="sheetsList" style="font-size:13px;line-height:1.8">Cargando…</div>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+              <input id="newSheetUrl" type="text" placeholder="URL o ID del Google Sheet" style="flex:1;min-width:280px;padding:8px;border:1px solid #ccc;border-radius:6px"/>
+              <button id="addSheetBtn" type="button" class="mini-btn" style="background:#a81117;color:#fff">➕ Añadir CRM</button>
+            </div>
+          </div>
+
+          <p class="muted" style="font-size:12px;margin-top:6px">La sincronización periódica se ejecuta automáticamente cada <strong id="syncIntervalHint">2h</strong>.</p>
+          <pre id="sheetsSyncJson" class="json-box">Sin sincronizaciones todavía.</pre>
+        </section>
+
+        <footer class="corp-footer">
+          <p>APLICACIONES DE ARTES BÚHO | ENVÍO MASIVO | Sistema construido por RUBEN COTON.</p>
+        </footer>
+      </section>
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- MODAL: Generar email con IA (réplica de ARTES-BUHO_HTML)     -->
+    <!-- ============================================================ -->
+    <div id="aiModal" class="ai-modal" aria-hidden="true">
+      <div class="ai-modal-backdrop" data-ai-close></div>
+      <div class="ai-modal-dialog" role="dialog" aria-labelledby="aiModalTitle">
+        <div class="ai-modal-header">
+          <div>
+            <span class="ai-modal-badge">🤖 Cascada 9 IAs</span>
+            <h2 id="aiModalTitle">Generar email con IA</h2>
+            <p class="ai-modal-sub">La IA adapta el tono, asunto, diseño y contenido automáticamente.</p>
+          </div>
+          <button type="button" class="ai-modal-close" data-ai-close aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="ai-modal-body">
+          <!-- PASO 1 -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">1</span>¿A quién va dirigido? <span class="ai-req">*</span></div>
+            <p class="ai-hint">Perfil del destinatario. La IA adapta el tono, el saludo y el contenido.</p>
+            <input type="text" id="aiAudiencia" placeholder="Ej: Concejales de festejos de Castilla y León" />
+          </div>
+
+          <!-- PASO 2 -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">2</span>¿Qué quieres conseguir? <span class="ai-req">*</span></div>
+            <p class="ai-hint">Elige qué quieres que pase cuando lean tu correo. La IA lo adapta todo.</p>
+            <select id="aiObjetivo">
+              <option value="">Elige tu objetivo…</option>
+              <optgroup label="QUIERO QUE ME CONTRATEN PARA…">
+                <option value="fiestas_patronales">Fiestas patronales (pueblo, ciudad o municipio)</option>
+                <option value="festival">Un festival de música</option>
+                <option value="boda">Una boda o fiesta privada</option>
+                <option value="corporativo">Un evento de empresa (cena, convención, gala…)</option>
+                <option value="discoteca">Ser DJ residente en una sala o discoteca</option>
+                <option value="deportivo">Un evento deportivo (club, liga, partido…)</option>
+              </optgroup>
+              <optgroup label="QUIERO QUEDAR EN PERSONA PARA…">
+                <option value="entrevista">Una reunión o entrevista presencial</option>
+                <option value="presentacion">Presentar mi propuesta cara a cara</option>
+                <option value="colaboracion">Proponer una colaboración profesional</option>
+              </optgroup>
+              <optgroup label="QUIERO SALIR EN…">
+                <option value="radio">La radio (entrevista o sesión en directo)</option>
+                <option value="prensa">Prensa escrita o un medio digital</option>
+                <option value="tv">La televisión (entrevista o actuación)</option>
+                <option value="podcast">Un podcast como invitado</option>
+                <option value="rrss_media">Redes sociales de un medio o influencer</option>
+              </optgroup>
+              <optgroup label="QUIERO INFORMAR SOBRE…">
+                <option value="presentar_marca">Quién soy y qué hago (presentación general)</option>
+                <option value="nuevo_proyecto">Un proyecto nuevo que estoy lanzando</option>
+                <option value="booking">Mis servicios de booking y management de artistas</option>
+              </optgroup>
+              <option value="otro">Otro objetivo (lo escribo yo abajo)</option>
+            </select>
+            <div id="aiObjetivoDesc" class="ai-obj-desc" style="display:none"></div>
+            <textarea id="aiObjetivoTexto" placeholder="Describe aquí qué quieres conseguir…" style="display:none;margin-top:10px"></textarea>
+          </div>
+
+          <!-- PASO 3 -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">3</span>¿Qué vamos a vender? <span class="ai-req">*</span></div>
+            <p class="ai-hint">Describe el producto, artista o servicio concreto. La IA lo usará como eje.</p>
+            <textarea id="aiQueVendemos" placeholder="Ej: DJ RUBEN COTON para fiestas patronales 2026, con repertorio de mashups y experiencia en plazas de más de 5.000 personas…"></textarea>
+          </div>
+
+          <!-- PASO 4 -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">4</span>Vídeo de YouTube <span class="ai-opt">(opcional)</span></div>
+            <p class="ai-hint">Pega el enlace de YouTube. Si lo dejas vacío, el email se genera sin vídeo.</p>
+            <input type="text" id="aiVideoLink" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+
+          <!-- PASO 5 -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">5</span>Foto desde Google Drive <span class="ai-opt">(opcional)</span></div>
+            <p class="ai-hint">Pega el enlace del archivo en Google Drive (debe estar compartido).</p>
+            <input type="text" id="aiFotoLink" placeholder="https://drive.google.com/file/d/.../view" />
+          </div>
+
+          <!-- PASO 6: Tono -->
+          <div class="ai-card">
+            <div class="ai-card-title"><span class="ai-step">6</span>Tono del mensaje <span class="ai-opt">(opcional)</span></div>
+            <select id="aiTono">
+              <option value="profesional cercano">Profesional cercano (por defecto)</option>
+              <option value="profesional formal">Profesional formal</option>
+              <option value="cercano desenfadado">Cercano y desenfadado</option>
+              <option value="urgente directo">Urgente y directo</option>
+              <option value="creativo inspirador">Creativo e inspirador</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ai-modal-footer">
+          <div id="aiGenStatus" class="ai-gen-status"></div>
+          <div id="aiProgressWrap" class="ai-progress" style="display:none">
+            <div class="ai-progress-head">
+              <span id="aiProgressPhase">🧠 Analizando…</span>
+              <span id="aiProgressPct">0%</span>
+            </div>
+            <div class="ai-progress-bar"><div id="aiProgressFill" class="ai-progress-fill"></div></div>
+          </div>
+          <div class="ai-modal-actions">
+            <button type="button" class="ai-btn-secondary" data-ai-close>Cancelar</button>
+            <button type="button" id="aiGenerarBtn" class="ai-btn-primary">
+              <span>⚡</span> Generar email con IA
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Enviar Informe -->
+    <div id="sendReportModal" class="ai-modal" aria-hidden="true">
+      <div class="ai-modal-backdrop" data-sr-close></div>
+      <div class="ai-modal-dialog" role="dialog" aria-labelledby="sendReportTitle" style="max-width:640px">
+        <div class="ai-modal-header">
+          <div>
+            <span class="ai-modal-badge" style="background:#ffd84d;color:#a81117">✉️ Enviar informe</span>
+            <h2 id="sendReportTitle" class="ai-modal-title">Compartir informe de campaña</h2>
+            <p class="ai-modal-sub">Envía el informe ejecutivo a cliente, CEO o equipo. Incluye resumen y enlace al informe completo.</p>
+          </div>
+          <button type="button" class="ai-modal-close" data-sr-close aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="ai-modal-body">
+          <div class="ai-card">
+            <label class="ai-card-label" for="srCampaignName">Campaña</label>
+            <input id="srCampaignName" type="text" readonly style="background:#f4f4f4"/>
+          </div>
+
+          <div class="ai-card">
+            <label class="ai-card-label" for="srRecipients">Destinatarios *</label>
+            <textarea id="srRecipients" rows="3" placeholder="cliente@empresa.com, ceo@empresa.com"></textarea>
+            <small class="muted">Separa varios emails con coma, punto y coma, espacio o salto de línea.</small>
+          </div>
+
+          <div class="ai-card">
+            <label class="ai-card-label" for="srSubject">Asunto (opcional)</label>
+            <input id="srSubject" type="text" placeholder="Por defecto: Informe de campaña: [nombre]"/>
+          </div>
+
+          <div class="ai-card">
+            <label class="ai-card-label" for="srMessage">Mensaje personalizado (opcional)</label>
+            <textarea id="srMessage" rows="4" placeholder="Hola, te adjunto el informe de la última campaña..."></textarea>
+          </div>
+        </div>
+
+        <div class="ai-modal-footer">
+          <div id="srStatus" class="ai-gen-status"></div>
+          <div class="ai-modal-actions">
+            <button type="button" class="ai-btn-secondary" data-sr-close>Cancelar</button>
+            <button type="button" id="srSendBtn" class="ai-btn-primary">
+              <span>✉️</span> Enviar informe
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>

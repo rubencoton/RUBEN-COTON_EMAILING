@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe de Campaña · ARTES BÚHO MANAGEMENT</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Inter", "Segoe UI", -apple-system, Arial, sans-serif;
+  color: #1a1a1a;
+  background: #f4f4f6;
+  line-height: 1.6;
+  font-size: 11pt;
+  padding: 24px;
+  -webkit-font-smoothing: antialiased;
+  /* Impresión: fuerza conservar los colores corporativos (rojo / amarillo) */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.container { max-width: 880px; margin: 0 auto; }
+
+/* ========== CORPORATIVO: VARIABLES ========== */
+:root {
+  --rojo: #a81117;
+  --rojo-2: #D62828;
+  --rojo-soft: #fff1f1;
+  --amarillo: #F4B400;
+  --negro: #1a1a1a;
+  --gris-1: #f9fafb;
+  --gris-2: #e5e7eb;
+  --gris-3: #6b7280;
+}
+
+/* ========== PORTADA CORPORATIVA (rojo / amarillo / blanco) ========== */
+.cover {
+  position: relative;
+  /* Se ajusta a página A4 útil (sin desbordar al imprimir) */
+  min-height: calc(100vh - 60px);
+  padding: 56px 56px 48px;
+  background: linear-gradient(145deg, #D62828 0%, #a81117 55%, #7a0b10 100%);
+  color: #fff;
+  border-radius: 18px;
+  margin-bottom: 40px;
+  box-shadow: 0 18px 50px rgba(168,17,23,0.35);
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.cover::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 10px;
+  background: #F4B400;
+}
+.cover::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 15% 85%, rgba(244,180,0,0.18), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(255,255,255,0.12), transparent 55%);
+  pointer-events: none;
+}
+.cover-inner { position: relative; z-index: 1; }
+.cover-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.cover-logo {
+  width: 100px; height: 100px;
+  border-radius: 14px;
+  background: #fff;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.cover-brand { flex: 1; }
+.cover-brand h1 {
+  color: #fff !important;
+  font-size: 28pt;
+  letter-spacing: 6px;
+  margin: 0;
+  border: none; padding: 0;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.cover-brand .tagline {
+  color: var(--amarillo);
+  font-size: 11pt;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.cover-middle { text-align: center; padding: 28px 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.cover-doctype {
+  display: inline-block;
+  background: rgba(244,180,0,0.15);
+  border: 1.5px solid var(--amarillo);
+  color: var(--amarillo);
+  padding: 8px 24px;
+  border-radius: 30px;
+  font-size: 10pt;
+  font-weight: 800;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+.cover-camp {
+  font-size: 24pt;
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 14px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.cover-subject {
+  font-size: 12pt;
+  opacity: 0.92;
+  font-style: italic;
+  max-width: 640px;
+  margin: 0 auto 36px;
+  padding: 12px 20px;
+  background: rgba(255,255,255,0.05);
+  border-left: 3px solid var(--amarillo);
+  border-radius: 4px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.cover-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.cover-meta-item {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: left;
+}
+.cover-meta-item .lbl {
+  font-size: 9pt;
+  color: var(--amarillo);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+.cover-meta-item .val {
+  font-size: 12pt;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.cover-footer {
+  border-top: 1px solid rgba(255,255,255,0.15);
+  padding-top: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9.5pt;
+  opacity: 0.85;
+}
+.cover-footer .conf {
+  background: var(--rojo-2);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: 8.5pt;
+  text-transform: uppercase;
+}
+
+/* ========== CABECERA PÁGINAS INTERNAS (ROJO corporativo) ========== */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: var(--rojo-2);
+  color: #fff;
+  border-radius: 10px;
+  margin-bottom: 22px;
+  border-left: 6px solid var(--amarillo);
+}
+.page-header img { width: 40px; height: 40px; border-radius: 8px; background: #fff; padding: 3px; }
+.page-header .ph-title { font-size: 13pt; font-weight: 800; letter-spacing: 1px; }
+.page-header .ph-sub { font-size: 9pt; color: var(--amarillo); letter-spacing: 2px; text-transform: uppercase; }
+.page-header .ph-right { margin-left: auto; font-size: 9.5pt; opacity: 0.92; text-align: right; }
+
+/* ========== ÍNDICE ========== */
+.toc {
+  background: #fff;
+  border-radius: 14px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  overflow: hidden;
+  page-break-after: always;
+}
+.toc-head {
+  background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+  color: #fff;
+  padding: 24px 30px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 5px solid var(--amarillo);
+}
+.toc-head h2 { color: #fff; font-size: 18pt; margin: 0; border: none; padding: 0; display: flex; align-items: center; gap: 14px; }
+.toc-head .toc-meta { margin-left: auto; color: var(--amarillo); font-size: 9.5pt; letter-spacing: 2px; font-weight: 800; }
+.toc-list { padding: 20px 30px 28px; }
+.toc-list ol { margin: 0; padding: 0; list-style: none; counter-reset: toc; }
+.toc-list li { margin: 8px 0; counter-increment: toc; }
+.toc-list a {
+  display: flex; align-items: center; gap: 14px;
+  color: #1a1a1a; text-decoration: none;
+  font-weight: 600; font-size: 11.5pt;
+  padding: 12px 14px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  border-bottom: 1px dashed var(--gris-2);
+}
+.toc-list a:hover { background: var(--rojo-soft); color: var(--rojo); padding-left: 20px; }
+.toc-list a::before {
+  content: counter(toc, decimal-leading-zero);
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; padding: 4px 10px;
+  background: var(--rojo); color: #fff;
+  border-radius: 6px;
+  font-size: 10pt; font-weight: 800;
+  flex-shrink: 0;
+}
+.toc-list a .dots { flex: 1; border-bottom: 2px dotted #ccc; margin: 0 10px; transform: translateY(-4px); }
+.toc-list a .pg { color: var(--rojo); font-weight: 800; font-size: 10pt; }
+
+/* ========== SECCIONES ========== */
+.section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 34px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+h1 {
+  color: var(--rojo);
+  font-size: 20pt;
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 4px solid var(--rojo-2);
+  display: flex; align-items: center; gap: 16px;
+  font-weight: 900;
+}
+h1 .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, var(--rojo-2), var(--rojo));
+  color: #fff; border-radius: 12px;
+  font-size: 16pt; font-weight: 900;
+  box-shadow: 0 4px 10px rgba(168,17,23,0.3);
+  letter-spacing: 0;
+}
+h2 { color: var(--rojo); font-size: 14pt; margin: 22px 0 12px; padding-left: 12px; border-left: 4px solid var(--amarillo); }
+h3 { color: #1a1a1a; font-size: 12pt; margin: 16px 0 8px; font-weight: 800; }
+p { margin: 8px 0; }
+
+.intro {
+  font-size: 11pt;
+  color: #555;
+  font-style: italic;
+  margin-bottom: 14px;
+}
+
+/* ========== METADATOS ========== */
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin: 16px 0;
+}
+.meta-item {
+  background: var(--gris-1);
+  border-left: 4px solid var(--rojo-2);
+  padding: 14px 18px;
+  border-radius: 8px;
+}
+.meta-item .lbl { font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: var(--gris-3); font-weight: 800; }
+.meta-item .val { font-size: 12pt; color: #1a1a1a; margin-top: 4px; font-weight: 700; word-break: break-word; }
+
+/* ========== KPIS ========== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 16px 0;
+}
+.kpi {
+  background: #fff;
+  border: 1px solid var(--gris-2);
+  border-top: 5px solid var(--rojo-2);
+  padding: 18px 14px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: transform 0.15s;
+}
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
+.kpi.ok { border-top-color: #10b981; }
+.kpi.warn { border-top-color: #f59e0b; }
+.kpi.bad { border-top-color: #dc2626; }
+.kpi.neutral { border-top-color: var(--gris-3); }
+.kpi-icon { font-size: 24px; margin-bottom: 6px; }
+.kpi-num { font-size: 26pt; font-weight: 900; color: var(--rojo-2); line-height: 1.05; }
+.kpi.ok .kpi-num { color: #10b981; }
+.kpi.warn .kpi-num { color: #f59e0b; }
+.kpi.bad .kpi-num { color: #dc2626; }
+.kpi.neutral .kpi-num { color: var(--negro); }
+.kpi-lbl { font-size: 9pt; color: var(--gris-3); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 800; margin-top: 8px; }
+.kpi-sub { font-size: 9pt; color: #888; margin-top: 4px; font-weight: 600; }
+
+/* ========== BARRAS ========== */
+.bar-row { display: grid; grid-template-columns: 180px 1fr 80px; gap: 14px; align-items: center; margin: 10px 0; }
+.bar-label { font-size: 10.5pt; font-weight: 700; color: #333; }
+.bar-track { background: #eef0f4; height: 18px; border-radius: 9px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06); }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--rojo), var(--rojo-2) 60%, var(--amarillo)); border-radius: 9px; }
+.bar-value { font-size: 10.5pt; font-weight: 800; color: var(--rojo); text-align: right; }
+
+/* ========== TABLAS ========== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 10pt;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+th {
+  background: var(--rojo-2); color: #fff;
+  padding: 12px 14px; text-align: left;
+  font-size: 9pt; text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 800;
+  border-bottom: 4px solid var(--amarillo);
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--gris-2); vertical-align: middle; }
+tr:nth-child(even) td { background: var(--gris-1); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--rojo-soft); }
+
+/* ========== PILLS ========== */
+.status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 8.5pt;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-clic { background: #dcfce7; color: #166534; }
+.status-abierto { background: #dbeafe; color: #1e40af; }
+.status-enviado { background: #e0e7ff; color: #3730a3; }
+.status-rebote { background: #fee2e2; color: #991b1b; }
+.status-baja { background: #fef3c7; color: #92400e; }
+.status-en-cola { background: #f3f4f6; color: #374151; }
+
+/* ========== CALLOUTS ========== */
+.callout {
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0;
+  font-size: 11pt;
+}
+.callout.exec { background: linear-gradient(135deg, #fff1f1, #fff8e1); border-left: 5px solid var(--rojo-2); }
+.callout.ok { background: #e6f7ec; border-left: 5px solid #10b981; }
+.callout.tip { background: #eef4ff; border-left: 5px solid #3b82f6; }
+.callout.warn { background: #fff8e1; border-left: 5px solid var(--amarillo); }
+.callout.alert { background: var(--rojo-soft); border-left: 5px solid var(--rojo-2); }
+.callout strong { color: var(--negro); }
+.callout h3 { margin-top: 0; }
+
+/* ========== PRIVACIDAD ========== */
+.privacy-notice {
+  background: var(--rojo-2);
+  color: #fff;
+  padding: 16px 22px;
+  border-radius: 10px;
+  font-size: 10pt;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-left: 6px solid var(--amarillo);
+}
+.privacy-notice .ic { font-size: 26px; }
+.privacy-notice strong { color: var(--amarillo); }
+
+/* ========== EMAIL PREVIEW ========== */
+.email-preview {
+  background: #fff;
+  border: 2px solid var(--gris-2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 16px 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+.email-head {
+  background: var(--rojo-2);
+  color: #fff;
+  padding: 14px 20px;
+  border-bottom: 4px solid var(--amarillo);
+}
+.email-head .row { display: flex; gap: 8px; align-items: center; margin: 3px 0; font-size: 10.5pt; }
+.email-head .row .tag {
+  background: var(--rojo-2);
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 8.5pt;
+  font-weight: 800;
+  letter-spacing: 1px;
+  min-width: 74px;
+  text-align: center;
+}
+.email-head .row .val { font-weight: 600; flex: 1; word-break: break-word; }
+.email-head .row .val em { color: var(--amarillo); font-style: normal; font-weight: 700; }
+.email-preview iframe { width: 100%; height: 620px; border: none; background: #fff; }
+
+/* ========== GLOSARIO ========== */
+.glossary dt { font-weight: 800; color: var(--rojo); margin-top: 12px; font-size: 11pt; }
+.glossary dd { margin: 3px 0 0 0; color: #444; font-size: 10.5pt; }
+
+/* ========== FOOTER (ROJO corporativo) ========== */
+.footer {
+  margin-top: 40px;
+  padding: 30px 24px 22px;
+  background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+  color: #fff;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 10pt;
+  border-top: 6px solid var(--amarillo);
+}
+.footer img { width: 60px; height: 60px; border-radius: 10px; background: #fff; padding: 4px; margin-bottom: 10px; }
+.footer strong { color: var(--amarillo); font-size: 12pt; letter-spacing: 2px; }
+.footer .sep { color: var(--amarillo); margin: 0 8px; }
+
+/* ========== BOTÓN PDF ========== */
+.print-btn {
+  position: fixed;
+  top: 20px; right: 20px;
+  padding: 14px 26px;
+  background: linear-gradient(135deg, var(--rojo-2), var(--rojo));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(168,17,23,0.35);
+  z-index: 1000;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.print-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(168,17,23,0.45); }
+.print-hint {
+  position: fixed; top: 72px; right: 20px;
+  background: var(--rojo-2); color: #fff;
+  padding: 10px 16px; border-radius: 8px;
+  font-size: 10pt; z-index: 1000;
+  box-shadow: 0 4px 10px rgba(168,17,23,0.35);
+  opacity: 0.95; max-width: 280px;
+  border-left: 4px solid var(--amarillo);
+}
+
+/* ============================================================
+ * IMPRESIÓN — A4 optimizada, armonía visual profesional
+ * Reglas: portada 1 página entera, ToC 1 página, secciones sin
+ * cortes, tablas con cabecera repetida, footer junto, numeración.
+ * ============================================================ */
+@media print {
+  /* Página A4 con márgenes generosos + numeración en el pie */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 14mm 18mm 14mm;
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #a81117; }
+    @bottom-left { content: "ARTES BÚHO · Informe de campaña"; font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #999; }
+  }
+  @page :first {
+    margin: 0;
+    @bottom-right { content: ""; }
+    @bottom-left { content: ""; }
+  }
+
+  /* Global */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  html, body {
+    padding: 0 !important; margin: 0 !important;
+    background: #fff !important;
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
+  }
+  .print-btn, .print-hint, .toc-toggle, .no-print { display: none !important; }
+  .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+
+  /* Anti-huérfanos */
+  p, li { orphans: 3; widows: 3; }
+
+  /* === PORTADA === página entera, sin márgenes @page */
+  .cover {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 26mm 20mm 20mm !important;
+    border-radius: 0 !important;
+    min-height: 0 !important;
+    height: 297mm !important; /* A4 alto completo */
+    width: 210mm !important;
+    background: linear-gradient(145deg, #D62828 0%, #a81117 55%, #7a0b10 100%) !important;
+    color: #fff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+  .cover-logo { width: 72px !important; height: 72px !important; }
+  .cover-brand h1 { font-size: 22pt !important; letter-spacing: 4px !important; margin: 0 0 6px !important; }
+  .cover-camp { font-size: 24pt !important; margin: 20px 0 12px !important; line-height: 1.1 !important; }
+  .cover-subject { font-size: 12pt !important; margin-bottom: 20px !important; padding: 12px 16px !important; }
+  .cover-meta { gap: 12px !important; }
+  .cover-meta-item { padding: 14px 16px !important; }
+  .cover-footer { padding-top: 16px !important; margin-top: auto !important; }
+
+  /* === ToC página entera === */
+  .toc {
+    page-break-after: always !important; break-after: page !important;
+    page-break-inside: avoid !important; break-inside: avoid !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+  .toc-head { background: linear-gradient(135deg, #D62828 0%, #a81117 100%) !important; color: #fff !important; }
+
+  /* === Secciones === evitan cortes pero permiten flujo si son largas */
+  .section {
+    box-shadow: none !important;
+    padding: 14px 0 !important;
+    background: transparent !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    margin-bottom: 8mm !important;
+  }
+  .section > :first-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Headings siempre con su contenido */
+  h1, h2, h3, h4 {
+    page-break-after: avoid !important; break-after: avoid !important;
+    page-break-inside: avoid !important; break-inside: avoid !important;
+  }
+  h1 { font-size: 15pt !important; margin-top: 8mm !important; }
+  h1 .num { width: 34px !important; height: 34px !important; font-size: 11pt !important; }
+  h2 { font-size: 12pt !important; }
+  h3 { font-size: 11pt !important; }
+
+  /* Page-header: backgrounds, banners */
+  .page-header, .footer, .privacy-notice, .email-head {
+    background: #D62828 !important;
+    color: #fff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .page-header { page-break-after: avoid !important; break-after: avoid !important; }
+  .footer {
+    background: linear-gradient(135deg, #D62828 0%, #a81117 100%) !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    margin-top: 10mm !important;
+  }
+
+  /* KPIs: grid compacta, sin cortes */
+  .kpi-grid {
+    page-break-inside: avoid !important; break-inside: avoid !important;
+    gap: 8px !important;
+    margin: 10px 0 !important;
+  }
+  .kpi {
+    page-break-inside: avoid !important;
+    padding: 10px 12px !important;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* TABLAS: thead repetido en cada página */
+  table { page-break-inside: auto !important; border-collapse: collapse !important; font-size: 9.5pt !important; }
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+  tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+  th {
+    background: #D62828 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    padding: 8px 10px !important;
+    border-bottom: 2px solid #F4B400 !important;
+  }
+  td { padding: 7px 10px !important; border-bottom: 1px solid #e5e7eb !important; }
+  tbody tr:nth-child(even) { background: #fafafa !important; }
+
+  /* Bloques que nunca se parten */
+  .email-preview, .callout, .privacy-notice, .kpi, .rate-card, .bar-row, .summary-card {
+    page-break-inside: avoid !important; break-inside: avoid !important;
+  }
+
+  /* Evitar que quede solo un h1 al final de la página */
+  .section > h1 + * { page-break-before: avoid !important; break-before: avoid !important; }
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 700px) {
+  body { padding: 12px; }
+  .cover { padding: 36px 24px 28px; min-height: auto; }
+  .cover-header { flex-direction: column; text-align: center; gap: 12px; }
+  .cover-logo { width: 80px; height: 80px; }
+  .cover-brand h1 { font-size: 22pt; letter-spacing: 3px; }
+  .cover-camp { font-size: 18pt; }
+  .cover-subject { font-size: 11pt; padding: 10px 14px; }
+  .cover-meta { grid-template-columns: 1fr; gap: 10px; }
+  .cover-footer { flex-direction: column; gap: 10px; text-align: center; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .meta-grid { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 1fr; gap: 4px; }
+  .bar-value { text-align: left; }
+  .section { padding: 18px 18px; }
+  h1 { font-size: 16pt; }
+  h1 .num { width: 38px; height: 38px; font-size: 13pt; }
+}
+</style>
+</head>
+<body>
+
+<button class="print-btn" id="printBtn" type="button">
+  <span style="font-size:18px;">📥</span> Descargar PDF
+</button>
+<div class="print-hint">Se abrirá el diálogo de impresión → elige <strong>"Guardar como PDF"</strong></div>
+
+<div class="container" id="root">
+
+  <!-- ========= PORTADA ========= -->
+  <div class="cover">
+    <div class="cover-inner">
+      <div class="cover-header">
+        <img class="cover-logo" src="/assets/logo-artes-buho.jpg" alt="Logo ARTES BÚHO">
+        <div class="cover-brand">
+          <h1>ARTES BÚHO</h1>
+          <div class="tagline">Management · Booking de Artistas</div>
+        </div>
+      </div>
+
+      <div class="cover-middle">
+        <div class="cover-doctype">Informe Ejecutivo de Campaña</div>
+        <div class="cover-camp" id="coverName">Cargando…</div>
+        <div class="cover-subject" id="coverSubject"></div>
+
+        <div class="cover-meta">
+          <div class="cover-meta-item">
+            <div class="lbl">📅 Fecha del informe</div>
+            <div class="val" id="coverDate">—</div>
+          </div>
+          <div class="cover-meta-item">
+            <div class="lbl">⏱ Hora de generación</div>
+            <div class="val" id="coverTime">—</div>
+          </div>
+          <div class="cover-meta-item">
+            <div class="lbl">🏷 Estado</div>
+            <div class="val" id="coverCampMeta">—</div>
+          </div>
+          <div class="cover-meta-item">
+            <div class="lbl">👥 Destinatarios</div>
+            <div class="val" id="coverRecipMeta">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <div>📍 Madrid, España · booking@artesbuhomanagement.com</div>
+        <div class="conf">Confidencial</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= ÍNDICE ========= -->
+  <div class="toc">
+    <div class="toc-head">
+      <h2>📑 Índice del informe</h2>
+      <div class="toc-meta">10 secciones</div>
+    </div>
+    <div class="toc-list">
+      <ol>
+        <li><a href="#resumen"><span>Resumen ejecutivo</span><span class="dots"></span><span class="pg">pág. 01</span></a></li>
+        <li><a href="#datos"><span>Datos de la campaña</span><span class="dots"></span><span class="pg">pág. 02</span></a></li>
+        <li><a href="#email"><span>Email enviado (contenido)</span><span class="dots"></span><span class="pg">pág. 03</span></a></li>
+        <li><a href="#destinatarios"><span>Destinatarios — empresas y entidades</span><span class="dots"></span><span class="pg">pág. 04</span></a></li>
+        <li><a href="#kpis"><span>Métricas clave (KPIs)</span><span class="dots"></span><span class="pg">pág. 05</span></a></li>
+        <li><a href="#rendimiento"><span>Rendimiento vs. sector</span><span class="dots"></span><span class="pg">pág. 06</span></a></li>
+        <li><a href="#geografia"><span>Distribución geográfica</span><span class="dots"></span><span class="pg">pág. 07</span></a></li>
+        <li><a href="#categoria"><span>Análisis por categoría</span><span class="dots"></span><span class="pg">pág. 08</span></a></li>
+        <li><a href="#conclusiones"><span>Conclusiones y recomendaciones</span><span class="dots"></span><span class="pg">pág. 09</span></a></li>
+        <li><a href="#glosario"><span>Glosario de términos</span><span class="dots"></span><span class="pg">pág. 10</span></a></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ========= CONTENIDO DINÁMICO ========= -->
+  <div id="content"><div class="section"><p style="text-align:center;color:#999;padding:40px">Cargando informe…</p></div></div>
+
+  <!-- ========= FOOTER ========= -->
+  <div class="footer">
+    <img src="/assets/logo-artes-buho.jpg" alt="ARTES BÚHO">
+    <p><strong>🦉 ARTES BÚHO MANAGEMENT</strong></p>
+    <p>Booking &amp; Management de Artistas</p>
+    <p style="margin-top:8px">📧 booking@artesbuhomanagement.com <span class="sep">·</span> 📍 Madrid</p>
+    <p style="margin-top:14px;font-size:9pt;opacity:0.75">Este informe respeta el RGPD. No se comparten datos personales de contacto (emails, teléfonos, nombres de personas físicas).</p>
+    <p style="margin-top:6px;font-size:9pt;opacity:0.55">Documento generado automáticamente por la plataforma ENVÍO MASIVO</p>
+  </div>
+
+</div>
+
+<script>
+const pathParts = window.location.pathname.split("/");
+const campaignId = pathParts[pathParts.length - 2];
+const fmt = (n) => Number(n || 0).toLocaleString("es-ES");
+const pct = (n, d) => d > 0 ? ((n / d) * 100).toFixed(1) + "%" : "—";
+const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const STATUS_ES = { draft: "Borrador", queued: "En cola", sending: "Enviando", sent: "Enviada", paused: "Pausada", failed: "Error", scheduled: "Programada", completed: "Completada" };
+const tStatus = (s) => STATUS_ES[String(s || "").toLowerCase()] || s || "—";
+
+function showError(msg) {
+  document.getElementById("coverName").textContent = "Error al cargar informe";
+  document.getElementById("coverSubject").textContent = msg;
+  document.getElementById("content").innerHTML = '<div class="section"><p style="color:#991b1b;padding:20px;font-size:15px">⚠ ' + esc(msg) + '</p><p style="padding:0 20px;color:#666">Verifica que la campaña existe y que la API responde. Abre la consola del navegador (F12) para más detalles.</p></div>';
+}
+
+async function load() {
+  try {
+    /* Modo offline: informe auto-contenido con datos embebidos (descarga ZIP) */
+    if (typeof window.__EMBEDDED_REPORT === "object" && window.__EMBEDDED_REPORT) {
+      try { render(window.__EMBEDDED_REPORT); }
+      catch (renderErr) { showError("Error renderizando informe: " + renderErr.message); }
+      return;
+    }
+    if (!campaignId || campaignId === "campaigns") { showError("ID de campaña no encontrado en la URL"); return; }
+    console.log("[report] Cargando campaña:", campaignId);
+    const r = await fetch("/api/campaigns/" + campaignId + "/report", { credentials: "include", cache: "no-store" });
+    console.log("[report] HTTP", r.status);
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error("HTTP " + r.status + ": " + txt.slice(0, 120));
+    }
+    const json = await r.json();
+    if (json.status !== "ok") throw new Error("Respuesta inválida: " + JSON.stringify(json).slice(0, 120));
+    /* El backend aplana la respuesta (apiOk). Aceptamos json.data o json directamente. */
+    const data = json.data || json;
+    try { render(data); }
+    catch (renderErr) {
+      console.error("[report] Error render:", renderErr);
+      showError("Error renderizando informe: " + renderErr.message);
+    }
+  } catch (e) {
+    console.error("[report] Error load:", e);
+    showError("Error cargando informe: " + e.message);
+  }
+}
+
+/* Autoprint: si la URL lleva ?autoprint=1 disparamos el diálogo de impresión
+   justo después de renderizar. El navegador ofrece "Guardar como PDF". */
+function maybeAutoprint() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("autoprint") === "1") {
+    setTimeout(() => { try { window.print(); } catch (e) { console.warn(e); } }, 800);
+  }
+}
+
+const BENCHMARK = {
+  open:   { low: 15,  mid: 22,  high: 35 },
+  click:  { low: 1.5, mid: 3,   high: 7 },
+  bounce: { low: 0.5, mid: 2,   high: 5 },
+  unsub:  { low: 0.2, mid: 0.5, high: 1 }
+};
+const grade = (val, bench, inverse) => {
+  if (inverse) {
+    if (val <= bench.low) return { label: "EXCELENTE", cls: "ok" };
+    if (val <= bench.mid) return { label: "BUENO", cls: "ok" };
+    if (val <= bench.high) return { label: "ACEPTABLE", cls: "warn" };
+    return { label: "REVISAR", cls: "bad" };
+  } else {
+    if (val >= bench.high) return { label: "EXCELENTE", cls: "ok" };
+    if (val >= bench.mid)  return { label: "BUENO", cls: "ok" };
+    if (val >= bench.low)  return { label: "ACEPTABLE", cls: "warn" };
+    return { label: "POR MEJORAR", cls: "bad" };
+  }
+};
+
+function pageHeader(title, pg) {
+  return `
+    <div class="page-header">
+      <img src="/assets/logo-artes-buho.jpg" alt="">
+      <div>
+        <div class="ph-title">${esc(title)}</div>
+        <div class="ph-sub">ARTES BÚHO · Informe de Campaña</div>
+      </div>
+      <div class="ph-right">pág. ${pg}</div>
+    </div>`;
+}
+
+function render(d) {
+  const c = d.campaign;
+  const s = d.stats;
+  const recipients = d.recipients || [];
+  const gen = new Date(d.generatedAt);
+
+  /* ---- PORTADA ---- */
+  document.getElementById("coverName").textContent = c.name || "Campaña sin nombre";
+  document.getElementById("coverSubject").textContent = '"' + (c.subject || "—") + '"';
+  document.getElementById("coverDate").textContent = gen.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  document.getElementById("coverTime").textContent = gen.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + " h";
+  document.getElementById("coverCampMeta").textContent = tStatus(c.status);
+  document.getElementById("coverRecipMeta").textContent = fmt(recipients.length) + " entidades";
+
+  /* ---- MÉTRICAS ---- */
+  const openPct = s.sent > 0 ? (s.opened / s.sent) * 100 : 0;
+  const clickPct = s.sent > 0 ? (s.clicked / s.sent) * 100 : 0;
+  const bouncePct = s.total > 0 ? (s.bounced / s.total) * 100 : 0;
+  const unsubPct = s.sent > 0 ? (s.unsubscribed / s.sent) * 100 : 0;
+  const ctor = s.opened > 0 ? (s.clicked / s.opened) * 100 : 0;
+  const deliv = s.sent > 0 ? ((s.sent - s.bounced) / s.sent) * 100 : 0;
+
+  const gOpen   = grade(openPct, BENCHMARK.open);
+  const gClick  = grade(clickPct, BENCHMARK.click);
+  const gBounce = grade(bouncePct, BENCHMARK.bounce, true);
+  const gUnsub  = grade(unsubPct, BENCHMARK.unsub, true);
+
+  /* ---- AGRUPACIONES ---- */
+  const byCCAA = {}, byProv = {}, byCat = {}, statusCount = {};
+  for (const r of recipients) {
+    byCCAA[r.ccaa] = (byCCAA[r.ccaa] || 0) + 1;
+    byProv[r.provincia] = (byProv[r.provincia] || 0) + 1;
+    byCat[r.categoria] = (byCat[r.categoria] || 0) + 1;
+    statusCount[r.status] = (statusCount[r.status] || 0) + 1;
+  }
+  const sortObj = (o) => Object.entries(o).sort((a,b) => b[1] - a[1]);
+  const topCCAA = sortObj(byCCAA).slice(0, 10);
+  const topProv = sortObj(byProv).slice(0, 15);
+  const topCat = sortObj(byCat).slice(0, 10);
+  const maxCCAA = Math.max(1, ...topCCAA.map(x => x[1]));
+  const maxProv = Math.max(1, ...topProv.map(x => x[1]));
+  const maxCat = Math.max(1, ...topCat.map(x => x[1]));
+
+  const barList = (rows, max) => rows.map(([k, v]) => `
+    <div class="bar-row">
+      <div class="bar-label">${esc(k)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div>
+      <div class="bar-value">${fmt(v)}</div>
+    </div>
+  `).join("");
+
+  /* ---- RECOMENDACIONES ---- */
+  const recos = [];
+  if (s.sent === 0) recos.push("⏳ La campaña aún no se ha enviado o está en cola. Las métricas se actualizarán tras el envío.");
+  if (s.sent > 0) {
+    if (openPct < BENCHMARK.open.low) recos.push("📧 <strong>Apertura baja.</strong> Prueba asuntos más cortos (&lt;50 caracteres) y con gancho emocional. Evita palabras tipo 'gratis' o 'urgente'.");
+    if (openPct >= BENCHMARK.open.high) recos.push("🎯 <strong>Apertura excelente.</strong> Replica este estilo de asunto en futuras campañas.");
+    if (clickPct < BENCHMARK.click.low) recos.push("🔗 <strong>Pocos clics.</strong> Revisa que el CTA (llamada a la acción) sea claro, visible y único en el email.");
+    if (clickPct >= BENCHMARK.click.high) recos.push("✅ <strong>Clics por encima de la media.</strong> El contenido conecta con el destinatario.");
+    if (bouncePct > BENCHMARK.bounce.high) recos.push("⚠️ <strong>Rebotes altos.</strong> Depura la base: elimina bounced y suppressed antes del próximo envío.");
+    if (unsubPct > BENCHMARK.unsub.high) recos.push("📉 <strong>Bajas altas.</strong> Segmenta más fino o reduce la frecuencia de envío.");
+    if (ctor > 15) recos.push("💡 <strong>CTOR muy alto.</strong> Cuando abren, clican. El diseño del email funciona.");
+  }
+  if (!recos.length) recos.push("✅ La campaña se desempeña dentro de los parámetros habituales del sector. Mantener estrategia.");
+
+  /* ---- TABLA DE DESTINATARIOS ---- */
+  const recRows = recipients.map((r, i) => {
+    const rStatus = String(r.status || "pendiente");
+    const rStatusSlug = rStatus.replace(/ /g, "-");
+    return `
+    <tr>
+      <td style="color:#888;font-size:9pt;font-family:monospace;width:36px">${String(i+1).padStart(3, "0")}</td>
+      <td><strong>${esc(r.empresa)}</strong></td>
+      <td>${esc(r.municipio)}</td>
+      <td>${esc(r.provincia)}</td>
+      <td>${esc(r.ccaa)}</td>
+      <td>${esc(r.categoria)}</td>
+      <td><span class="status-pill status-${esc(rStatusSlug)}">${esc(rStatus)}</span></td>
+    </tr>
+  `;
+  }).join("");
+
+  /* ========== MONTAJE ========== */
+  document.getElementById("content").innerHTML = `
+    <!-- 1. RESUMEN EJECUTIVO -->
+    <div class="section" id="resumen">
+      ${pageHeader("Resumen ejecutivo", "01")}
+      <h1><span class="num">1</span>Resumen ejecutivo</h1>
+      <p class="intro">Visión de alto nivel del desempeño de la campaña, con los KPIs más relevantes y su comparativa frente al sector.</p>
+
+      <div class="callout exec">
+        <h3 style="color:var(--rojo)">📌 En una sola línea</h3>
+        <p>La campaña <strong>${esc(c.name)}</strong> impactó a <strong>${fmt(recipients.length)} entidades</strong> en <strong>${Object.keys(byCCAA).length} comunidades autónomas</strong> con una tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> y de clic del <strong>${clickPct.toFixed(2)}%</strong>.</p>
+      </div>
+
+      <div class="kpi-grid" style="margin-top:18px">
+        <div class="kpi ${gOpen.cls}"><div class="kpi-icon">📬</div><div class="kpi-num">${openPct.toFixed(1)}%</div><div class="kpi-lbl">Apertura</div><div class="kpi-sub">${gOpen.label}</div></div>
+        <div class="kpi ${gClick.cls}"><div class="kpi-icon">🔗</div><div class="kpi-num">${clickPct.toFixed(1)}%</div><div class="kpi-lbl">Clic</div><div class="kpi-sub">${gClick.label}</div></div>
+        <div class="kpi ${gBounce.cls}"><div class="kpi-icon">↩️</div><div class="kpi-num">${bouncePct.toFixed(1)}%</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${gBounce.label}</div></div>
+        <div class="kpi ${gUnsub.cls}"><div class="kpi-icon">👋</div><div class="kpi-num">${unsubPct.toFixed(2)}%</div><div class="kpi-lbl">Bajas</div><div class="kpi-sub">${gUnsub.label}</div></div>
+      </div>
+    </div>
+
+    <!-- 2. DATOS DE LA CAMPAÑA -->
+    <div class="section" id="datos">
+      ${pageHeader("Datos de la campaña", "02")}
+      <h1><span class="num">2</span>Datos de la campaña</h1>
+      <p class="intro">Ficha técnica completa con la información identificativa del envío.</p>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="lbl">📛 Nombre interno</div><div class="val">${esc(c.name)}</div></div>
+        <div class="meta-item"><div class="lbl">✉️ Asunto</div><div class="val">${esc(c.subject)}</div></div>
+        <div class="meta-item"><div class="lbl">👤 Remitente</div><div class="val">${esc(c.fromName || "ARTES BÚHO MANAGEMENT")}</div></div>
+        <div class="meta-item"><div class="lbl">📧 Email envío</div><div class="val">${esc(c.fromEmail || "booking@artesbuhomanagement.com")}</div></div>
+        <div class="meta-item"><div class="lbl">🏷 Estado</div><div class="val">${esc(tStatus(c.status))}</div></div>
+        <div class="meta-item"><div class="lbl">🆔 ID campaña</div><div class="val" style="font-family:monospace;font-size:10pt">${esc(campaignId)}</div></div>
+        <div class="meta-item"><div class="lbl">📅 Creada</div><div class="val">${c.createdAt ? new Date(c.createdAt).toLocaleString("es-ES") : "—"}</div></div>
+        <div class="meta-item"><div class="lbl">🚀 Enviada</div><div class="val">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</div></div>
+      </div>
+    </div>
+
+    <!-- 3. EMAIL ENVIADO -->
+    <div class="section" id="email">
+      ${pageHeader("Email enviado", "03")}
+      <h1><span class="num">3</span>Email enviado</h1>
+      <p class="intro">Reproducción fiel del correo electrónico tal como lo recibió cada destinatario.</p>
+      <div class="email-preview">
+        <div class="email-head">
+          <div class="row"><span class="tag">DE</span><span class="val">${esc(c.fromName || "ARTES BÚHO MANAGEMENT")} &lt;<em>${esc(c.fromEmail || "booking@artesbuhomanagement.com")}</em>&gt;</span></div>
+          <div class="row"><span class="tag">PARA</span><span class="val">${fmt(recipients.length)} destinatarios (ver sección 4)</span></div>
+          <div class="row"><span class="tag">ASUNTO</span><span class="val"><strong>${esc(c.subject || "—")}</strong></span></div>
+          <div class="row"><span class="tag">FECHA</span><span class="val">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente de envío"}</span></div>
+        </div>
+        <iframe sandbox="allow-same-origin" srcdoc="${esc(c.html || '<p style=&quot;padding:40px;color:#999;text-align:center;font-family:sans-serif&quot;>Email de texto plano — sin versión HTML</p>')}"></iframe>
+      </div>
+    </div>
+
+    <!-- 4. DESTINATARIOS (prominente) -->
+    <div class="section" id="destinatarios">
+      ${pageHeader("Destinatarios de la campaña", "04")}
+      <h1><span class="num">4</span>Destinatarios (${fmt(recipients.length)})</h1>
+      <p class="intro">Relación completa de empresas, entidades, festivales, medios, influencers y colaboradores a los que se ha enviado esta campaña.</p>
+
+      <div class="privacy-notice">
+        <span class="ic">🔒</span>
+        <div>
+          <strong>Confidencialidad &amp; RGPD:</strong> este listado respeta el Reglamento General de Protección de Datos.
+          Sólo se muestra el <strong>nombre público de la empresa/entidad</strong> y datos de localización (municipio, provincia, CCAA, categoría).
+          <u>No se muestran emails, teléfonos ni nombres de personas físicas.</u>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Empresa / Entidad</th>
+            <th>Municipio</th>
+            <th>Provincia</th>
+            <th>CCAA</th>
+            <th>Categoría</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>${recRows || '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <!-- 5. KPIs DETALLADOS -->
+    <div class="section" id="kpis">
+      ${pageHeader("Métricas clave", "05")}
+      <h1><span class="num">5</span>Métricas clave (KPIs)</h1>
+      <p class="intro">Indicadores numéricos desglosados de la campaña.</p>
+      <div class="kpi-grid">
+        <div class="kpi neutral"><div class="kpi-icon">👥</div><div class="kpi-num">${fmt(s.total)}</div><div class="kpi-lbl">Destinatarios</div></div>
+        <div class="kpi neutral"><div class="kpi-icon">📤</div><div class="kpi-num">${fmt(s.sent)}</div><div class="kpi-lbl">Enviados</div><div class="kpi-sub">${pct(s.sent, s.total)} del total</div></div>
+        <div class="kpi ok"><div class="kpi-icon">📬</div><div class="kpi-num">${fmt(s.opened)}</div><div class="kpi-lbl">Aperturas</div><div class="kpi-sub">${pct(s.opened, s.sent)}</div></div>
+        <div class="kpi ok"><div class="kpi-icon">🎯</div><div class="kpi-num">${fmt(s.clicked)}</div><div class="kpi-lbl">Clics</div><div class="kpi-sub">${pct(s.clicked, s.sent)}</div></div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi bad"><div class="kpi-icon">↩️</div><div class="kpi-num">${fmt(s.bounced)}</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${pct(s.bounced, s.total)}</div></div>
+        <div class="kpi warn"><div class="kpi-icon">👋</div><div class="kpi-num">${fmt(s.unsubscribed)}</div><div class="kpi-lbl">Bajas</div><div class="kpi-sub">${pct(s.unsubscribed, s.sent)}</div></div>
+        <div class="kpi neutral"><div class="kpi-icon">⚡</div><div class="kpi-num">${ctor.toFixed(1)}%</div><div class="kpi-lbl">CTOR</div><div class="kpi-sub">clic / apertura</div></div>
+        <div class="kpi ok"><div class="kpi-icon">✅</div><div class="kpi-num">${deliv.toFixed(1)}%</div><div class="kpi-lbl">Entregabilidad</div></div>
+      </div>
+    </div>
+
+    <!-- 6. RENDIMIENTO -->
+    <div class="section" id="rendimiento">
+      ${pageHeader("Rendimiento vs. sector", "06")}
+      <h1><span class="num">6</span>Rendimiento vs. sector</h1>
+      <p class="intro">Comparativa frente a los benchmarks del email marketing B2B (fuente: Mailjet / HubSpot / Campaign Monitor 2024-25).</p>
+      <table>
+        <tr><th>Métrica</th><th>Campaña</th><th>Benchmark sector</th><th>Valoración</th></tr>
+        <tr><td><strong>Tasa de apertura</strong></td><td>${openPct.toFixed(1)}%</td><td>22% media · 35% top</td><td><span class="status-pill status-${gOpen.cls === 'ok' ? 'clic' : gOpen.cls === 'warn' ? 'abierto' : 'rebote'}">${gOpen.label}</span></td></tr>
+        <tr><td><strong>Tasa de clic</strong></td><td>${clickPct.toFixed(2)}%</td><td>3% media · 7% top</td><td><span class="status-pill status-${gClick.cls === 'ok' ? 'clic' : gClick.cls === 'warn' ? 'abierto' : 'rebote'}">${gClick.label}</span></td></tr>
+        <tr><td><strong>Rebotes</strong></td><td>${bouncePct.toFixed(2)}%</td><td>≤ 2% (bueno)</td><td><span class="status-pill status-${gBounce.cls === 'ok' ? 'clic' : gBounce.cls === 'warn' ? 'abierto' : 'rebote'}">${gBounce.label}</span></td></tr>
+        <tr><td><strong>Bajas</strong></td><td>${unsubPct.toFixed(2)}%</td><td>≤ 0,5% (sano)</td><td><span class="status-pill status-${gUnsub.cls === 'ok' ? 'clic' : gUnsub.cls === 'warn' ? 'abierto' : 'rebote'}">${gUnsub.label}</span></td></tr>
+      </table>
+      <div class="callout tip">
+        <strong>ℹ️ Interpretación:</strong> las campañas B2B del sector cultural y booking suelen tener aperturas más altas (25-30%) pero clics moderados (2-4%) porque el contenido es informativo, no de compra directa.
+      </div>
+    </div>
+
+    <!-- 7. GEOGRAFÍA -->
+    <div class="section" id="geografia">
+      ${pageHeader("Distribución geográfica", "07")}
+      <h1><span class="num">7</span>Distribución geográfica</h1>
+      <p class="intro">Reparto territorial de los destinatarios impactados.</p>
+      <h2>Top Comunidades Autónomas</h2>
+      ${topCCAA.length ? barList(topCCAA, maxCCAA) : '<p style="color:#888">Sin datos geográficos.</p>'}
+      <h2>Top 15 Provincias</h2>
+      ${topProv.length ? barList(topProv, maxProv) : '<p style="color:#888">Sin datos de provincia.</p>'}
+    </div>
+
+    <!-- 8. CATEGORÍA -->
+    <div class="section" id="categoria">
+      ${pageHeader("Análisis por categoría", "08")}
+      <h1><span class="num">8</span>Análisis por categoría</h1>
+      <p class="intro">Segmentación del envío según la lista de origen en los CRMs.</p>
+      ${topCat.length ? barList(topCat, maxCat) : '<p style="color:#888">Sin datos de categoría.</p>'}
+      <h2>Estado de entrega</h2>
+      <table>
+        <tr><th>Estado</th><th>Cantidad</th><th>% sobre total</th></tr>
+        ${Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+          <tr>
+            <td><span class="status-pill status-${esc(k.replace(/ /g,"-"))}">${esc(k)}</span></td>
+            <td><strong>${fmt(v)}</strong></td>
+            <td>${pct(v, recipients.length)}</td>
+          </tr>
+        `).join("") || '<tr><td colspan="3" style="text-align:center;color:#888">—</td></tr>'}
+      </table>
+    </div>
+
+    <!-- 9. CONCLUSIONES -->
+    <div class="section" id="conclusiones">
+      ${pageHeader("Conclusiones y recomendaciones", "09")}
+      <h1><span class="num">9</span>Conclusiones y recomendaciones</h1>
+      <h2>Hallazgos principales</h2>
+      <ul style="margin-left:24px">
+        <li>La campaña alcanzó a <strong>${fmt(s.sent)}</strong> destinatarios efectivos sobre ${fmt(s.total)} programados.</li>
+        <li>Tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> (benchmark sector: 22%).</li>
+        <li>Tasa de clic del <strong>${clickPct.toFixed(2)}%</strong> (benchmark sector: 3%).</li>
+        <li>Cobertura geográfica: <strong>${Object.keys(byCCAA).length}</strong> CCAA y <strong>${Object.keys(byProv).length}</strong> provincias.</li>
+        <li>Categorías profesionales impactadas: <strong>${Object.keys(byCat).length}</strong>.</li>
+      </ul>
+      <h2>Recomendaciones estratégicas</h2>
+      <div class="callout warn">
+        ${recos.map(r => `<p style="margin:8px 0">${r}</p>`).join("")}
+      </div>
+    </div>
+
+    <!-- 10. GLOSARIO -->
+    <div class="section" id="glosario">
+      ${pageHeader("Glosario", "10")}
+      <h1><span class="num">10</span>Glosario de términos</h1>
+      <dl class="glossary">
+        <dt>Tasa de apertura (Open Rate)</dt>
+        <dd>Porcentaje de destinatarios que abrieron el email al menos una vez, sobre emails entregados.</dd>
+        <dt>Tasa de clic (CTR)</dt>
+        <dd>Porcentaje de destinatarios que hicieron clic en algún enlace del email, sobre emails entregados.</dd>
+        <dt>CTOR (Click-to-Open Ratio)</dt>
+        <dd>Porcentaje de los que abrieron que además clicaron. Mide la calidad del contenido del email.</dd>
+        <dt>Rebote (Bounce)</dt>
+        <dd>Email que no pudo entregarse. Puede ser soft (temporal) o hard (permanente, dirección no existe).</dd>
+        <dt>Baja (Unsubscribe)</dt>
+        <dd>Destinatario que pide dejar de recibir emails mediante el enlace del pie del correo.</dd>
+        <dt>Entregabilidad</dt>
+        <dd>Porcentaje de emails que llegaron correctamente a bandeja, sin rebotar.</dd>
+        <dt>Benchmark</dt>
+        <dd>Valor de referencia del sector. Permite comparar una campaña con el promedio del mercado.</dd>
+        <dt>CCAA</dt>
+        <dd>Comunidad Autónoma. Región administrativa de España.</dd>
+        <dt>DKIM / SPF / DMARC</dt>
+        <dd>Protocolos de autenticación del remitente. Evitan que el email caiga en spam.</dd>
+        <dt>RGPD</dt>
+        <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales.</dd>
+      </dl>
+    </div>
+  `;
+}
+
+load().then(maybeAutoprint);
+
+/* Boton Descargar PDF */
+document.getElementById("printBtn")?.addEventListener("click", () => {
+  try {
+    window.print();
+  } catch (err) {
+    console.error("[report] Error window.print():", err);
+    alert("No se pudo abrir el diálogo de impresión. Usa Ctrl+P (Windows) o Cmd+P (Mac) y elige 'Guardar como PDF'.");
+  }
+});
+</script>
+
+</body>
+</html>

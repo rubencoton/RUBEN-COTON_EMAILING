@@ -1,0 +1,63 @@
+﻿<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acceso privado | Aplicaciones de Artes Búho</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/login.js" defer></script>
+  </head>
+  <body>
+    <main class="login-layout">
+      <section class="login-card">
+        <div class="login-brand">
+          <img
+            class="brand-logo"
+            src="/assets/logo-artes-buho.jpg"
+            alt="Logo de Artes Búho"
+          />
+          <div>
+            <p class="badge">APLICACIONES DE ARTES BÚHO</p>
+            <p class="brand-signature">
+              Plataforma oficial del grupo de aplicaciones de
+              <strong>Artes Búho</strong>.
+            </p>
+          </div>
+        </div>
+        <h1>Envío Masivo</h1>
+        <p class="subtitle">Introduce la contraseña para entrar en la app.</p>
+
+        <form id="loginForm" class="login-form">
+          <label for="password">Contraseña</label>
+          <div class="password-field">
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Escribe la contraseña"
+              required
+              autocomplete="current-password"
+              autofocus
+            />
+            <button
+              id="togglePasswordBtn"
+              type="button"
+              class="password-toggle"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
+            >
+              👁
+            </button>
+          </div>
+          <button type="submit">Entrar</button>
+          <p class="login-note">
+            Desarrollo técnico: <strong>RUBEN COTON</strong>.
+          </p>
+          <p id="errorMessage" class="login-error" hidden>
+            Contraseña incorrecta. Intenta de nuevo.
+          </p>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

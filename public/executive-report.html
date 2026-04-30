@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe Ejecutivo · ARTES BÚHO</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --rojo: #D62828;
+    --rojo-2: #a81117;
+    --rojo-3: #7a0b10;
+    --amarillo: #F4B400;
+    --amarillo-2: #ffd84d;
+    --blanco: #ffffff;
+    --gris: #f5f5f5;
+    --gris-2: #e5e7eb;
+    --ink: #2a2a2a;
+    --ink-muted: #666;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background: #fafafa;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  /* PORTADA */
+  .cover {
+    background: linear-gradient(145deg, var(--rojo) 0%, var(--rojo-2) 55%, var(--rojo-3) 100%);
+    color: #fff;
+    padding: 48px 44px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    min-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    background: var(--amarillo);
+    border-radius: 50%;
+    opacity: 0.18;
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    bottom: -60px; left: -60px;
+    width: 260px; height: 260px;
+    background: var(--amarillo);
+    border-radius: 50%;
+    opacity: 0.12;
+  }
+  .cover-logo {
+    width: 92px; height: 92px;
+    background: var(--amarillo);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    position: relative;
+    z-index: 1;
+  }
+  .cover-brand {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--amarillo);
+    margin-bottom: 10px;
+    position: relative; z-index: 1;
+  }
+  .cover h1 {
+    font-size: 54px;
+    font-weight: 900;
+    line-height: 1;
+    margin: 0 0 18px 0;
+    letter-spacing: -1px;
+    position: relative; z-index: 1;
+  }
+  .cover .subtitle {
+    font-size: 20px;
+    opacity: 0.95;
+    margin-bottom: 28px;
+    position: relative; z-index: 1;
+  }
+  .cover .meta {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border-left: 4px solid var(--amarillo);
+    padding: 14px 20px;
+    border-radius: 6px;
+    font-size: 15px;
+    position: relative; z-index: 1;
+  }
+  .cover .meta strong { color: var(--amarillo); }
+
+  /* HEADER secciones */
+  h2.section-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 40px 0 18px 0;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    color: #fff;
+    border-radius: 8px;
+    border-left: 6px solid var(--amarillo);
+  }
+  h3.block-title {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 20px 0 12px 0;
+    color: var(--rojo-2);
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--amarillo);
+  }
+
+  /* KPIS grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 16px 0 28px 0;
+  }
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--gris-2);
+    border-radius: 12px;
+    padding: 22px 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .kpi::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--rojo) 0%, var(--amarillo) 100%);
+  }
+  .kpi-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--rojo-2);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .kpi-big {
+    grid-column: span 2;
+  }
+  .kpi-big .kpi-value { font-size: 54px; }
+
+  /* RATES (porcentajes con barra) */
+  .rates-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .rate-card {
+    background: #fff;
+    border: 1px solid var(--gris-2);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .rate-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+  .rate-value {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--rojo-2);
+    margin-bottom: 10px;
+  }
+  .rate-bar {
+    height: 8px;
+    background: var(--gris);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .rate-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rojo) 0%, var(--amarillo) 100%);
+    transition: width 0.4s;
+  }
+
+  /* TABLAS */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gris-2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 26px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    color: #fff;
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 3px solid var(--amarillo);
+  }
+  tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--gris-2);
+    vertical-align: middle;
+  }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  tbody tr:hover { background: #fff7e6; }
+  .mini-bar {
+    display: inline-block;
+    height: 6px;
+    background: var(--gris);
+    border-radius: 3px;
+    width: 80px;
+    overflow: hidden;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .mini-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rojo) 0%, var(--amarillo) 100%);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .badge-sent { background: #d1fae5; color: #065f46; }
+  .badge-draft { background: #fef3c7; color: #78350f; }
+  .badge-queued { background: #fde68a; color: #7c2d12; }
+  .badge-sending { background: #fde68a; color: var(--rojo-2); }
+  .badge-failed { background: #fecaca; color: var(--rojo-3); }
+  .badge-completed { background: #d1fae5; color: #064e3b; }
+
+  /* TOP 5 */
+  .top5 {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 26px;
+  }
+  .top-item {
+    display: grid;
+    grid-template-columns: 50px 1fr 130px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--gris-2);
+    border-left: 5px solid var(--amarillo);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .top-rank {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--rojo);
+  }
+  .top-info strong {
+    display: block;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .top-info small { color: var(--ink-muted); font-size: 11px; }
+  .top-score {
+    text-align: right;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--rojo-2);
+  }
+  .top-score small {
+    display: block;
+    font-size: 10px;
+    color: var(--ink-muted);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* MONTHLY chart */
+  .chart {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    height: 180px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--gris-2);
+    border-radius: 10px;
+    margin-bottom: 26px;
+    overflow-x: auto;
+  }
+  .chart-bar {
+    min-width: 40px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .chart-bar-inner {
+    width: 100%;
+    background: linear-gradient(180deg, var(--rojo) 0%, var(--rojo-2) 100%);
+    border-radius: 4px 4px 0 0;
+    min-height: 4px;
+    position: relative;
+  }
+  .chart-bar-inner::after {
+    content: attr(data-value);
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--rojo-2);
+    white-space: nowrap;
+  }
+  .chart-label {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 6px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    color: #fff;
+    padding: 24px 28px;
+    border-radius: 10px;
+    margin-top: 40px;
+    text-align: center;
+    font-size: 13px;
+  }
+  .footer strong { color: var(--amarillo); }
+
+  /* PRINT controls (se ocultan al imprimir) */
+  .print-hint {
+    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .print-hint button {
+    background: var(--amarillo);
+    color: var(--rojo-2);
+    border: 0;
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .print-hint button:hover { background: var(--amarillo-2); }
+
+  .loading {
+    text-align: center;
+    padding: 80px 40px;
+    font-size: 18px;
+    color: var(--ink-muted);
+  }
+  .err {
+    background: #fee;
+    color: var(--rojo-3);
+    padding: 16px;
+    border-left: 4px solid var(--rojo);
+    border-radius: 6px;
+  }
+
+  /* ============================================================
+   * IMPRESIÓN — A4 optimizada informe ejecutivo
+   * ============================================================ */
+  @media print {
+    /* Página A4 con numeración + header */
+    @page {
+      size: A4 portrait;
+      margin: 15mm 14mm 18mm 14mm;
+      @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Inter, Arial, sans-serif; font-size: 9pt; color: var(--rojo-2); }
+      @bottom-left { content: "ARTES BÚHO · Informe ejecutivo"; font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #999; }
+    }
+    @page :first {
+      margin: 0;
+      @bottom-right { content: ""; }
+      @bottom-left { content: ""; }
+    }
+
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      background: #fff !important;
+      margin: 0 !important; padding: 0 !important;
+      width: 100% !important;
+      font-size: 10.5pt !important;
+      line-height: 1.45 !important;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
+    }
+    .page { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+    .print-hint, .no-print { display: none !important; }
+
+    /* Anti-huérfanos */
+    p, h3, li { orphans: 3; widows: 3; }
+
+    /* === PORTADA === A4 entera, full-bleed */
+    .cover {
+      padding: 28mm 20mm 22mm !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      min-height: 0 !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      background: linear-gradient(145deg, var(--rojo) 0%, var(--rojo-2) 55%, var(--rojo-3) 100%) !important;
+      color: #fff !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+    .cover h1 { font-size: 36pt !important; margin: 0 0 10px !important; line-height: 1.05 !important; }
+    .cover .subtitle { font-size: 13pt !important; margin-bottom: 20px !important; }
+    .cover-logo { width: 72px !important; height: 72px !important; font-size: 42px !important; margin-bottom: 24px !important; }
+    .cover-brand { font-size: 11pt !important; }
+    .cover .meta { font-size: 10.5pt !important; padding: 12px 16px !important; }
+
+    /* === Secciones === títulos unidos a su contenido */
+    h2.section-title {
+      page-break-after: avoid !important; break-after: avoid !important;
+      page-break-inside: avoid !important; break-inside: avoid !important;
+      margin: 8mm 0 4mm !important;
+      padding: 10px 14px !important;
+      font-size: 14pt !important;
+      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
+      color: #fff !important;
+      border-left: 5px solid var(--amarillo) !important;
+    }
+    h3.block-title {
+      page-break-after: avoid !important; break-after: avoid !important;
+      page-break-inside: avoid !important; break-inside: avoid !important;
+      font-size: 11pt !important;
+      margin-top: 6mm !important;
+    }
+
+    /* === KPIs / tarjetas === sin cortes, compactas */
+    .kpi-grid { gap: 8px !important; margin-bottom: 8mm !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .rates-grid { gap: 8px !important; margin-bottom: 8mm !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .kpi, .rate-card, .top-item {
+      page-break-inside: avoid !important; break-inside: avoid !important;
+      box-shadow: none !important;
+      border: 1px solid #ddd !important;
+    }
+    .kpi { padding: 10px 12px !important; }
+    .kpi-value { font-size: 22pt !important; }
+    .kpi-big .kpi-value { font-size: 26pt !important; }
+    .rate-value { font-size: 18pt !important; }
+
+    /* === TABLAS === header repetido, filas que no se cortan */
+    table { page-break-inside: auto !important; border-collapse: collapse !important; font-size: 9.5pt !important; width: 100% !important; }
+    thead { display: table-header-group !important; }
+    tfoot { display: table-footer-group !important; }
+    tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+    thead th {
+      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
+      color: #fff !important;
+      border-bottom: 2px solid var(--amarillo) !important;
+      padding: 8px 10px !important;
+      font-weight: 700 !important;
+    }
+    tbody td { padding: 7px 10px !important; border-bottom: 1px solid #e5e7eb !important; }
+    tbody tr:nth-child(even) { background: #fafafa !important; }
+    .card { page-break-inside: auto !important; box-shadow: none !important; border: 1px solid #ddd !important; }
+
+    /* === Chart === altura sensata y no se corta */
+    .chart { height: 100px !important; overflow: hidden !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+
+    /* === Footer === siempre pegado al final, nunca solo */
+    .footer {
+      page-break-inside: avoid !important; break-inside: avoid !important;
+      page-break-before: avoid !important; break-before: avoid !important;
+      margin-top: 10mm !important;
+      padding: 14px 18px !important;
+      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
+      color: #fff !important;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .page { padding: 14px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-big { grid-column: span 2; }
+    .rates-grid { grid-template-columns: 1fr; }
+    .cover { padding: 36px 24px; min-height: auto; }
+    .cover h1 { font-size: 36px; }
+    .cover .subtitle { font-size: 16px; }
+    h2.section-title { font-size: 20px; padding: 10px 14px; }
+    .top-item { grid-template-columns: 40px 1fr; row-gap: 6px; }
+    .top-item .top-score { grid-column: 1 / -1; text-align: left; }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 8px 10px; }
+  }
+
+  @media (max-width: 520px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .kpi-big { grid-column: span 1; }
+    .cover h1 { font-size: 28px; }
+    .cover-logo { width: 68px; height: 68px; font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="print-hint">
+      <div>
+        <strong>📊 Informe ejecutivo generado.</strong>
+        Puedes imprimirlo o guardarlo como PDF para la directiva.
+      </div>
+      <button onclick="window.print()">🖨 Imprimir / PDF</button>
+    </div>
+
+    <div id="content" class="loading">Cargando datos…</div>
+  </div>
+
+<script>
+(function() {
+  const fmt = (n) => (Number(n) || 0).toLocaleString("es-ES");
+  const pct = (n) => ((Number(n) || 0) * 100).toFixed(1) + "%";
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fechaEs = (iso) => {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+    } catch { return "—"; }
+  };
+  const statusBadge = (s) => {
+    const labels = { draft: "Borrador", sent: "Enviada", sending: "Enviando", queued: "En cola", completed: "Completada", failed: "Error", paused: "Pausada" };
+    return '<span class="badge badge-' + esc(s) + '">' + esc(labels[s] || s) + '</span>';
+  };
+  const monthEs = (key) => {
+    const [y, m] = key.split("-");
+    const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    return months[Number(m) - 1] + " '" + String(y).slice(2);
+  };
+
+  /* Modo offline: si el HTML viene servido con datos embebidos por el servidor
+     (informes ejecutivos semanales / mensuales archivados) usamos esos datos
+     directamente y NO hacemos fetch. */
+  if (typeof window.__EMBEDDED_REPORT_EXEC === "object" && window.__EMBEDDED_REPORT_EXEC) {
+    try { render(window.__EMBEDDED_REPORT_EXEC); }
+    catch (err) {
+      document.getElementById("content").innerHTML =
+        '<div class="err"><strong>Error renderizando informe:</strong> ' + esc(err.message) + '</div>';
+    }
+  } else {
+    fetch("/api/campaigns/report/executive", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.status !== "ok") throw new Error(data.message || "Error");
+        render(data);
+      })
+      .catch((err) => {
+        document.getElementById("content").innerHTML =
+          '<div class="err"><strong>Error al cargar el informe:</strong> ' + esc(err.message) + '</div>';
+      });
+  }
+
+  function render(data) {
+    const t = data.totals;
+    const maxMonth = (data.monthly || []).reduce((m, x) => Math.max(m, x.sent), 1);
+    const fecha = new Date(data.generatedAt).toLocaleDateString("es-ES", {
+      day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
+    });
+    const meta = data.meta || {};
+    const scopeLabel = {
+      weekly: "Informe Ejecutivo · Semanal",
+      monthly: "Informe Ejecutivo · Mensual",
+      historic: "Informe Ejecutivo"
+    }[meta.scope] || "Informe Ejecutivo";
+    const scopeSubtitle = {
+      weekly: "Resumen semanal de campañas de email marketing",
+      monthly: "Resumen mensual de campañas para la directiva",
+      historic: "Histórico completo de campañas de email marketing"
+    }[meta.scope] || "Histórico completo de campañas de email marketing";
+    const periodTxt = meta.periodLabel ? ' &nbsp;·&nbsp; <strong>Periodo:</strong> ' + esc(meta.periodLabel) : '';
+
+    const html = [
+      // PORTADA
+      '<div class="cover">',
+      '  <div class="cover-logo">🦉</div>',
+      '  <div class="cover-brand">ARTES BÚHO · MANAGEMENT</div>',
+      '  <h1>' + esc(scopeLabel) + '</h1>',
+      '  <div class="subtitle">' + esc(scopeSubtitle) + '</div>',
+      '  <div class="meta"><strong>Emitido:</strong> ' + esc(fecha) + periodTxt + ' &nbsp;·&nbsp; <strong>Campañas analizadas:</strong> ' + fmt(t.campaigns) + '</div>',
+      '</div>',
+
+      // RESUMEN
+      '<h2 class="section-title">📊 Resumen ejecutivo</h2>',
+      '<div class="kpi-grid">',
+      '  <div class="kpi kpi-big"><div class="kpi-label">Contactos alcanzados</div><div class="kpi-value">' + fmt(t.sent) + '</div><div class="kpi-sub">emails entregados en total</div></div>',
+      '  <div class="kpi"><div class="kpi-label">Campañas lanzadas</div><div class="kpi-value">' + fmt(t.campaigns) + '</div><div class="kpi-sub">entre borradores y enviadas</div></div>',
+      '  <div class="kpi"><div class="kpi-label">Aperturas totales</div><div class="kpi-value">' + fmt(t.opened) + '</div><div class="kpi-sub">lecturas registradas</div></div>',
+      '</div>',
+
+      '<div class="rates-grid">',
+      '  <div class="rate-card"><div class="rate-label">Tasa de apertura</div><div class="rate-value">' + pct(t.openRate) + '</div><div class="rate-bar"><div class="rate-bar-fill" style="width:' + Math.min(100, t.openRate * 100) + '%"></div></div></div>',
+      '  <div class="rate-card"><div class="rate-label">Tasa de clic</div><div class="rate-value">' + pct(t.clickRate) + '</div><div class="rate-bar"><div class="rate-bar-fill" style="width:' + Math.min(100, t.clickRate * 100 * 5) + '%"></div></div></div>',
+      '  <div class="rate-card"><div class="rate-label">Tasa de rebote</div><div class="rate-value">' + pct(t.bounceRate) + '</div><div class="rate-bar"><div class="rate-bar-fill" style="width:' + Math.min(100, t.bounceRate * 100 * 10) + '%"></div></div></div>',
+      '</div>',
+
+      // TOP 5
+      data.top5.length > 0 ? (
+        '<h2 class="section-title">🏆 Top 5 campañas por tasa de apertura</h2>' +
+        '<div class="top5">' +
+        data.top5.map((c, i) => (
+          '<div class="top-item">' +
+          '  <div class="top-rank">#' + (i + 1) + '</div>' +
+          '  <div class="top-info"><strong>' + esc(c.name) + '</strong><small>' + esc(c.subject) + '</small></div>' +
+          '  <div class="top-score">' + pct(c.rates.openRate) + '<small>' + fmt(c.stats.opened) + ' de ' + fmt(c.stats.sent) + '</small></div>' +
+          '</div>'
+        )).join("") +
+        '</div>'
+      ) : "",
+
+      // EVOLUCION MENSUAL
+      data.monthly.length > 0 ? (
+        '<h2 class="section-title">📈 Evolución mensual de envíos</h2>' +
+        '<div class="chart">' +
+        data.monthly.map((m) => (
+          '<div class="chart-bar">' +
+          '  <div class="chart-bar-inner" data-value="' + fmt(m.sent) + '" style="height:' + Math.max(4, (m.sent / maxMonth) * 100) + '%"></div>' +
+          '  <div class="chart-label">' + esc(monthEs(m.month)) + '</div>' +
+          '</div>'
+        )).join("") +
+        '</div>'
+      ) : "",
+
+      // HISTÓRICO COMPLETO
+      '<h2 class="section-title">📋 Histórico completo</h2>',
+      '<div class="card"><table>',
+      '<thead><tr>',
+      '  <th>Campaña</th><th>Estado</th><th>Fecha</th><th>Enviados</th><th>Aperturas</th><th>Clics</th><th>Rebotes</th>',
+      '</tr></thead>',
+      '<tbody>',
+      data.campaigns.length === 0
+        ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:#999">Sin campañas todavía. Lanza tu primera campaña en "Crear campaña".</td></tr>'
+        : data.campaigns.map((c) => (
+          '<tr>' +
+          '  <td><strong>' + esc(c.name) + '</strong><br><small style="color:#888">' + esc(c.subject) + '</small></td>' +
+          '  <td>' + statusBadge(c.status) + '</td>' +
+          '  <td>' + esc(fechaEs(c.sentAt || c.createdAt)) + '</td>' +
+          '  <td>' + fmt(c.stats.sent) + '</td>' +
+          '  <td>' +
+          '    <span class="mini-bar"><span class="mini-bar-fill" style="width:' + Math.min(100, c.rates.openRate * 100) + '%"></span></span>' +
+          '    <strong>' + pct(c.rates.openRate) + '</strong> <small style="color:#999">(' + fmt(c.stats.opened) + ')</small>' +
+          '  </td>' +
+          '  <td><strong>' + pct(c.rates.clickRate) + '</strong> <small style="color:#999">(' + fmt(c.stats.clicked) + ')</small></td>' +
+          '  <td><strong>' + pct(c.rates.bounceRate) + '</strong> <small style="color:#999">(' + fmt(c.stats.bounced) + ')</small></td>' +
+          '</tr>'
+        )).join(""),
+      '</tbody></table></div>',
+
+      // FOOTER
+      '<div class="footer">',
+      '  <div style="font-size:22px;font-weight:900;color:var(--amarillo);margin-bottom:6px">🦉 ARTES BÚHO MANAGEMENT</div>',
+      '  <div>Informe ejecutivo · Plataforma oficial de emailing</div>',
+      '  <div style="margin-top:10px;opacity:0.9">booking@artesbuhomanagement.com · +34 649 63 59 07</div>',
+      '</div>'
+    ].join("");
+
+    document.getElementById("content").innerHTML = html;
+    document.getElementById("content").className = "";
+
+    /* Auto-imprimir si viene ?autoprint=1 */
+    if (new URLSearchParams(location.search).get("autoprint") === "1") {
+      setTimeout(() => window.print(), 800);
+    }
+  }
+})();
+</script>
+</body>
+</html>

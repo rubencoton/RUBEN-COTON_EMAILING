@@ -1,0 +1,72 @@
+﻿[
+    {
+        "name":  "APP_ARTES-BUHO",
+        "uuid":  "g81wml0wc22fp3it93httpoq",
+        "repo":  "rubencoton/APP_ARTES-BUHO",
+        "branch":  "main",
+        "source_type":  "App\\Models\\GithubApp",
+        "auto_deploy_mode":  "github_app_auto",
+        "fqdn":  "https://artesbuhomanagement.com",
+        "status":  "running:unknown",
+        "health_check_enabled":  false,
+        "health_check_path":  "/health",
+        "redirect":  "both",
+        "updated_at":  "2026-03-30T18:41:17.000000Z"
+    },
+    {
+        "name":  "APP_ARTES-BUHO_BELLA-BESTIA",
+        "uuid":  "nxqib7ja5ykbnnjgig390516",
+        "repo":  "rubencoton/APP_ARTES-BUHO_BELLA-BESTIA",
+        "branch":  "main",
+        "source_type":  "App\\Models\\GithubApp",
+        "auto_deploy_mode":  "github_app_auto",
+        "fqdn":  "https://bella-bestia.artesbuhomanagement.com",
+        "status":  "running:unknown",
+        "health_check_enabled":  false,
+        "health_check_path":  "/",
+        "redirect":  "both",
+        "updated_at":  "2026-03-30T18:41:17.000000Z"
+    },
+    {
+        "name":  "APP_ARTES-BUHO_CONTABILIDAD",
+        "uuid":  "e8mmivaja29y7lnvyyrx8vbs",
+        "repo":  "rubencoton/APP_ARTES-BUHO_CONTABILIDAD",
+        "branch":  "main",
+        "source_type":  "App\\Models\\GithubApp",
+        "auto_deploy_mode":  "github_app_auto",
+        "fqdn":  "https://contabilidad.artesbuhomanagement.com",
+        "status":  "running:healthy",
+        "health_check_enabled":  true,
+        "health_check_path":  "/health",
+        "redirect":  "both",
+        "updated_at":  "2026-03-30T18:41:17.000000Z"
+    },
+    {
+        "name":  "APP_ARTES-BUHO_EMAILING",
+        "uuid":  "rsqknw9bq6jrisiok39jcgfs",
+        "repo":  "rubencoton/APP_ARTES-BUHO_EMAILING",
+        "branch":  "main",
+        "source_type":  "App\\Models\\GithubApp",
+        "auto_deploy_mode":  "github_app_auto",
+        "fqdn":  "https://emailing.artesbuhomanagement.com",
+        "status":  "running:healthy",
+        "health_check_enabled":  true,
+        "health_check_path":  "/",
+        "redirect":  "both",
+        "updated_at":  "2026-03-30T18:41:17.000000Z"
+    },
+    {
+        "name":  "APP_RUBEN-COTON",
+        "uuid":  "u54231spi5c0degtxf1026yz",
+        "repo":  "rubencoton/APP_RUBEN-COTON.git",
+        "branch":  "main",
+        "source_type":  "App\\Models\\GithubApp",
+        "auto_deploy_mode":  "github_app_auto",
+        "fqdn":  "https://rubencoton.net",
+        "status":  "running:healthy",
+        "health_check_enabled":  false,
+        "health_check_path":  "/",
+        "redirect":  "both",
+        "updated_at":  "2026-03-30T18:41:17.000000Z"
+    }
+]

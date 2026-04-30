@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manual de uso — ENVÍO MASIVO ARTES BÚHO</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  color: #1a1a1a;
+  background: #f7f7f9;
+  line-height: 1.6;
+  font-size: 11pt;
+  padding: 24px;
+}
+.container { max-width: 860px; margin: 0 auto; }
+
+/* ---------- PORTADA ---------- */
+.cover {
+  position: relative;
+  text-align: center;
+  padding: 70px 24px 60px;
+  background: linear-gradient(135deg, #8b1a1a 0%, #d71920 60%, #a81117 100%);
+  color: #fff;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: 0 10px 30px rgba(168,17,23,0.25);
+  overflow: hidden;
+}
+.cover::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% 10%, rgba(244,180,0,0.15), transparent 50%);
+  pointer-events: none;
+}
+.cover .logo-mark {
+  font-size: 48pt; line-height: 1;
+  color: #F4B400;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));
+}
+.cover h1 {
+  color: #ffffff !important;
+  font-size: 36pt;
+  letter-spacing: 6px;
+  margin: 0 0 10px;
+  border: none;
+  padding: 0;
+  font-weight: 900;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}
+.cover .subtitle {
+  font-size: 13pt;
+  color: #F4B400;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 24px;
+}
+.cover .tagline { font-size: 12pt; opacity: 0.95; font-weight: 600; }
+.cover .author {
+  margin-top: 32px;
+  font-size: 10pt;
+  opacity: 0.85;
+  letter-spacing: 1px;
+}
+
+/* ---------- TITULARES ---------- */
+h1 {
+  color: #a81117;
+  font-size: 22pt;
+  margin: 44px 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 4px solid #D62828;
+  display: flex; align-items: center; gap: 14px;
+}
+h1 .icon {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #D62828, #a81117);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 22px;
+  box-shadow: 0 4px 10px rgba(168,17,23,0.25);
+}
+h2 { color: #a81117; font-size: 15pt; margin: 24px 0 10px; }
+h3 { color: #1a1a1a; font-size: 13pt; margin: 18px 0 8px; font-weight: 800; }
+
+p { margin: 8px 0; }
+ul, ol { margin: 8px 0 12px 28px; }
+li { margin: 5px 0; }
+
+/* ---------- TARJETAS ---------- */
+.step {
+  background: #fff8e1;
+  border-left: 5px solid #F4B400;
+  padding: 14px 18px;
+  margin: 12px 0;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.step-num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  background: #D62828;
+  color: #fff;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  font-weight: 800;
+  margin-right: 12px;
+  box-shadow: 0 2px 6px rgba(214,40,40,0.35);
+  font-size: 12pt;
+}
+.alert {
+  background: #fff1f1;
+  border-left: 5px solid #D62828;
+  padding: 14px 18px;
+  margin: 12px 0;
+  border-radius: 6px;
+}
+.alert strong { color: #a81117; }
+.tip {
+  background: #e6f7ec;
+  border-left: 5px solid #10b981;
+  padding: 14px 18px;
+  margin: 12px 0;
+  border-radius: 6px;
+}
+.info {
+  background: #eef4ff;
+  border-left: 5px solid #3b82f6;
+  padding: 14px 18px;
+  margin: 12px 0;
+  border-radius: 6px;
+}
+
+/* ---------- GRID DE CAPACIDADES ---------- */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 16px 0 20px;
+}
+.feature {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: transform 0.15s;
+}
+.feature:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.feature .fi {
+  font-size: 24px;
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff1f1;
+  color: #D62828;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.feature h4 { font-size: 12pt; color: #a81117; margin-bottom: 4px; font-weight: 800; }
+.feature p { font-size: 10.5pt; color: #444; margin: 0; }
+
+/* ---------- TABLAS ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 10.5pt;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+th {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 9.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+tr:nth-child(even) td { background: #f9fafb; }
+tr:last-child td { border-bottom: none; }
+
+code {
+  background: #1e1e2e;
+  color: #a6e3a1;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: Consolas, monospace;
+  font-size: 10pt;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  background: #F4B400;
+  color: #6f2d0a;
+  border-radius: 12px;
+  font-size: 9pt;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ---------- ÍNDICE ---------- */
+.toc {
+  background: #fff;
+  border: 2px solid #D62828;
+  padding: 24px 28px;
+  border-radius: 14px;
+  margin: 20px 0 40px;
+  box-shadow: 0 4px 12px rgba(168,17,23,0.08);
+}
+.toc h2 {
+  margin-top: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.toc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px 24px;
+  margin-top: 16px;
+  list-style: none;
+  padding: 0;
+  counter-reset: toc;
+}
+.toc-grid li { margin: 0; }
+.toc-grid a {
+  display: flex; align-items: center; gap: 10px;
+  color: #1a1a1a;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.toc-grid a:hover { background: #fff1f1; color: #a81117; }
+.toc-grid .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  background: #a81117;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 10pt;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.footer {
+  margin-top: 60px;
+  padding: 30px 20px 20px;
+  border-top: 3px solid #D62828;
+  text-align: center;
+  font-size: 10pt;
+  color: #666;
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+}
+.footer strong { color: #a81117; font-size: 11pt; }
+
+.page-break { page-break-after: always; }
+
+/* ---------- BOTÓN PDF ---------- */
+.print-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 14px 26px;
+  background: linear-gradient(135deg, #D62828, #a81117);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(168,17,23,0.35);
+  z-index: 1000;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.print-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(168,17,23,0.45);
+}
+.print-btn:active { transform: translateY(0); }
+.print-hint {
+  position: fixed;
+  top: 72px;
+  right: 20px;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 10.5pt;
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  opacity: 0.95;
+  max-width: 260px;
+}
+.print-hint::before {
+  content: "";
+  position: absolute;
+  top: -6px; right: 30px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #1a1a1a;
+}
+
+/* ---------- IMPRESIÓN ---------- */
+@media print {
+  body { padding: 0; font-size: 10pt; background: #fff; }
+  .print-btn, .print-hint { display: none !important; }
+  .container { max-width: 100%; }
+  .cover { page-break-after: always; box-shadow: none; }
+  h1 { page-break-after: avoid; }
+  h2, h3 { page-break-after: avoid; }
+  .step, .alert, .tip, .info, .feature { page-break-inside: avoid; }
+  table { page-break-inside: avoid; }
+  .toc { page-break-after: always; }
+  .features { grid-template-columns: repeat(2, 1fr); }
+  .feature { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="descargarPDF()">
+  <span style="font-size:18px;">📥</span> Descargar PDF
+</button>
+<div class="print-hint">Se abrirá el diálogo de impresión → elige <strong>"Guardar como PDF"</strong></div>
+
+<div class="container">
+
+<!-- PORTADA -->
+<div class="cover">
+  <div class="logo-mark">🦉</div>
+  <h1>ARTES BÚHO</h1>
+  <div class="subtitle">Envío Masivo</div>
+  <div class="tagline">Manual de uso completo</div>
+  <div class="author">Sistema propio de emailing · Desarrollado por RUBEN COTON</div>
+</div>
+
+<!-- ÍNDICE -->
+<div class="toc">
+  <h2><span>📑</span> Índice</h2>
+  <ul class="toc-grid">
+    <li><a href="#intro"><span class="num">1</span>¿Qué es la app?</a></li>
+    <li><a href="#acceso"><span class="num">2</span>Cómo acceder</a></li>
+    <li><a href="#dashboard"><span class="num">3</span>Inicio (Dashboard)</a></li>
+    <li><a href="#contactos"><span class="num">4</span>Contactos</a></li>
+    <li><a href="#importar"><span class="num">5</span>Importar contactos</a></li>
+    <li><a href="#plantillas"><span class="num">6</span>Plantillas</a></li>
+    <li><a href="#segmentos"><span class="num">7</span>Segmentos</a></li>
+    <li><a href="#campanas"><span class="num">8</span>Enviar campañas</a></li>
+    <li><a href="#analitica"><span class="num">9</span>Analítica</a></li>
+    <li><a href="#automatizaciones"><span class="num">10</span>Automatizaciones</a></li>
+    <li><a href="#crms"><span class="num">11</span>CRMs conectados</a></li>
+    <li><a href="#configuracion"><span class="num">12</span>Configuración técnica</a></li>
+    <li><a href="#ia"><span class="num">13</span>Sistema de IA</a></li>
+    <li><a href="#solucion"><span class="num">14</span>Solución de problemas</a></li>
+  </ul>
+</div>
+
+<h1 id="intro"><span class="icon">💡</span>1. ¿Qué es la app?</h1>
+<p><strong>ENVÍO MASIVO</strong> es la plataforma propia de email marketing de <strong>ARTES BÚHO MANAGEMENT</strong>. Permite enviar campañas de email a grandes listas de contactos sin depender de servicios externos como Brevo o MailerLite.</p>
+
+<h3>🚀 Qué puede hacer</h3>
+<div class="features">
+  <div class="feature">
+    <div class="fi">📤</div>
+    <h4>Envío masivo propio</h4>
+    <p>Hasta 30 emails/minuto desde servidor propio con DKIM firmado.</p>
+  </div>
+  <div class="feature">
+    <div class="fi">📊</div>
+    <h4>+51.000 contactos</h4>
+    <p>Gestiona 6 CRMs sincronizados automáticamente desde Google Sheets.</p>
+  </div>
+  <div class="feature">
+    <div class="fi">🎨</div>
+    <h4>Plantillas HTML</h4>
+    <p>Editor con vista previa desktop/móvil y generador con IA.</p>
+  </div>
+  <div class="feature">
+    <div class="fi">🎯</div>
+    <h4>Segmentación</h4>
+    <p>Filtra destinatarios por tipo, etiqueta, CRM o lista.</p>
+  </div>
+  <div class="feature">
+    <div class="fi">📈</div>
+    <h4>Analítica completa</h4>
+    <p>Aperturas, clics, rebotes, bajas y conversiones en tiempo real.</p>
+  </div>
+  <div class="feature">
+    <div class="fi">🤖</div>
+    <h4>IA en cascada</h4>
+    <p>9 cerebros de IA para escribir emails, asuntos y respuestas.</p>
+  </div>
+</div>
+
+<h3>⚙️ Cómo funciona</h3>
+<div class="tip">
+  <strong>Flujo completo:</strong><br>
+  Google Sheets (CRMs) → <strong>Sync automático</strong> cada lunes 10:30 → Base de datos de la app → Creas campaña → Envías a segmento → El servidor envía vía SMTP directo con DKIM firmado.
+</div>
+
+<h1 id="acceso"><span class="icon">🔑</span>2. Cómo acceder</h1>
+
+<div class="step">
+  <span class="step-num">1</span><strong>URL:</strong> <code>https://emailing.artesbuhomanagement.com</code>
+</div>
+<div class="step">
+  <span class="step-num">2</span><strong>Contraseña:</strong> <code>+artesbuho26</code>
+</div>
+<div class="step">
+  <span class="step-num">3</span>La sesión dura <strong>30 días</strong>. No tienes que volver a entrar si usas el mismo navegador.
+</div>
+
+<div class="alert">
+  <strong>🔒 Seguridad:</strong> máximo 5 intentos de login fallidos por IP en 5 minutos. Si te bloquean, espera 5 min.
+</div>
+
+<h1 id="dashboard"><span class="icon">🏠</span>3. Inicio (Dashboard)</h1>
+<p>Primera pantalla al entrar. Muestra el estado general del sistema.</p>
+
+<table>
+  <tr><th>Tarjeta</th><th>Significado</th></tr>
+  <tr><td><strong>Estado de app</strong></td><td>OPERATIVA = todo OK</td></tr>
+  <tr><td><strong>Base de datos</strong></td><td>CONECTADA = PostgreSQL OK</td></tr>
+  <tr><td><strong>Contactos</strong></td><td>Total en la base de datos</td></tr>
+  <tr><td><strong>Campañas</strong></td><td>Total creadas</td></tr>
+  <tr><td><strong>Motor</strong></td><td>ACTIVO (PROPIO) = sistema de envío OK</td></tr>
+  <tr><td><strong>Ritmo / cola</strong></td><td>Velocidad actual + emails pendientes</td></tr>
+</table>
+
+<h3>📋 Secciones del dashboard</h3>
+<ul>
+  <li><strong>Campañas enviadas / Tasa apertura / Tasa clics / Rebotes</strong></li>
+  <li><strong>Actividad reciente:</strong> últimos envíos</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h1 id="contactos"><span class="icon">👥</span>4. Contactos</h1>
+<p>Aquí ves y gestionas todos los contactos de tus CRMs.</p>
+
+<h3>🔎 Qué puedes hacer</h3>
+<ul>
+  <li><strong>Buscar</strong> por email, nombre, empresa o etiqueta</li>
+  <li><strong>Ver estado:</strong> subscribed / unsubscribed / bounced / complained</li>
+  <li><strong>Ver etiquetas:</strong> por ejemplo <code>crm-venta-booking</code> + <code>seg-infantil</code></li>
+  <li><strong>Paginar</strong> 50 contactos por página</li>
+</ul>
+
+<div class="info">
+  <strong>ℹ️ Importante:</strong> los contactos ya <strong>no se crean manualmente</strong>. Todo se sincroniza desde Google Sheets. Los cambios se hacen SIEMPRE en las hojas.
+</div>
+
+<h3>🎨 Estados de contacto</h3>
+<table>
+  <tr><th>Estado</th><th>Color</th><th>¿Recibe emails?</th></tr>
+  <tr><td>subscribed</td><td>🟢 Verde</td><td>SÍ</td></tr>
+  <tr><td>non_subscribed</td><td>⚪ Gris</td><td>NO</td></tr>
+  <tr><td>unsubscribed</td><td>🟡 Amarillo</td><td>NO (se dio de baja)</td></tr>
+  <tr><td>bounced</td><td>🔴 Rojo</td><td>NO (email no válido)</td></tr>
+  <tr><td>complained</td><td>🩷 Rosa</td><td>NO (marcó como spam)</td></tr>
+  <tr><td>suppressed</td><td>🟣 Morado</td><td>NO (suprimido)</td></tr>
+</table>
+
+<h1 id="importar"><span class="icon">📥</span>5. Importar contactos</h1>
+<p>Para subir contactos manualmente desde un archivo (uso excepcional).</p>
+
+<div class="step">
+  <span class="step-num">1</span>Ve a <strong>Importar</strong> en el menú lateral
+</div>
+<div class="step">
+  <span class="step-num">2</span>Arrastra tu archivo (CSV, TXT o XLSX) a la zona marcada
+</div>
+<div class="step">
+  <span class="step-num">3</span>La app detecta automáticamente las columnas (email, nombre, empresa, teléfono)
+</div>
+<div class="step">
+  <span class="step-num">4</span>Revisa el mapeo y clic en <strong>Importar contactos</strong>
+</div>
+
+<h3>📋 Columnas que se detectan</h3>
+<table>
+  <tr><th>Campo app</th><th>Cabeceras aceptadas</th></tr>
+  <tr><td>Email</td><td>EMAIL, CORREO, CORREO ELECTRÓNICO, E-MAIL</td></tr>
+  <tr><td>Nombre</td><td>NOMBRE CONTACTO, NOMBRE COMPLETO</td></tr>
+  <tr><td>Empresa</td><td>NOMBRE, NOMBRE FESTIVAL, MEDIO O EMPRESA</td></tr>
+  <tr><td>Provincia</td><td>PROVINCIA</td></tr>
+  <tr><td>Comunidad</td><td>CCAA, C.C.A., Comunidad Autónoma</td></tr>
+</table>
+
+<div class="tip">
+  <strong>🔄 Modo de importación:</strong><br>
+  • <strong>Crear o actualizar:</strong> si el email ya existe, se actualiza con los datos nuevos<br>
+  • <strong>Solo nuevos:</strong> ignora los contactos que ya existen
+</div>
+
+<h1 id="plantillas"><span class="icon">🎨</span>6. Plantillas</h1>
+<p>Diseños HTML reutilizables para tus emails.</p>
+
+<h3>✏️ Crear una plantilla</h3>
+<div class="step">
+  <span class="step-num">1</span>Clic en <strong>Plantillas</strong>
+</div>
+<div class="step">
+  <span class="step-num">2</span>Rellena <strong>Nombre</strong> y <strong>Asunto</strong>
+</div>
+<div class="step">
+  <span class="step-num">3</span>Elige pestaña:
+  <ul style="margin-top:6px;">
+    <li><strong>Código HTML:</strong> pega tu HTML directamente</li>
+    <li><strong>Vista previa:</strong> ve cómo queda (Desktop / Móvil)</li>
+    <li><strong>Texto plano:</strong> alternativa sin HTML</li>
+    <li><strong>Crear con IA:</strong> usa el Email Builder con cascada de 9 IAs</li>
+  </ul>
+</div>
+<div class="step">
+  <span class="step-num">4</span>Clic en <strong>Guardar plantilla</strong>
+</div>
+
+<h1 id="segmentos"><span class="icon">🎯</span>7. Segmentos</h1>
+<p>Listas filtradas de contactos para enviar solo a quien te interesa.</p>
+
+<h3>➕ Crear segmento</h3>
+<div class="step">
+  <span class="step-num">1</span>Ve a <strong>Segmentos</strong>
+</div>
+<div class="step">
+  <span class="step-num">2</span>Rellena el formulario:
+  <ul style="margin-top:6px;">
+    <li><strong>Nombre:</strong> ej. "Festivales urbanos"</li>
+    <li><strong>Campo:</strong> tags / status / company</li>
+    <li><strong>Operador:</strong> equals / contains / is_empty</li>
+    <li><strong>Valor:</strong> ej. "crm-festivales"</li>
+  </ul>
+</div>
+<div class="step">
+  <span class="step-num">3</span>Clic en <strong>Crear segmento</strong>
+</div>
+
+<div class="tip">
+  <strong>🏷️ Etiquetas automáticas:</strong> cada contacto de los CRMs ya viene con tags del tipo <code>crm-nombre</code> y <code>seg-pestaña</code>. Usa <code>tags contains crm-festivales</code> para todos los festivales, o <code>tags contains seg-urban-s</code> para los de urbano tamaño S.
+</div>
+
+<div class="page-break"></div>
+
+<h1 id="campanas"><span class="icon">📧</span>8. Enviar campañas (3 pasos)</h1>
+<p>El corazón de la app. Aquí lanzas los envíos masivos.</p>
+
+<h3>PASO 1 — A quién enviar</h3>
+<div class="step">
+  <span class="step-num">1</span>Selecciona un <strong>CRM</strong> y una <strong>Lista</strong> del desplegable. Verás cuántos contactos recibirán el email.
+</div>
+<div class="alert">
+  <strong>⚠️ IMPORTANTE:</strong> si dejas "Todos los contactos" y confirmas, enviarás a los +51.000 contactos. La app te pedirá confirmación expresa para esto.
+</div>
+
+<h3>PASO 2 — El email</h3>
+<div class="step">
+  <span class="step-num">2</span>Rellena:
+  <ul style="margin-top:6px;">
+    <li><strong>Nombre interno</strong> (no lo ve el destinatario)</li>
+    <li><strong>Asunto</strong> (lo que ve el destinatario en bandeja)</li>
+    <li><strong>Plantilla</strong> (elige de tus plantillas guardadas)</li>
+    <li><strong>Adjuntos</strong> (opcional, máx 10MB total)</li>
+  </ul>
+  <p style="margin-top:6px;">Clic en <strong>Guardar campaña</strong>.</p>
+</div>
+
+<h3>PASO 3 — Enviar</h3>
+<div class="step">
+  <span class="step-num">3</span>En la tabla de campañas, clic en <strong>Enviar</strong>. Los emails entran en la cola y se envían al ritmo configurado en el motor.
+</div>
+
+<div class="tip">
+  <strong>🛡️ Seguridad anti-errores:</strong> si creas una campaña sin segmento y tiene más de 100 destinatarios, la app bloquea el envío y pide confirmación expresa.
+</div>
+
+<h1 id="analitica"><span class="icon">📊</span>9. Analítica</h1>
+<p>Para ver cómo funcionan tus campañas.</p>
+
+<ul>
+  <li>Selecciona una campaña del desplegable</li>
+  <li>Clic en <strong>Ver analítica</strong> o <strong>Descargar informe PDF</strong></li>
+  <li>Verás: enviados, entregados, aperturas, clics, bajas, rebotes</li>
+  <li>El informe PDF incluye datos públicos (empresa, provincia, CCAA) sin exponer emails ni teléfonos</li>
+</ul>
+
+<h1 id="automatizaciones"><span class="icon">⚡</span>10. Automatizaciones</h1>
+<p>Workflows que se ejecutan solos.</p>
+
+<h3>🔁 Tipos disponibles</h3>
+<ul>
+  <li><strong>No abrió tras X horas:</strong> envía follow-up a quien no abrió</li>
+  <li><strong>Abrió pero no clicó tras X horas:</strong> envía segundo email a indecisos</li>
+</ul>
+
+<div class="step">
+  <span class="step-num">1</span>Rellena formulario: nombre, tipo, horas de espera, plantilla
+</div>
+<div class="step">
+  <span class="step-num">2</span>Clic en <strong>Crear workflow</strong>
+</div>
+<div class="step">
+  <span class="step-num">3</span>Clic en <strong>Ejecutar workflows ahora</strong> para lanzar manualmente
+</div>
+
+<h1 id="crms"><span class="icon">🗂️</span>11. CRMs conectados (Google Sheets)</h1>
+<p>La app está sincronizada con <strong>6 hojas de cálculo de Google Sheets</strong>:</p>
+
+<table>
+  <tr><th>CRM</th><th>Listas</th></tr>
+  <tr><td><strong>VENTA BOOKING</strong></td><td>Infantil, Teatro, Bodas, Hoteles, Festejos, Cultura, Juventud, Club, Abuelos...</td></tr>
+  <tr><td><strong>OTROS</strong></td><td>Grupos, Management, Pedagógico, Locales Ensayo</td></tr>
+  <tr><td><strong>MUNDO DISCOGRÁFICO</strong></td><td>Discográficas, Editoriales, Distribuidoras</td></tr>
+  <tr><td><strong>MARKETING Y PROMOCIÓN</strong></td><td>Influencers, Podcast, Radio, Prensa, TV...</td></tr>
+  <tr><td><strong>FESTIVALES</strong></td><td>Urban S/L, Pop L/XL, Indie, Rock, Electrónica, Flamenco...</td></tr>
+  <tr><td><strong>BELLA BESTIA</strong></td><td>Despedidas, Universitarios</td></tr>
+</table>
+
+<h3>🔄 Sincronización automática</h3>
+<div class="alert">
+  <strong>Cada lunes a las 10:30</strong> la app lee las 6 hojas y:
+  <ul style="margin-top:6px;">
+    <li>Añade contactos nuevos</li>
+    <li>Actualiza los existentes</li>
+    <li><strong>Borra</strong> los que ya no están en las hojas</li>
+  </ul>
+</div>
+
+<h3>🖱️ Sincronizar manualmente</h3>
+<p>En <strong>Configuración</strong> hay un botón <strong>"Sincronizar CRMs ahora"</strong> para forzar un sync inmediato.</p>
+
+<div class="tip">
+  <strong>📌 Regla de oro:</strong> los cambios se hacen SÓLO en las hojas de Google. La app sólo LEE, nunca escribe.
+</div>
+
+<h1 id="configuracion"><span class="icon">⚙️</span>12. Configuración técnica</h1>
+<p>Panel para DevOps y ajustes avanzados.</p>
+
+<ul>
+  <li><strong>Checklist de producción:</strong> verifica DNS, SMTP, DKIM</li>
+  <li><strong>Probar proveedor:</strong> test de conexión SMTP</li>
+  <li><strong>Pausar / Reanudar motor:</strong> para/arranca los envíos</li>
+  <li><strong>Envío de prueba:</strong> manda un email a un destinatario para testear</li>
+  <li><strong>Sincronizar CRMs ahora:</strong> fuerza sync inmediato</li>
+</ul>
+
+<h3>🚂 Motor de envío</h3>
+<table>
+  <tr><th>Dato</th><th>Valor</th></tr>
+  <tr><td>Modo</td><td>Directo MX (sin relay externo)</td></tr>
+  <tr><td>Velocidad</td><td>30 emails/minuto</td></tr>
+  <tr><td>Remitente</td><td>booking@artesbuhomanagement.com</td></tr>
+  <tr><td>DKIM</td><td>Activo (firma digital)</td></tr>
+  <tr><td>SPF</td><td>Configurado en DNS</td></tr>
+  <tr><td>DMARC</td><td>p=none (monitoreo)</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1 id="ia"><span class="icon">🤖</span>13. Sistema de IA (9 cerebros en cascada)</h1>
+<p>La app tiene <strong>9 IAs en cascada</strong> calcadas del sistema de ARTES-BÚHO_RAMÓN. Si una falla, la siguiente toma el relevo. <strong>Imposible tumbar el sistema.</strong></p>
+
+<h3>🧠 Los 9 cerebros por potencia descendente</h3>
+<table>
+  <tr><th>#</th><th>Cerebro</th><th>Parámetros</th><th>Cuota</th></tr>
+  <tr><td>1</td><td><strong>SambaNova</strong> DeepSeek-V3.2</td><td>685B</td><td>baja</td></tr>
+  <tr><td>2</td><td><strong>NVIDIA NIM</strong> llama-3.1</td><td>405B</td><td>1.000/mes</td></tr>
+  <tr><td>3</td><td><strong>Cerebras</strong> qwen-3</td><td>235B</td><td>media</td></tr>
+  <tr><td>4</td><td><strong>Mistral</strong> large</td><td>123B</td><td>media</td></tr>
+  <tr><td>5</td><td><strong>OpenRouter</strong> gpt-oss</td><td>120B</td><td>alta</td></tr>
+  <tr><td>6</td><td><strong>Groq</strong> llama-3.3</td><td>70B</td><td>14.400/día</td></tr>
+  <tr><td>7</td><td><strong>Gemini</strong> 2.5 Flash</td><td>~</td><td>1.500/día</td></tr>
+  <tr><td>8</td><td>PC Local Qwen</td><td>14B</td><td>ilimitada</td></tr>
+</table>
+
+<h3>🎚️ Routing inteligente por tier (ahorra cuotas)</h3>
+<p>Cada acción de la app usa el cerebro JUSTO para esa tarea:</p>
+
+<table>
+  <tr><th>Tier</th><th>Se usa para</th><th>Cerebros preferidos</th></tr>
+  <tr><td><span class="badge">TRIVIAL</span></td><td>Clasificar spam, extraer email, detectar intención</td><td>Groq, Mistral, OpenRouter, Gemini</td></tr>
+  <tr><td><span class="badge">NORMAL</span></td><td>Generar asunto, resumir respuesta, traducir</td><td>Groq, Mistral, OpenRouter, Cerebras, Gemini</td></tr>
+  <tr><td><span class="badge">ALTA</span></td><td>Generar email completo, optimizar copy</td><td>Cerebras, NVIDIA, Mistral, OpenRouter, Gemini</td></tr>
+  <tr><td><span class="badge">CRÍTICA</span></td><td>Propuesta comercial, respuesta a queja, negociación</td><td>SambaNova, NVIDIA, Cerebras, Mistral</td></tr>
+</table>
+
+<div class="tip">
+  <strong>🛡️ Por qué es imposible agotar cuota:</strong><br>
+  Las tareas simples usan Groq (14K/día) primero. Sólo cuando agotamos los cerebros de cuota alta bajamos a los de cuota baja. Y aunque 7 cerebros caigan a la vez, siempre queda otro.
+</div>
+
+<h1 id="solucion"><span class="icon">🆘</span>14. Solución de problemas</h1>
+
+<h3>❌ No recibo los emails de prueba</h3>
+<ul>
+  <li>Revisa la carpeta de SPAM</li>
+  <li>Verifica que el contacto está <strong>subscribed</strong></li>
+  <li>Ve a Configuración y pulsa <strong>Probar proveedor</strong></li>
+</ul>
+
+<h3>🐢 La app va lenta</h3>
+<ul>
+  <li>Normal con +50K contactos. La paginación ayuda.</li>
+  <li>Si se cuelga, el motor sigue en cola — no pierdes emails.</li>
+</ul>
+
+<h3>🔒 Me bloquearon el login</h3>
+<p>Has fallado 5 veces. Espera <strong>5 minutos</strong> antes de volver a intentar.</p>
+
+<h3>🚨 Envié campaña sin querer</h3>
+<ol>
+  <li>Ve a <strong>Configuración</strong></li>
+  <li>Pulsa <strong>Pausar motor</strong></li>
+  <li>La cola se detiene. Contacta con el admin técnico (RUBEN COTON)</li>
+</ol>
+
+<h3>👋 Darse de baja de los emails</h3>
+<p>Los destinatarios hacen clic en el enlace del footer y se marcan como <strong>unsubscribed</strong>. No reciben más emails.</p>
+
+<div class="footer">
+  <p><strong>🦉 ARTES BÚHO MANAGEMENT</strong></p>
+  <p>ENVÍO MASIVO — Sistema construido por RUBEN COTON</p>
+  <p>📧 booking@artesbuhomanagement.com</p>
+  <p style="margin-top:10px;">Versión del manual: 2.0 · <span id="fecha"></span></p>
+</div>
+
+</div>
+
+<script>
+document.getElementById('fecha').textContent = new Date().toLocaleDateString('es-ES', {year:'numeric', month:'long', day:'numeric'});
+
+function descargarPDF() {
+  // Usar window.print() que es 100% fiable y funciona en todos los navegadores.
+  // El usuario elige "Guardar como PDF" en el diálogo de impresión.
+  window.print();
+}
+
+// Atajo teclado Ctrl+P ya funciona nativo.
+</script>
+
+</body>
+</html>
