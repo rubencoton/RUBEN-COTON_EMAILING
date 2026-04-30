@@ -27,6 +27,7 @@ const localAgent = require("./localAgent");
 const spamShield = require("./spamShield");
 const driveScheduler = require("./driveScheduler");
 const sheetsWriteback = require("./sheetsWriteback");
+const trackingSign = require("./trackingSign");
 
 /* Helper writeback: busca _sheetMeta del contacto y encola update */
 const wbForEmail = (email, status) => {
@@ -3182,10 +3183,27 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
       const ip = (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80);
       const isMachineOpen = /GoogleImageProxy|YahooMailProxy|Outlook-iOS|MicrosoftPreview/i.test(ua)
         || !ua;
+      /* P0-A audit 2026-04-30: validar HMAC en query ?s=<sig>. URLs sin
+       * firma se aceptan en modo legacy (compat con emails ya enviados)
+       * pero se loggean. Modo enforce bloquea sin firma. URL con firma
+       * INVÁLIDA siempre se rechaza. */
+      const sig = String(req.query.s || "").trim();
+      let signed = false;
+      let sigValid = true;
+      if (sig) {
+        signed = true;
+        sigValid = trackingSign.verify(campaignId, email, sig);
+        if (!sigValid) {
+          console.warn(`[tracking][open] HMAC inválido cid=${campaignId} email=${email} ip=${ip}`);
+        }
+      } else if (trackingSign.isEnforce()) {
+        console.warn(`[tracking][open] sin firma (enforce) cid=${campaignId} email=${email}`);
+        sigValid = false;
+      }
       /* FIX C3 audit 2026-04-30: rate limit por (cid, email, ip).
        * Sólo registramos un evento por minuto para evitar que un
        * atacante con la URL pueda inflar stats. */
-      if (trackingAllowEvent("open", campaignId, email, ip)) {
+      if (sigValid && trackingAllowEvent("open", campaignId, email, ip)) {
         try {
           dataStore.addEvent({
             type: "open",
@@ -3195,6 +3213,7 @@ app.get("/t/o/:cid/:eb64.gif", (req, res) => {
             userAgent: ua,
             ip,
             isMachineOpen,
+            signed,
             occurredAt: new Date().toISOString()
           });
         } catch (err) { console.warn("[tracking][open] addEvent:", err.message); }
@@ -3236,40 +3255,100 @@ const trackingAllowEvent = (kind, cid, email, ip) => {
   return true;
 };
 
-/* Hosts no redirigibles desde /t/c/ (FIX C4 audit 2026-04-30):
- * IPs privadas, localhost, dominios de typo-squat conocidos. */
+/* Hosts no redirigibles desde /t/c/ (P0-L audit 2026-04-30 — endurecido):
+ * El BLOCKED_REDIRECT_HOSTS Set + isPrivateIP-IPv4 originales (FIX C4)
+ * tenían bypass triviales: octal (0177.0.0.1), entero (2130706433),
+ * IPv6 [::1], hostname suffix (localhost.attacker.com), short IP (127.1).
+ *
+ * Ahora cubrimos:
+ *   - localhost / *.localhost / *.local / *.internal / *.test / *.example
+ *   - IPv6 (cualquier host con `:`)
+ *   - Decimal IP (host puramente numérico)
+ *   - Octal/hex IP forms
+ *   - IPv4 estándar privadas/loopback con parsing tolerante a leading zeros
+ *   - Short IPv4 (127.1, 0.1, 1)
+ *   - 169.254.x.x (link-local) y 100.64-127.x.x (CGNAT). */
 const BLOCKED_REDIRECT_HOSTS = new Set([
-  "localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254"
+  "localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254",
+  /* AWS/GCP metadata IPs por hostname */
+  "metadata.google.internal", "metadata.goog"
 ]);
+const BLOCKED_TLD_SUFFIXES = [
+  ".localhost", ".local", ".internal", ".test", ".example", ".lan", ".intranet"
+];
+const parseOctet = (s) => {
+  if (/^0x/i.test(s)) return parseInt(s.slice(2), 16);
+  if (/^0[0-7]+$/.test(s)) return parseInt(s, 8);
+  return parseInt(s, 10);
+};
 const isPrivateIP = (host) => {
-  if (!/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
-  const o = host.split(".").map(Number);
-  return (o[0] === 10) ||
-         (o[0] === 172 && o[1] >= 16 && o[1] <= 31) ||
-         (o[0] === 192 && o[1] === 168) ||
-         (o[0] === 127);
+  /* IPv6 — bloqueamos siempre (no hay redirect legítimo a IPv6 desde email) */
+  if (host.includes(":")) return true;
+  if (host.startsWith("[") && host.endsWith("]")) return true;
+  /* Decimal puro (IP en entero) */
+  if (/^\d+$/.test(host)) return true;
+  /* Hex puro */
+  if (/^0x[0-9a-f]+$/i.test(host)) return true;
+  /* IPv4 estándar a.b.c.d con tolerancia a leading zeros (octal) */
+  if (/^[0-9a-fx]+\.[0-9a-fx]+\.[0-9a-fx]+\.[0-9a-fx]+$/i.test(host)) {
+    const o = host.split(".").map(parseOctet);
+    if (o.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return true;
+    return (o[0] === 10) ||
+           (o[0] === 172 && o[1] >= 16 && o[1] <= 31) ||
+           (o[0] === 192 && o[1] === 168) ||
+           (o[0] === 127) ||
+           (o[0] === 0) ||
+           (o[0] === 169 && o[1] === 254) ||
+           (o[0] === 100 && o[1] >= 64 && o[1] <= 127);
+  }
+  /* Short IPv4 (127.1, 0.1) — formato legacy aceptado por algunos resolvers */
+  if (/^\d+(\.\d+){0,3}$/.test(host) && /\d/.test(host)) return true;
+  return false;
+};
+const isBlockedHost = (host) => {
+  const h = String(host || "").toLowerCase().trim();
+  if (!h) return true;
+  if (BLOCKED_REDIRECT_HOSTS.has(h)) return true;
+  if (BLOCKED_TLD_SUFFIXES.some((suf) => h.endsWith(suf))) return true;
+  if (isPrivateIP(h)) return true;
+  return false;
 };
 
-/* GET /t/c/:cid/:eb64?u=URL_B64 — registra click y redirige a URL real. */
+/* GET /t/c/:cid/:eb64?u=URL_B64&s=SIG — registra click y redirige a URL real. */
 app.get("/t/c/:cid/:eb64", (req, res) => {
   const campaignId = String(req.params.cid || "").slice(0, 100);
   const email = decodeB64url(String(req.params.eb64 || "")).toLowerCase();
   const urlB64 = String(req.query.u || "");
   const targetUrl = decodeB64url(urlB64);
-  /* Validar URL destino para no crear open redirect (FIX C4) */
+  /* Validar URL destino para no crear open redirect (P0-L audit 2026-04-30
+   * — endurecido: ahora isBlockedHost cubre IPv6, octal, hostname suffix). */
   let finalUrl = "/";
   try {
     const parsed = new URL(targetUrl);
     const host = (parsed.hostname || "").toLowerCase();
     const okProtocol = parsed.protocol === "http:" || parsed.protocol === "https:";
-    const okHost = host && !BLOCKED_REDIRECT_HOSTS.has(host) && !isPrivateIP(host);
+    const okHost = host && !isBlockedHost(host);
     if (okProtocol && okHost) {
       finalUrl = parsed.toString();
     } else if (okProtocol && !okHost) {
       console.warn(`[tracking][click] redirect bloqueado a host sospechoso: ${host}`);
     }
   } catch (_e) { /* URL inválida, cae al fallback */ }
-  if (campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && finalUrl !== "/") {
+  /* P0-A audit 2026-04-30: validar HMAC. Igual que pixel: sin firma = legacy
+   * (acepta y registra signed:false), firma inválida = rechaza. */
+  const sig = String(req.query.s || "").trim();
+  let signed = false;
+  let sigValid = true;
+  if (sig) {
+    signed = true;
+    sigValid = trackingSign.verify(campaignId, email, sig);
+    if (!sigValid) {
+      console.warn(`[tracking][click] HMAC inválido cid=${campaignId} email=${email}`);
+    }
+  } else if (trackingSign.isEnforce()) {
+    sigValid = false;
+  }
+  if (sigValid && campaignId && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && finalUrl !== "/") {
     const ua = (req.headers["user-agent"] || "").slice(0, 200);
     const ip = (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80);
     const isBotSuspected = /bot|crawler|spider|preview|fetch|headless/i.test(ua);
@@ -3287,6 +3366,7 @@ app.get("/t/c/:cid/:eb64", (req, res) => {
         userAgent: ua,
         ip: (req.headers["x-forwarded-for"] || req.ip || "").toString().slice(0, 80),
         isBotSuspected,
+        signed,
         occurredAt: new Date().toISOString()
       });
       if (!isBotSuspected) {
@@ -3384,6 +3464,55 @@ app.get("/api/spam-shield/dns-health", async (_req, res) => {
 
 /* ── Unsubscribe endpoint (CRITICO para entregabilidad) ── */
 const EMAIL_REGEX_UNSUB = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* P0-K audit 2026-04-30: RFC 8058 one-click unsubscribe (POST sin form).
+ * Gmail/Apple Mail llaman a este endpoint como bot cuando el usuario pulsa
+ * "Cancelar suscripción" desde la barra superior del email. NO debe pedir
+ * confirmación ni renderizar HTML — debe procesar la baja y devolver 200.
+ *
+ * Header List-Unsubscribe-Post: List-Unsubscribe=One-Click ya se envía en
+ * gmailSender.js / massMailEngine.js. Sin este endpoint, Gmail Postmaster
+ * baja "Sender Reputation" detectando que la promesa del header no se cumple.
+ *
+ * Acepta email tanto en query (?email=...) como en body (form-urlencoded). */
+const processUnsubscribe = (email, source = "post") => {
+  if (!email) return { ok: false, reason: "missing_email" };
+  let decoded;
+  try {
+    decoded = Buffer.from(String(email), "base64url").toString("utf8").trim().toLowerCase();
+  } catch (_e) {
+    return { ok: false, reason: "invalid_b64" };
+  }
+  if (!EMAIL_REGEX_UNSUB.test(decoded)) return { ok: false, reason: "invalid_format" };
+  try {
+    const allContacts = dataStore.listContacts({});
+    const contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
+    if (contact) {
+      dataStore.createOrUpdateContact({ email: decoded, status: "unsubscribed" }, "update");
+      console.log(`[unsubscribe][${source}] Baja procesada: ${decoded}`);
+      return { ok: true, found: true, email: decoded };
+    }
+    console.log(`[unsubscribe][${source}] Email no encontrado: ${decoded}`);
+    return { ok: true, found: false, email: decoded };
+  } catch (err) {
+    console.warn(`[unsubscribe][${source}] error: ${err.message}`);
+    return { ok: false, reason: "internal_error" };
+  }
+};
+
+app.post("/unsubscribe", express.urlencoded({ extended: false, limit: "8kb" }), (req, res) => {
+  /* RFC 8058 One-Click: el bot envía POST con header
+   * "List-Unsubscribe=One-Click" en el body o como param. Procesamos sin
+   * confirmación ni HTML — solo 200 OK. */
+  const emailQuery = req.query?.email;
+  const emailBody = req.body?.email;
+  const result = processUnsubscribe(emailQuery || emailBody, "post");
+  if (result.ok) {
+    return res.status(200).type("text/plain").send("OK");
+  }
+  return res.status(400).type("text/plain").send("INVALID");
+});
+
 app.get("/unsubscribe", (req, res) => {
   const { email } = req.query;
   if (!email) {
@@ -3611,3 +3740,18 @@ const gracefulShutdown = async () => {
 
 process.on("SIGTERM", gracefulShutdown);
 process.on("SIGINT", gracefulShutdown);
+
+/* P0-F audit 2026-04-30: handlers globales de errores no capturados.
+ * Sin esto, una promise rechazada en setInterval (backup, scheduler,
+ * replyTracker) tira el proceso silencioso o lo deja zombie. Loggear
+ * con contexto, no matar al proceso por unhandledRejection (puede ser
+ * transitorio); sí matar por uncaughtException porque deja estado roto. */
+process.on("unhandledRejection", (reason, promise) => {
+  const msg = reason && reason.stack ? reason.stack : String(reason);
+  console.error("[unhandledRejection]", msg.slice(0, 2000));
+});
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err && err.stack ? err.stack : String(err));
+  /* Estado potencialmente corrupto. Salimos para que Coolify reinicie. */
+  setTimeout(() => process.exit(1), 200);
+});

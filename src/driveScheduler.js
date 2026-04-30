@@ -189,13 +189,30 @@ const tick = async () => {
   }
 };
 
+/* P1#2 audit 2026-04-30: si tick tarda más que el intervalo (subir PDF
+ * con 30 campañas puede tomar minutos), dos ticks paralelos llaman
+ * readState/writeState concurrentes → JSON corrupto o markDone duplicado.
+ * Guard de re-entry. */
+let _ticking = false;
+const guardedTick = async () => {
+  if (_ticking) return;
+  _ticking = true;
+  try {
+    await tick();
+  } catch (e) {
+    console.warn("[driveScheduler] tick err:", e.message);
+  } finally {
+    _ticking = false;
+  }
+};
+
 const start = () => {
   if (_ticker) return;
   console.log(`[driveScheduler] arrancado (tick cada ${TICK_INTERVAL_MS / 60000}min, max ${MAX_TRACKING_DAYS}d)`);
   /* Primer tick a los 30s del arranque */
-  setTimeout(() => { tick().catch((e) => console.warn("[driveScheduler] tick err:", e.message)); }, 30000);
+  setTimeout(() => { guardedTick(); }, 30000);
   _ticker = setInterval(() => {
-    tick().catch((e) => console.warn("[driveScheduler] tick err:", e.message));
+    guardedTick();
   }, TICK_INTERVAL_MS);
 };
 

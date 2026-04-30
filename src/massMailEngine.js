@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const dns = require("dns");
 const nodemailer = require("nodemailer");
 const sheetsWriteback = require("./sheetsWriteback");
+const trackingSign = require("./trackingSign");
 
 /* Helper para extraer _sheetMeta de un contacto y enviarlo a writeback. */
 const writebackForEmail = (dataStoreRef, email, status) => {
@@ -764,6 +765,10 @@ const createMassMailEngine = (config) => {
         if (htmlBody && trackingBase && job.campaignId) {
           const emailB64 = Buffer.from(recipient.email).toString("base64url");
           const cid = encodeURIComponent(job.campaignId);
+          /* P0-A audit 2026-04-30: HMAC firma URL de tracking para evitar
+           * que cualquier destinatario falsifique aperturas/clicks de
+           * OTROS contactos iterando emails. */
+          const sig = trackingSign.sign(job.campaignId, recipient.email);
           /* Wrap links: todos los <a href="http..."> excepto los de tracking y unsub */
           htmlBody = htmlBody.replace(
             /<a\s+([^>]*?)href=["'](https?:\/\/[^"']+)["']([^>]*)>/gi,
@@ -771,11 +776,11 @@ const createMassMailEngine = (config) => {
               /* No wrappear los propios enlaces de tracking/unsubscribe ni anchors */
               if (/\/t\/o\/|\/t\/c\/|\/unsubscribe|%%UNSUBSCRIBE_URL%%|mailto:/i.test(url)) return m;
               const urlB64 = Buffer.from(url).toString("base64url");
-              return `<a ${pre}href="${trackingBase}/t/c/${cid}/${emailB64}?u=${urlB64}"${post}>`;
+              return `<a ${pre}href="${trackingBase}/t/c/${cid}/${emailB64}?u=${urlB64}&s=${sig}"${post}>`;
             }
           );
-          /* Pixel de apertura al final del body */
-          const pixelTag = `<img src="${trackingBase}/t/o/${cid}/${emailB64}.gif" width="1" height="1" style="display:none;border:0;outline:none" alt="">`;
+          /* Pixel de apertura al final del body — incluye firma HMAC */
+          const pixelTag = `<img src="${trackingBase}/t/o/${cid}/${emailB64}.gif?s=${sig}" width="1" height="1" style="display:none;border:0;outline:none" alt="">`;
           if (/<\/body>/i.test(htmlBody)) {
             htmlBody = htmlBody.replace(/<\/body>/i, `${pixelTag}</body>`);
           } else {

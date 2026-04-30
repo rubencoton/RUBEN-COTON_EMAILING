@@ -346,6 +346,21 @@ async function backupStoreToDrive(dataFilePath) {
   } catch (err) {
     return { ok: false, error: `read_store_failed: ${err.message}` };
   }
+  /* P0-H audit 2026-04-30: validar JSON ANTES de subir. Si el flush dejó
+   * un store truncado o corrupto, no replicamos la corrupción a Drive
+   * (que luego sería usado por restoreStoreFromDrive como fuente de
+   * verdad). Mejor abortar el backup y alertar. */
+  try {
+    const parsed = JSON.parse(content);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, error: "store_json_not_object" };
+    }
+    if (!Array.isArray(parsed.contacts) || !Array.isArray(parsed.events)) {
+      return { ok: false, error: "store_json_missing_required_arrays" };
+    }
+  } catch (err) {
+    return { ok: false, error: `store_json_invalid: ${err.message}` };
+  }
   try {
     const drive = clients.drive();
     const rootId = await getOrCreateRootFolder(drive);

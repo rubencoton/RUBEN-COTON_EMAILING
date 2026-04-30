@@ -126,15 +126,30 @@ async function scanReplies() {
   }
 }
 
+/* P1#3 audit 2026-04-30: flag de re-entry. Si Gmail API responde lento
+ * (>10min con 50 mensajes y 429), corre dos scans paralelos → mismo
+ * gmailMessageId chequea events.find antes de que el otro llame addEvent
+ * → doble evento "reply". */
+let _scanning = false;
+const guardedScan = async () => {
+  if (_scanning) return null;
+  _scanning = true;
+  try {
+    return await scanReplies();
+  } finally {
+    _scanning = false;
+  }
+};
+
 function start({ dataStore }) {
   if (_ticker) return;
   _dataStoreRef = dataStore;
   /* Primera corrida pasados 2 minutos (deja arrancar otras rutinas) */
   setTimeout(() => {
-    scanReplies().then((r) => console.log("[replyTracker] first scan:", JSON.stringify(r))).catch(() => {});
+    guardedScan().then((r) => r && console.log("[replyTracker] first scan:", JSON.stringify(r))).catch(() => {});
   }, 2 * 60 * 1000).unref?.();
   _ticker = setInterval(() => {
-    scanReplies().then((r) => {
+    guardedScan().then((r) => {
       if (r && r.registered > 0) console.log("[replyTracker]", JSON.stringify(r));
     }).catch(() => {});
   }, CHECK_INTERVAL_MS);
