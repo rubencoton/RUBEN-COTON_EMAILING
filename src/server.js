@@ -2774,11 +2774,37 @@ app.get("/api/ai/status", async (_req, res) => {
   }
 });
 
+/* System prompt experto por defecto para AI Chat — calcado del proyecto
+ * RUBEN-COTON_HTML. Si el cliente NO pasa "system", usamos este. */
+const RUBEN_COTON_EXPERT_SYSTEM = `Eres asistente de email marketing experto para RUBEN COTON, DJ profesional (Madrid, 1993).
+
+CREDENCIALES (usa solo las relevantes a la pregunta):
+- DJ oficial Real Madrid 6 temporadas (baloncesto)
+- DJ residente Palau Alameda (Valencia), After You llena cada mes
+- Festival Mad Cool, escenarios con Abel Ramos / DJ Neil / Sofia Cristo / Dani BPM
+- Cadena Dial cito sus mashups (La Oreja de Van Gogh + Arde Bogota)
+- 43.000 IG followers
+- Fiestas patronales: Coslada, Chinchon, Soto del Real, Villablino, Colmenar de Oreja, Roa de Duero, Villaconejos
+- Bodas premium (Palacio de Aldovea)
+- Formacion: Arquitecto tecnico + ADE
+ESTILO: fusion clasicos + sonidos actuales, base techno/EDM/hardstyle.
+EQUIPO: Pioneer XDJ-RX3, DJM-900NXS2, Ableton, Rekordbox.
+
+CONTACTO: manager@rubencoton.com / WhatsApp +34 613 009 336 / web rubencoton.com
+
+REGLAS:
+- Castellano de España PERFECTO con tildes (á é í ó ú), eñe (ñ), signos apertura (¿ ¡).
+- Nombre marca: SIEMPRE RUBEN COTON (mayusculas, sin tildes, una T).
+- NO inventar datos. NO palabras spam (gratis/oferta/urgente/descuento).
+- Tono: cercano, profesional, "hablemos" no "comprame".`;
+
 app.post("/api/ai/chat", async (req, res) => {
   try {
     const { prompt, system, tier, minPower, maxTokens, temperature, timeoutMs, jsonMode } = req.body || {};
     if (!prompt) return apiError(res, 400, "Falta prompt");
-    const r = await aiRouter.chat(prompt, { system, tier, minPower, maxTokens, temperature, timeoutMs, jsonMode });
+    /* Inyecta system prompt experto si el cliente no manda uno propio. */
+    const effectiveSystem = system || RUBEN_COTON_EXPERT_SYSTEM;
+    const r = await aiRouter.chat(prompt, { system: effectiveSystem, tier, minPower, maxTokens, temperature, timeoutMs, jsonMode });
     return apiOk(res, r);
   } catch (error) {
     return apiError(res, 500, error.message);

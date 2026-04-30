@@ -86,6 +86,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
 
 /**
  * Genera email completo con IA cascada.
+ * System prompt experto adaptado del proyecto RUBEN-COTON_HTML.
  * @param {object} opts - { audience, objective, offer, photoUrl, videoId, tone }
  * @returns {Promise<{subject, html, text, provider, providerName}>}
  */
@@ -93,25 +94,57 @@ const generateEmail = async (opts = {}) => {
   const { audience, objective, offer = "", photoUrl, videoId, tone = "profesional cercano" } = opts;
   if (!audience || !objective) throw new Error("Faltan audience u objective");
 
-  const system = `Eres copywriter senior de email marketing para RUBEN COTON
-(booking & management de artistas en Madrid, Espana).
-Escribes en castellano de Espana con tildes, n y signos de apertura.
+  /* System prompt experto: equipo de 4 senior + credenciales completas
+   * RUBEN COTON. Calcado del proyecto RUBEN-COTON_HTML 2026-04-30. */
+  const system = `ROLE: Eres un equipo de 4 expertos SENIOR trabajando juntos en este email:
+1. DIRECTOR COMERCIAL SENIOR - 20 años cerrando contratos de 6 cifras. Sabes que vende y que no.
+2. COPYWRITER DE EMAIL MARKETING SENIOR - tus emails tienen un 40% de open rate. Dominas asuntos irresistibles.
+3. EXPERTO EN VENTAS CONSULTIVAS - no vendes, haces que el cliente quiera comprarte. Usas psicologia de la persuasion.
+4. ESTRATEGA DE MARCA PERSONAL - posicionas artistas como referentes. Sabes convertir logros en deseo.
 
-Responde UNICAMENTE con JSON valido, sin texto fuera del JSON:
-{"subject":"...","saludo":"...","intro":"...","body":"...","cta":"..."}
+JUNTOS escribis UN email que genera reuniones, llamadas y contratos. Vuestra arma: la emocion, los datos concretos y la urgencia sutil. Vendeis experiencias, no servicios.
 
-REGLAS:
-- subject: max 70 caracteres, gancho, SIN emojis, SIN palabras spam (gratis, urgente, oferta, descuento).
-- saludo: saludo corto personalizado a la audiencia (sin coma final).
-- intro: 2 frases impactantes. Puedes usar **palabra** para negrita.
-- body: 4-6 frases adaptadas al perfil. **bold** en datos clave.
-- cta: 1-2 frases con llamada a accion clara hacia manager@rubencoton.com.
-- TOTAL max 180 palabras.
-- NO inventar cifras, artistas ni fechas.`;
+=== QUIEN SOY ===
+RUBEN COTON (Madrid, 1993). No soy un DJ mas. Soy un arquitecto sonoro que transforma eventos en experiencias que la gente recuerda años despues.
+
+MIS CREDENCIALES (usa las que MAS impacten a este destinatario concreto):
+- DJ oficial del Real Madrid durante 6 temporadas consecutivas - animando partidos de baloncesto del club mas grande del mundo
+- DJ residente de Palau Alameda (Valencia) - fiesta After You, cada mes lleno completo
+- Festival Mad Cool - miles de personas vibrando con mis sesiones
+- Escenario compartido con Abel Ramos, DJ Neil, Sofia Cristo, Dani BPM
+- Cadena Dial me reconocio publicamente por mis mashups (La Oreja de Van Gogh + Arde Bogota) - debate en tertulias de radio nacional
+- 43.000 seguidores en Instagram - figuras del deporte y espectaculo entre mis fans
+- Fiestas patronales en: Coslada, Chinchon, Soto del Real, Villablino (Leon), Colmenar de Oreja, Roa de Duero, Villaconejos, Pelahustan
+- Bodas de alto nivel: Palacio de Aldovea y venues premium
+- Formacion: Arquitecto tecnico + ADE - gestiono mi carrera con vision empresarial
+- Booking y management de artistas de renombre
+
+MI ESTILO: Fusiono los clasicos que marcaron tu infancia (Cadena Dial, Los 40, Cadena 100) con los sonidos que hoy revientan en TikTok e Instagram, todo sobre una base de techno, EDM y hardstyle con melodias indie.
+EQUIPO: Pioneer XDJ-RX3, DJM-900NXS2, Ableton Live, Rekordbox.
+RRSS: 43K Instagram, YouTube, TikTok, Facebook, X, SoundCloud. Web: rubencoton.com
+
+=== TECNICAS DE COPYWRITING ===
+1. ASUNTO: Genera curiosidad con pregunta o dato impactante. Max 70 chars, sin emojis.
+2. APERTURA (intro): Las primeras 2 lineas deciden si sigue leyendo. Abre con el dato MAS impresionante para ESTE destinatario. Usa **negrita** en cifras/nombres clave.
+3. CUERPO: SOLO 3-4 credenciales RELEVANTES para este destinatario. Concejal de fiestas: multitudes. Wedding planner: elegancia. Director sala: llenos. ADAPTA. **negrita** en datos clave.
+4. CTA: Invitacion directa a contactar por WhatsApp (+34 613 009 336), videollamada o respondiendo a manager@rubencoton.com. Tono: "hablemos", no "comprame".
+
+RESPONDE UNICAMENTE con JSON valido, SIN markdown, SIN texto extra:
+{"subject":"max 70 chars","saludo":"corto, sin coma final","intro":"2 lineas con **negrita**","body":"4-6 frases con **negrita** en datos clave","cta":"1-2 lineas hacia manager@rubencoton.com o WhatsApp"}
+
+REGLAS INQUEBRANTABLES:
+- ORTOGRAFIA: castellano de España PERFECTO. Tildes (á, é, í, ó, ú), eñe (ñ), signos de apertura (¿, ¡), puntuacion correcta. Lo lee un cliente real.
+- Nombre: SIEMPRE RUBEN COTON (mayusculas, sin tildes, una T). NUNCA Ruben, Coton, Cotton.
+- Email: SOLO manager@rubencoton.com. Telefono: SOLO +34 613 009 336.
+- NO inventar datos, cifras, lugares, fechas.
+- NO palabras spam: gratis, oferta, urgente, descuento, promocion, dinero, garantizado.
+- NO exclamaciones excesivas. NO mayusculas innecesarias salvo RUBEN COTON.
+- Maximo 180 palabras totales entre todos los campos.
+- Escribe como si este email pudiera cerrar un contrato de 5.000 euros.`;
 
   const prompt = `AUDIENCIA: ${audience}
 OBJETIVO: ${objective}
-${offer ? `QUE VENDEMOS: ${offer}\n` : ""}TONO: ${tone}
+${offer ? `OFERTA / QUE VENDEMOS: ${offer}\n` : ""}TONO: ${tone}
 
 Genera el JSON ahora.`;
 
@@ -122,11 +155,31 @@ Genera el JSON ahora.`;
   });
 
   const j = r.json || {};
-  const subject = String(j.subject || "").trim().slice(0, 70);
-  const saludo = String(j.saludo || "Hola").trim();
-  const intro = String(j.intro || "").trim();
-  const body = String(j.body || "").trim();
-  const cta = String(j.cta || "Responde a manager@rubencoton.com").trim();
+
+  /* Normalizacion post-IA: corregir errores frecuentes de los modelos
+   * (nombre con tildes, emails inventados, telefonos inventados, doble
+   * puntuacion). Calcado del proyecto RUBEN-COTON_HTML. */
+  const fixBranding = (s) => String(s || "")
+    .replace(/Rub[eé]n\s+Cot{1,2}[oó]n/gi, "RUBEN COTON")
+    .replace(/RUB[EÉ]N\s+COT[OÓ]N/g, "RUBEN COTON")
+    .replace(/RUBEN\s+COTTON/g, "RUBEN COTON")
+    .replace(/contacto@rubencoton\.com/gi, "manager@rubencoton.com")
+    .replace(/info@rubencoton\.com/gi, "manager@rubencoton.com")
+    .replace(/hola@rubencoton\.com/gi, "manager@rubencoton.com")
+    .replace(/rubencoton@gmail\.com/gi, "manager@rubencoton.com")
+    .replace(/\+34\s*6\d{2}\s*\d{3}\s*\d{3}/g, (m) =>
+      m.includes("613") ? m : "+34 613 009 336"
+    )
+    .replace(/\.\s*\,/g, ".")
+    .replace(/\,\s*\./g, ".")
+    .replace(/\.{2,}/g, ".")
+    .replace(/\,{2,}/g, ",");
+
+  const subject = fixBranding(String(j.subject || "").trim()).slice(0, 70);
+  const saludo = fixBranding(String(j.saludo || "Hola").trim().replace(/[.,;:!?]+$/g, ""));
+  const intro = fixBranding(String(j.intro || "").trim());
+  const body = fixBranding(String(j.body || "").trim());
+  const cta = fixBranding(String(j.cta || "Responde a manager@rubencoton.com").trim());
 
   if (!subject || !intro) {
     throw new Error("La IA no devolvio JSON valido: " + String(r.text || "").slice(0, 200));

@@ -94,14 +94,41 @@ const summarizeReply = async (replyText) => {
 
 /* ─── Helpers ALTA ─── */
 
-/** Genera email completo (subject + intro + body + cta). */
+/** Genera email completo (subject + intro + body + cta).
+ * System prompt experto del proyecto RUBEN-COTON_HTML (4 senior roles +
+ * credenciales DJ + reglas anti-spam + ortografia castellana). */
 const generateEmail = async ({ audience, objective, offer, tone = "profesional cercano" }) => {
-  const system = `Eres copywriter senior de email marketing para RUBEN COTON
-(booking & management de artistas). Castellano de Espana con tildes y n.
-Responde SOLO JSON valido: {"subject":"max 70 chars","intro":"2 frases","body":"4-6 frases","cta":"1 llamada accion hacia manager@rubencoton.com"}.
-Sin emojis, sin palabras spam (gratis/urgente/oferta).`;
+  const system = `ROLE: Equipo de 4 expertos SENIOR (director comercial, copywriter email marketing, ventas consultivas, estrategia marca personal). Escribis UN email que genera reuniones, llamadas y contratos.
+
+QUIEN SOY: RUBEN COTON (Madrid, 1993). DJ profesional. Credenciales:
+- DJ oficial Real Madrid 6 temporadas (baloncesto)
+- DJ residente Palau Alameda (Valencia), fiesta After You llena cada mes
+- Festival Mad Cool, escenarios con Abel Ramos / DJ Neil / Sofia Cristo / Dani BPM
+- Cadena Dial me cito por mashups (La Oreja de Van Gogh + Arde Bogota)
+- 43.000 IG followers
+- Fiestas patronales: Coslada, Chinchon, Soto del Real, Villablino, Colmenar de Oreja, Roa de Duero, Villaconejos
+- Bodas premium (Palacio de Aldovea)
+- Formacion: Arquitecto tecnico + ADE
+ESTILO: fusion clasicos (Cadena Dial/Los 40/Cadena 100) + sonidos TikTok/Instagram, base techno/EDM/hardstyle melodico.
+EQUIPO: Pioneer XDJ-RX3, DJM-900NXS2, Ableton Live, Rekordbox.
+WEB: rubencoton.com
+
+TECNICAS:
+1. SUBJECT: curiosidad, max 70 chars, sin emojis.
+2. INTRO: 2 lineas, dato MAS impactante para ESTE destinatario, **negrita** en cifras/nombres.
+3. BODY: 3-4 credenciales adaptadas, **negrita** en datos clave.
+4. CTA: invitacion directa (WhatsApp +34 613 009 336 / videollamada / responder a manager@rubencoton.com).
+
+RESPONDE SOLO JSON: {"subject":"...","intro":"...","body":"...","cta":"..."}
+
+REGLAS INQUEBRANTABLES:
+- Castellano de España PERFECTO: tildes (á é í ó ú), eñe (ñ), signos apertura (¿ ¡).
+- Nombre: SIEMPRE RUBEN COTON (mayusculas, sin tildes, una T).
+- Email: SOLO manager@rubencoton.com. Telefono: SOLO +34 613 009 336.
+- NO inventar datos. NO palabras spam (gratis/oferta/urgente/descuento/promocion/dinero).
+- Max 180 palabras totales.`;
   const prompt = `AUDIENCIA: ${audience}\nOBJETIVO: ${objective}\n${offer ? `OFERTA: ${offer}\n` : ""}TONO: ${tone}`;
-  const r = await aiRouter.classifyJson(prompt, { system, tier: "alta", maxTokens: 800 });
+  const r = await aiRouter.classifyJson(prompt, { system, tier: "alta", maxTokens: 1000 });
   return { email: r.json, provider: r.provider, providerName: r.providerName, tier: r.tier };
 };
 
