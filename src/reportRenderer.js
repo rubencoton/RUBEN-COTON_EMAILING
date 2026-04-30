@@ -1,15 +1,28 @@
 "use strict";
 
 /**
- * reportRenderer.js — Genera el HTML del informe de campaña server-side.
+ * reportRenderer.js — Genera HTML del informe para PDF via Google Drive Docs.
  *
- * Razón: pdfGen sube HTML a Drive y lo convierte a PDF. Drive NO ejecuta
- * JavaScript, así que un informe que carga datos via fetch queda como
- * "Cargando…" en el PDF. Este módulo construye el HTML completo con
- * todos los datos ya inyectados.
+ * REGLAS DURAS (Drive Docs HTML→PDF NO soporta):
+ *   - linear-gradient / radial-gradient  → Drive las convierte a fondo plano feo
+ *   - flex / grid                         → Drive ignora
+ *   - rgba() backgrounds                  → mal renderizado
+ *   - border-radius                       → ignorado en PDF
+ *   - position absolute/fixed             → ignorado
+ *   - <body> anidados                     → roto
+ *   - CSS @page reglas avanzadas          → ignoradas
+ *   - <iframe> con email                  → no se renderiza
  *
- * Diseño visual: limpio, armónico, claro. Naranja/negro/blanco corporativos.
- * Sin emails ni teléfonos en el listado (RGPD).
+ * SI USA (testeado):
+ *   - <table> con cellpadding/cellspacing/border para layout
+ *   - colores hex sólidos (#FF6B00, #1a1a1a, #ffffff)
+ *   - <h1>, <h2>, <p>, <strong>, <em>, <ul>, <li>
+ *   - background-color hex en <td>
+ *   - padding/margin inline en estilos
+ *   - text-align, font-weight, font-size, color, font-family
+ *
+ * Diseño: portada FONDO BLANCO con marca limpia. Tipografía Arial.
+ * Naranja de marca como acento (#FF6B00). Negro y gris para texto.
  */
 
 const esc = (s) => String(s == null ? "" : s)
@@ -26,54 +39,67 @@ const STATUS_ES = {
 };
 const tStatus = (s) => STATUS_ES[String(s || "").toLowerCase()] || s || "—";
 
-const STATUS_PILL = {
-  enviado: { bg: "#e0e7ff", fg: "#3730a3" },
-  abierto: { bg: "#dbeafe", fg: "#1e40af" },
-  clic: { bg: "#dcfce7", fg: "#166534" },
-  rebote: { bg: "#fee2e2", fg: "#991b1b" },
-  baja: { bg: "#fef3c7", fg: "#92400e" },
-  "en cola": { bg: "#f3f4f6", fg: "#374151" }
-};
-const pill = (status) => {
-  const s = String(status || "en cola").toLowerCase();
-  const c = STATUS_PILL[s] || { bg: "#f3f4f6", fg: "#374151" };
-  return `<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:${c.bg};color:${c.fg}">${esc(s)}</span>`;
+const htmlToPlainText = (html) => {
+  if (!html) return "";
+  return String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 800);
 };
 
-/* Benchmarks B2B email marketing */
-const BENCHMARK = {
-  open: { low: 15, mid: 22, high: 35 },
-  click: { low: 1.5, mid: 3, high: 7 },
-  bounce: { low: 0.5, mid: 2, high: 5 }
-};
-const grade = (val, b, inverse) => {
+const grade = (val, low, mid, high, inverse) => {
   if (inverse) {
-    if (val <= b.low) return { label: "EXCELENTE", color: "#10b981" };
-    if (val <= b.mid) return { label: "BUENO", color: "#10b981" };
-    if (val <= b.high) return { label: "ACEPTABLE", color: "#f59e0b" };
-    return { label: "REVISAR", color: "#dc2626" };
+    if (val <= low) return "EXCELENTE";
+    if (val <= mid) return "BUENO";
+    if (val <= high) return "ACEPTABLE";
+    return "REVISAR";
   }
-  if (val >= b.high) return { label: "EXCELENTE", color: "#10b981" };
-  if (val >= b.mid) return { label: "BUENO", color: "#10b981" };
-  if (val >= b.low) return { label: "ACEPTABLE", color: "#f59e0b" };
-  return { label: "POR MEJORAR", color: "#dc2626" };
+  if (val >= high) return "EXCELENTE";
+  if (val >= mid) return "BUENO";
+  if (val >= low) return "ACEPTABLE";
+  return "POR MEJORAR";
 };
 
-const LOGO_URL = "https://lh3.googleusercontent.com/d/16UZKQnCW0J9qqd9yLZ9t4jukrp3p9hcj=w200";
+const gradeColor = (label) => {
+  if (label === "EXCELENTE" || label === "BUENO") return "#10b981";
+  if (label === "ACEPTABLE") return "#f59e0b";
+  return "#dc2626";
+};
 
-/**
- * Genera HTML completo del informe de UNA campaña, listo para PDF.
- * @param {object} reportData {campaign, stats, recipients, generatedAt}
- * @param {string} campaignId
- * @returns {string} HTML completo standalone
- */
+const statusBg = (st) => {
+  const s = String(st || "").toLowerCase();
+  if (s === "clic") return "#dcfce7";
+  if (s === "abierto") return "#dbeafe";
+  if (s === "rebote") return "#fee2e2";
+  if (s === "baja") return "#fef3c7";
+  if (s === "enviado") return "#e0e7ff";
+  return "#f3f4f6";
+};
+const statusFg = (st) => {
+  const s = String(st || "").toLowerCase();
+  if (s === "clic") return "#166534";
+  if (s === "abierto") return "#1e40af";
+  if (s === "rebote") return "#991b1b";
+  if (s === "baja") return "#92400e";
+  if (s === "enviado") return "#3730a3";
+  return "#374151";
+};
+
 function renderCampaignReport(reportData, campaignId) {
   const c = reportData.campaign || {};
   const s = reportData.stats || {};
   const recipients = reportData.recipients || [];
   const gen = new Date(reportData.generatedAt || Date.now());
 
-  /* Métricas calculadas */
   const sent = Number(s.sent || 0);
   const total = Number(s.total || recipients.length || 0);
   const opened = Number(s.opened || s.openedUnique || 0);
@@ -88,11 +114,10 @@ function renderCampaignReport(reportData, campaignId) {
   const ctor = opened > 0 ? (clicked / opened) * 100 : 0;
   const deliv = sent > 0 ? ((sent - bounced) / sent) * 100 : 0;
 
-  const gOpen = grade(openPct, BENCHMARK.open);
-  const gClick = grade(clickPct, BENCHMARK.click);
-  const gBounce = grade(bouncePct, BENCHMARK.bounce, true);
+  const gOpen = grade(openPct, 15, 22, 35);
+  const gClick = grade(clickPct, 1.5, 3, 7);
+  const gBounce = grade(bouncePct, 0.5, 2, 5, true);
 
-  /* Agrupaciones */
   const byCCAA = {}, byProv = {}, byCat = {};
   for (const r of recipients) {
     if (r.ccaa && r.ccaa !== "—") byCCAA[r.ccaa] = (byCCAA[r.ccaa] || 0) + 1;
@@ -103,298 +128,301 @@ function renderCampaignReport(reportData, campaignId) {
   const topCCAA = sortObj(byCCAA).slice(0, 8);
   const topProv = sortObj(byProv).slice(0, 10);
   const topCat = sortObj(byCat).slice(0, 8);
-  const maxCCAA = Math.max(1, ...topCCAA.map((x) => x[1]));
-  const maxProv = Math.max(1, ...topProv.map((x) => x[1]));
-  const maxCat = Math.max(1, ...topCat.map((x) => x[1]));
 
-  const barRow = (k, v, max) => `
+  /* Filas de destinatarios — MAX 100 para que el PDF no sea gigante */
+  const recipientRows = recipients.slice(0, 100).map((r, i) => `
     <tr>
-      <td style="padding:6px 12px;font-size:10pt;font-weight:600;width:200px">${esc(k)}</td>
-      <td style="padding:6px 12px"><div style="background:#f3f4f6;height:14px;border-radius:7px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#FF6B00,#E65100);width:${(v / max * 100).toFixed(1)}%"></div></div></td>
-      <td style="padding:6px 12px;text-align:right;font-weight:700;color:#E65100;width:60px">${fmt(v)}</td>
-    </tr>`;
-
-  const recipientRows = recipients.map((r, i) => `
-    <tr>
-      <td style="padding:8px 10px;color:#9ca3af;font-family:monospace;font-size:9pt">${String(i + 1).padStart(3, "0")}</td>
-      <td style="padding:8px 10px"><strong>${esc(r.empresa || "—")}</strong></td>
-      <td style="padding:8px 10px">${esc(r.municipio || "—")}</td>
-      <td style="padding:8px 10px">${esc(r.provincia || "—")}</td>
-      <td style="padding:8px 10px">${esc(r.ccaa || "—")}</td>
-      <td style="padding:8px 10px">${esc(r.categoria || "—")}</td>
-      <td style="padding:8px 10px">${pill(r.status)}</td>
-    </tr>`).join("") || `<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af">Sin destinatarios</td></tr>`;
+      <td style="padding:7px 8px;color:#888;font-size:9pt;border-bottom:1px solid #e5e7eb">${String(i + 1).padStart(3, "0")}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb"><strong>${esc(r.empresa || "—")}</strong></td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb">${esc(r.municipio || "—")}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb">${esc(r.provincia || "—")}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb">${esc(r.ccaa || "—")}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb">${esc(r.categoria || "—")}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;background-color:${statusBg(r.status)};color:${statusFg(r.status)};font-weight:bold;text-transform:uppercase;font-size:9pt">${esc(r.status || "—")}</td>
+    </tr>`).join("");
+  const truncated = recipients.length > 100 ? `<tr><td colspan="7" style="padding:10px;text-align:center;color:#888;background-color:#fafafa;font-style:italic">+ ${fmt(recipients.length - 100)} destinatarios más (no listados por longitud)</td></tr>` : "";
+  const recipientTbody = recipientRows + truncated || `<tr><td colspan="7" style="padding:14px;text-align:center;color:#888">Sin destinatarios</td></tr>`;
 
   const recos = [];
   if (sent === 0) recos.push("La campaña aún no se ha enviado o está en cola. Las métricas se actualizarán tras el envío.");
   if (sent > 0) {
-    if (openPct < BENCHMARK.open.low) recos.push("<strong>Apertura baja.</strong> Prueba asuntos más cortos (&lt;50 caracteres) y con gancho emocional. Evita palabras tipo \"gratis\" o \"urgente\".");
-    if (openPct >= BENCHMARK.open.high) recos.push("<strong>Apertura excelente.</strong> Replica este estilo de asunto en futuras campañas.");
-    if (clickPct < BENCHMARK.click.low && opened > 5) recos.push("<strong>Pocos clics.</strong> Revisa que el CTA sea claro, visible y único en el email.");
-    if (clickPct >= BENCHMARK.click.high) recos.push("<strong>Clics por encima de la media.</strong> El contenido conecta con el destinatario.");
-    if (bouncePct > BENCHMARK.bounce.high) recos.push("<strong>Rebotes altos.</strong> Depura la base: elimina bounced y suppressed antes del próximo envío.");
-    if (ctor > 15) recos.push("<strong>CTOR muy alto.</strong> Cuando abren, clican. El diseño del email funciona.");
+    if (openPct < 15) recos.push("<strong>Apertura baja.</strong> Prueba asuntos más cortos y con gancho emocional.");
+    if (openPct >= 35) recos.push("<strong>Apertura excelente.</strong> Replica este estilo de asunto en futuras campañas.");
+    if (clickPct < 1.5 && opened > 5) recos.push("<strong>Pocos clics.</strong> Revisa que la llamada a la acción sea clara y única.");
+    if (clickPct >= 7) recos.push("<strong>Clics por encima de la media.</strong> El contenido conecta con el destinatario.");
+    if (bouncePct > 5) recos.push("<strong>Rebotes altos.</strong> Depura la base antes del próximo envío.");
+    if (ctor > 15) recos.push("<strong>CTOR muy alto.</strong> Cuando abren, hacen clic.");
   }
-  if (recos.length === 0) recos.push("La campaña se desempeña dentro de los parámetros habituales del sector. Mantener estrategia.");
+  if (recos.length === 0) recos.push("La campaña se desempeña dentro de los parámetros del sector. Mantener estrategia.");
 
   const code = "CMP-" + (c.sentAt || c.createdAt || "").slice(0, 10).replace(/-/g, "") + "-" + String(campaignId || "").slice(-4);
+  const emailPlain = htmlToPlainText(c.html || c.text || "");
+
+  const barRows = (rows) => {
+    if (!rows.length) return "";
+    const max = Math.max(1, ...rows.map((x) => x[1]));
+    return rows.map(([k, v]) => {
+      const widthPct = Math.round(v / max * 100);
+      return `<tr>
+        <td style="padding:6px 8px;font-weight:bold;font-size:10pt;width:30%;border-bottom:1px solid #f0f0f0">${esc(k)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f0f0f0">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td style="background-color:#FF6B00;height:14px;width:${widthPct}%"></td>
+            <td style="background-color:#f3f4f6;width:${100 - widthPct}%"></td>
+          </tr></table>
+        </td>
+        <td style="padding:6px 8px;text-align:right;color:#E65100;font-weight:bold;width:60px;border-bottom:1px solid #f0f0f0">${fmt(v)}</td>
+      </tr>`;
+    }).join("");
+  };
+
+  /* Una métrica como celda blanca con borde superior de color */
+  const kpiCell = (num, label, sub, accent) => `
+    <td style="padding:14px 12px;background-color:#ffffff;border:1px solid #e5e7eb;border-top:4px solid ${accent};text-align:center;width:25%">
+      <div style="font-size:22pt;font-weight:bold;color:${accent};line-height:1.1">${num}</div>
+      <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;font-weight:bold;letter-spacing:0.6px;margin-top:6px">${label}</div>
+      ${sub ? `<div style="font-size:8.5pt;color:#9ca3af;margin-top:3px;font-weight:600">${sub}</div>` : ""}
+    </td>`;
+  const sep = `<td style="width:8px"></td>`;
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Informe ${esc(c.name)} | RUBEN COTON</title>
-<style>
-@page { size: A4 portrait; margin: 14mm 12mm 16mm; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: "Inter","Segoe UI",Arial,sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; font-size: 10.5pt; }
-.cover { background: linear-gradient(145deg,#FF6B00,#E65100,#BF360C); color: #fff; padding: 48px 40px; border-radius: 12px; margin-bottom: 28px; page-break-after: always; }
-.cover-top { display: flex; align-items: center; gap: 18px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); }
-.cover-top img { width: 70px; height: 70px; border-radius: 12px; background: #fff; padding: 6px; }
-.cover-top h1 { font-size: 24pt; letter-spacing: 5px; font-weight: 900; }
-.cover-top .tag { color: #FFB74D; font-size: 10pt; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
-.cover-doc { display: inline-block; background: rgba(255,183,77,0.18); border: 1.5px solid #FFB74D; color: #FFB74D; padding: 6px 18px; border-radius: 24px; font-size: 9pt; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; margin: 32px 0 24px; }
-.cover h2 { font-size: 22pt; line-height: 1.2; margin-bottom: 12px; font-weight: 800; }
-.cover .subj { font-size: 11pt; opacity: 0.92; font-style: italic; padding: 12px 16px; background: rgba(255,255,255,0.08); border-left: 3px solid #FFB74D; border-radius: 4px; margin-bottom: 28px; }
-.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-.meta-item { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 16px; }
-.meta-item .lbl { font-size: 8.5pt; color: #FFB74D; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
-.meta-item .val { font-size: 11pt; margin-top: 3px; font-weight: 600; }
-.cover-foot { padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 9pt; }
-.cover-foot .conf { background: #1a1a1a; padding: 3px 10px; border-radius: 4px; font-weight: 700; letter-spacing: 1.5px; font-size: 8.5pt; }
-.section { padding: 8px 0 20px; page-break-inside: avoid; }
-.section h3 { color: #E65100; font-size: 14pt; padding-bottom: 8px; border-bottom: 3px solid #FF6B00; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; font-weight: 800; }
-.section h3 .num { width: 32px; height: 32px; background: linear-gradient(135deg,#FF6B00,#E65100); color: #fff; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 12pt; font-weight: 900; }
-.section h4 { color: #E65100; font-size: 11pt; margin: 16px 0 8px; padding-left: 10px; border-left: 3px solid #FFB74D; }
-.kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 12px 0; }
-.kpi { background: #fff; border: 1px solid #e5e7eb; border-top: 4px solid #FF6B00; padding: 12px 10px; border-radius: 8px; text-align: center; }
-.kpi-num { font-size: 20pt; font-weight: 900; color: #E65100; line-height: 1.1; }
-.kpi-lbl { font-size: 8.5pt; color: #6b7280; text-transform: uppercase; font-weight: 700; margin-top: 4px; letter-spacing: 0.5px; }
-.kpi-sub { font-size: 8pt; color: #9ca3af; margin-top: 3px; font-weight: 600; }
-.kpi.ok { border-top-color: #10b981; } .kpi.ok .kpi-num { color: #10b981; }
-.kpi.warn { border-top-color: #f59e0b; } .kpi.warn .kpi-num { color: #f59e0b; }
-.kpi.bad { border-top-color: #dc2626; } .kpi.bad .kpi-num { color: #dc2626; }
-.kpi.neu { border-top-color: #6b7280; } .kpi.neu .kpi-num { color: #1a1a1a; }
-.callout { padding: 14px 18px; border-radius: 8px; margin: 12px 0; font-size: 10pt; }
-.callout.exec { background: linear-gradient(135deg,#fff5e6,#fff8e1); border-left: 4px solid #FF6B00; }
-.callout.warn { background: #fff8e1; border-left: 4px solid #FFB74D; }
-.callout.tip { background: #eef4ff; border-left: 4px solid #3b82f6; }
-.callout p { margin: 4px 0; }
-.callout strong { color: #1a1a1a; }
-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.5pt; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-table th { background: #FF6B00; color: #fff; padding: 8px 10px; text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 3px solid #FFB74D; }
-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
-table tr:nth-child(even) td { background: #fafafa; }
-.privacy { background: #FF6B00; color: #fff; padding: 12px 18px; border-radius: 8px; font-size: 9.5pt; margin: 12px 0; border-left: 5px solid #FFB74D; }
-.privacy strong { color: #FFB74D; }
-.email-card { border: 1.5px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin: 12px 0; }
-.email-head { background: #FF6B00; color: #fff; padding: 12px 16px; }
-.email-head .row { display: flex; gap: 10px; align-items: baseline; margin: 2px 0; font-size: 9.5pt; }
-.email-head .lbl { background: #1a1a1a; color: #FFB74D; padding: 1px 8px; border-radius: 8px; font-size: 7.5pt; font-weight: 700; min-width: 64px; text-align: center; }
-.email-head .val em { color: #FFB74D; font-style: normal; font-weight: 700; }
-.email-body { padding: 16px; background: #fff; }
-.bench-table td { padding: 10px 12px; }
-.bench-table .label { font-weight: 700; }
-.footer { margin-top: 24px; padding: 22px 18px; background: linear-gradient(135deg,#FF6B00,#E65100); color: #fff; border-radius: 12px; text-align: center; font-size: 9.5pt; border-top: 5px solid #FFB74D; }
-.footer img { width: 50px; height: 50px; border-radius: 8px; background: #fff; padding: 4px; margin-bottom: 8px; }
-.footer strong { color: #FFB74D; font-size: 11pt; letter-spacing: 1.5px; }
-.glossary dt { font-weight: 700; color: #E65100; margin-top: 8px; font-size: 10pt; }
-.glossary dd { color: #555; font-size: 9.5pt; margin-top: 2px; }
-ul { margin-left: 20px; margin-top: 6px; }
-ul li { margin: 4px 0; }
-</style>
+<title>Informe campaña — ${esc(c.name)}</title>
 </head>
-<body>
+<body style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;background-color:#ffffff;margin:0;padding:0;font-size:11pt;line-height:1.5">
 
-<!-- ========= PORTADA ========= -->
-<div class="cover">
-  <div class="cover-top">
-    <img src="${LOGO_URL}" alt="RUBEN COTON">
-    <div>
-      <h1>RUBEN COTON</h1>
-      <div class="tag">DJ · Booking · Management</div>
-    </div>
-  </div>
-  <div class="cover-doc">Informe ejecutivo de campaña</div>
-  <h2>${esc(c.name || "Campaña sin nombre")}</h2>
-  <div class="subj">"${esc(c.subject || "—")}"</div>
-  <div class="meta-grid">
-    <div class="meta-item"><div class="lbl">Fecha del informe</div><div class="val">${gen.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</div></div>
-    <div class="meta-item"><div class="lbl">Hora generación</div><div class="val">${gen.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} h</div></div>
-    <div class="meta-item"><div class="lbl">Estado campaña</div><div class="val">${esc(tStatus(c.status))}</div></div>
-    <div class="meta-item"><div class="lbl">Destinatarios</div><div class="val">${fmt(recipients.length)} entidades</div></div>
-  </div>
-  <div class="cover-foot">
-    <div>Madrid, España &middot; manager@rubencoton.com</div>
-    <div class="conf">Confidencial</div>
-  </div>
-</div>
+<!-- ============== PORTADA (FONDO BLANCO, MARCA EN NEGRO) ============== -->
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:30px">
+  <tr>
+    <td style="padding:34px 40px 22px;border-top:6px solid #FF6B00;border-bottom:1px solid #e5e7eb">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td>
+            <div style="display:inline-block;background-color:#1a1a1a;padding:14px 22px;border-radius:0">
+              <span style="color:#FF6B00;font-size:24pt;font-weight:bold;letter-spacing:5px">RUBEN COTON</span>
+            </div>
+            <p style="color:#1a1a1a;font-size:10pt;margin:10px 0 0;letter-spacing:3px;text-transform:uppercase;font-weight:bold">DJ &middot; Booking &middot; Management</p>
+          </td>
+          <td style="text-align:right;vertical-align:top">
+            <div style="display:inline-block;background-color:#FF6B00;color:#ffffff;padding:5px 14px;font-size:9pt;font-weight:bold;letter-spacing:3px;text-transform:uppercase">Confidencial</div>
+            <p style="color:#888;font-size:9pt;margin:8px 0 0">Madrid, España</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:30px 40px 8px">
+      <p style="color:#FF6B00;font-size:9.5pt;font-weight:bold;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px">INFORME EJECUTIVO DE CAMPAÑA</p>
+      <h1 style="color:#1a1a1a;font-size:24pt;margin:0 0 8px;font-weight:bold;line-height:1.2">${esc(c.name || "Campaña sin nombre")}</h1>
+      <p style="color:#555;font-size:11pt;margin:0;font-style:italic;border-left:4px solid #FF6B00;padding-left:12px">"${esc(c.subject || "—")}"</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 40px 30px">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="padding:12px 14px;background-color:#fafafa;border-left:3px solid #FF6B00;width:24%">
+            <p style="color:#888;font-size:8.5pt;margin:0;letter-spacing:1.2px;text-transform:uppercase;font-weight:bold">Fecha informe</p>
+            <p style="color:#1a1a1a;font-size:11pt;margin:4px 0 0;font-weight:bold">${gen.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
+          </td>
+          <td style="width:8px"></td>
+          <td style="padding:12px 14px;background-color:#fafafa;border-left:3px solid #FF6B00;width:24%">
+            <p style="color:#888;font-size:8.5pt;margin:0;letter-spacing:1.2px;text-transform:uppercase;font-weight:bold">Hora generación</p>
+            <p style="color:#1a1a1a;font-size:11pt;margin:4px 0 0;font-weight:bold">${gen.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} h</p>
+          </td>
+          <td style="width:8px"></td>
+          <td style="padding:12px 14px;background-color:#fafafa;border-left:3px solid #FF6B00;width:24%">
+            <p style="color:#888;font-size:8.5pt;margin:0;letter-spacing:1.2px;text-transform:uppercase;font-weight:bold">Estado</p>
+            <p style="color:#1a1a1a;font-size:11pt;margin:4px 0 0;font-weight:bold">${esc(tStatus(c.status))}</p>
+          </td>
+          <td style="width:8px"></td>
+          <td style="padding:12px 14px;background-color:#fafafa;border-left:3px solid #FF6B00;width:24%">
+            <p style="color:#888;font-size:8.5pt;margin:0;letter-spacing:1.2px;text-transform:uppercase;font-weight:bold">Destinatarios</p>
+            <p style="color:#1a1a1a;font-size:11pt;margin:4px 0 0;font-weight:bold">${fmt(recipients.length)} entidades</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
-<!-- ========= 1. RESUMEN EJECUTIVO ========= -->
-<div class="section">
-  <h3><span class="num">1</span>Resumen ejecutivo</h3>
-  <div class="callout exec">
-    <p>La campaña <strong>${esc(c.name)}</strong> impactó a <strong>${fmt(recipients.length)} entidades</strong> en <strong>${Object.keys(byCCAA).length} comunidades autónomas</strong>${sent > 0 ? ` con una tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> y de clic del <strong>${clickPct.toFixed(2)}%</strong>` : ""}.</p>
-  </div>
-  <div class="kpis">
-    <div class="kpi ${gOpen.label.includes("EXCEL") || gOpen.label.includes("BUEN") ? "ok" : gOpen.label.includes("ACEP") ? "warn" : "bad"}">
-      <div class="kpi-num">${openPct.toFixed(1)}%</div><div class="kpi-lbl">Apertura</div><div class="kpi-sub">${gOpen.label}</div>
-    </div>
-    <div class="kpi ${gClick.label.includes("EXCEL") || gClick.label.includes("BUEN") ? "ok" : gClick.label.includes("ACEP") ? "warn" : "bad"}">
-      <div class="kpi-num">${clickPct.toFixed(1)}%</div><div class="kpi-lbl">Clic</div><div class="kpi-sub">${gClick.label}</div>
-    </div>
-    <div class="kpi ${gBounce.label.includes("EXCEL") || gBounce.label.includes("BUEN") ? "ok" : gBounce.label.includes("ACEP") ? "warn" : "bad"}">
-      <div class="kpi-num">${bouncePct.toFixed(1)}%</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${gBounce.label}</div>
-    </div>
-    <div class="kpi neu">
-      <div class="kpi-num">${replied}</div><div class="kpi-lbl">Respuestas</div><div class="kpi-sub">contestaciones</div>
-    </div>
-  </div>
-</div>
-
-<!-- ========= 2. DATOS DE LA CAMPAÑA ========= -->
-<div class="section">
-  <h3><span class="num">2</span>Datos de la campaña</h3>
-  <table>
-    <tr><th style="width:30%">Concepto</th><th>Valor</th></tr>
-    <tr><td><strong>Nombre interno</strong></td><td>${esc(c.name || "—")}</td></tr>
-    <tr><td><strong>Asunto del email</strong></td><td>${esc(c.subject || "—")}</td></tr>
-    <tr><td><strong>Remitente</strong></td><td>${esc(c.fromName || "RUBEN COTON")} &lt;${esc(c.fromEmail || "manager@rubencoton.com")}&gt;</td></tr>
-    <tr><td><strong>Estado</strong></td><td>${esc(tStatus(c.status))}</td></tr>
-    <tr><td><strong>Código</strong></td><td style="font-family:monospace;font-size:10pt">${esc(code)}</td></tr>
-    <tr><td><strong>Fecha de creación</strong></td><td>${c.createdAt ? new Date(c.createdAt).toLocaleString("es-ES") : "—"}</td></tr>
-    <tr><td><strong>Fecha de envío</strong></td><td>${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</td></tr>
+<!-- ============== 1. RESUMEN EJECUTIVO ============== -->
+<div style="padding:0 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">1 &middot; Resumen ejecutivo</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:16px"></div>
+  <p style="background-color:#fff5e6;border-left:4px solid #FF6B00;padding:14px 18px;margin:0 0 18px;font-size:11pt;color:#1a1a1a">
+    La campaña <strong>${esc(c.name)}</strong> impactó a <strong>${fmt(recipients.length)} entidades</strong> en <strong>${Object.keys(byCCAA).length} comunidades autónomas</strong>${sent > 0 ? ` con una tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> y de clic del <strong>${clickPct.toFixed(2)}%</strong>` : ""}.
+  </p>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      ${kpiCell(openPct.toFixed(1) + "%", "Apertura", gOpen, gradeColor(gOpen))}
+      ${sep}
+      ${kpiCell(clickPct.toFixed(1) + "%", "Clic", gClick, gradeColor(gClick))}
+      ${sep}
+      ${kpiCell(bouncePct.toFixed(1) + "%", "Rebotes", gBounce, gradeColor(gBounce))}
+      ${sep}
+      ${kpiCell(replied, "Respuestas", "contestaciones", "#1a1a1a")}
+    </tr>
   </table>
 </div>
 
-<!-- ========= 3. MÉTRICAS DETALLADAS ========= -->
-<div class="section">
-  <h3><span class="num">3</span>Métricas detalladas</h3>
-  <div class="kpis">
-    <div class="kpi neu"><div class="kpi-num">${fmt(total)}</div><div class="kpi-lbl">Destinatarios</div></div>
-    <div class="kpi neu"><div class="kpi-num">${fmt(sent)}</div><div class="kpi-lbl">Enviados</div><div class="kpi-sub">${pct(sent, total)} del total</div></div>
-    <div class="kpi ok"><div class="kpi-num">${fmt(opened)}</div><div class="kpi-lbl">Aperturas</div><div class="kpi-sub">${pct(opened, sent)}</div></div>
-    <div class="kpi ok"><div class="kpi-num">${fmt(clicked)}</div><div class="kpi-lbl">Clics</div><div class="kpi-sub">${pct(clicked, sent)}</div></div>
-  </div>
-  <div class="kpis">
-    <div class="kpi bad"><div class="kpi-num">${fmt(bounced)}</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${pct(bounced, total)}</div></div>
-    <div class="kpi warn"><div class="kpi-num">${fmt(unsub)}</div><div class="kpi-lbl">Bajas</div><div class="kpi-sub">${pct(unsub, sent)}</div></div>
-    <div class="kpi neu"><div class="kpi-num">${ctor.toFixed(1)}%</div><div class="kpi-lbl">CTOR</div><div class="kpi-sub">clic / apertura</div></div>
-    <div class="kpi ok"><div class="kpi-num">${deliv.toFixed(1)}%</div><div class="kpi-lbl">Entregabilidad</div></div>
-  </div>
-</div>
-
-<!-- ========= 4. RENDIMIENTO VS SECTOR ========= -->
-<div class="section">
-  <h3><span class="num">4</span>Rendimiento vs. sector</h3>
-  <table class="bench-table">
-    <tr><th>Métrica</th><th>Campaña</th><th>Benchmark sector B2B</th><th>Valoración</th></tr>
-    <tr><td class="label">Tasa de apertura</td><td><strong>${openPct.toFixed(1)}%</strong></td><td>22% media · 35% top</td><td><span style="color:${gOpen.color};font-weight:700">${gOpen.label}</span></td></tr>
-    <tr><td class="label">Tasa de clic</td><td><strong>${clickPct.toFixed(2)}%</strong></td><td>3% media · 7% top</td><td><span style="color:${gClick.color};font-weight:700">${gClick.label}</span></td></tr>
-    <tr><td class="label">Tasa de rebote</td><td><strong>${bouncePct.toFixed(2)}%</strong></td><td>≤ 2% (saludable)</td><td><span style="color:${gBounce.color};font-weight:700">${gBounce.label}</span></td></tr>
-  </table>
-  <div class="callout tip"><strong>Interpretación:</strong> las campañas B2B del sector cultural y booking suelen tener aperturas altas (25-30%) pero clics moderados (2-4%) porque el contenido es informativo, no de compra directa.</div>
-</div>
-
-<!-- ========= 5. EMAIL ENVIADO ========= -->
-<div class="section">
-  <h3><span class="num">5</span>Email enviado</h3>
-  <div class="email-card">
-    <div class="email-head">
-      <div class="row"><span class="lbl">DE</span><span>${esc(c.fromName || "RUBEN COTON")} &lt;<em>${esc(c.fromEmail || "manager@rubencoton.com")}</em>&gt;</span></div>
-      <div class="row"><span class="lbl">PARA</span><span>${fmt(recipients.length)} destinatarios</span></div>
-      <div class="row"><span class="lbl">ASUNTO</span><span><strong>${esc(c.subject || "—")}</strong></span></div>
-      <div class="row"><span class="lbl">FECHA</span><span>${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</span></div>
-    </div>
-    <div class="email-body">
-      ${c.html ? c.html : `<p style="color:#9ca3af;text-align:center;padding:30px">Email de texto plano — sin versión HTML</p>`}
-    </div>
-  </div>
-</div>
-
-<!-- ========= 6. DESTINATARIOS ========= -->
-<div class="section">
-  <h3><span class="num">6</span>Destinatarios (${fmt(recipients.length)})</h3>
-  <div class="privacy">
-    <strong>Confidencialidad &amp; RGPD:</strong> este listado solo muestra el <strong>nombre público</strong> de cada empresa/entidad, su localización y categoría.
-    No se incluyen emails, teléfonos ni nombres de personas físicas.
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:36px">#</th>
-        <th>Empresa / Entidad</th>
-        <th>Municipio</th>
-        <th>Provincia</th>
-        <th>CCAA</th>
-        <th>Categoría</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody>${recipientRows}</tbody>
+<!-- ============== 2. DATOS ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">2 &middot; Datos de la campaña</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="1" width="100%" style="border-collapse:collapse;border-color:#e5e7eb">
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;width:30%;border:1px solid #e5e7eb">Nombre interno</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${esc(c.name || "—")}</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Asunto</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${esc(c.subject || "—")}</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Remitente</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${esc(c.fromName || "RUBEN COTON")} &lt;${esc(c.fromEmail || "manager@rubencoton.com")}&gt;</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Estado</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${esc(tStatus(c.status))}</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Código</td><td style="padding:8px 12px;border:1px solid #e5e7eb;font-family:Courier,monospace;font-size:10pt">${esc(code)}</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Creada</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${c.createdAt ? new Date(c.createdAt).toLocaleString("es-ES") : "—"}</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#fafafa;font-weight:bold;border:1px solid #e5e7eb">Enviada</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</td></tr>
   </table>
 </div>
 
-<!-- ========= 7. GEOGRAFÍA ========= -->
+<!-- ============== 3. MÉTRICAS DETALLADAS ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">3 &middot; Métricas detalladas</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      ${kpiCell(fmt(total), "Destinatarios", "", "#6b7280")}
+      ${sep}
+      ${kpiCell(fmt(sent), "Enviados", pct(sent, total) + " del total", "#6b7280")}
+      ${sep}
+      ${kpiCell(fmt(opened), "Aperturas", pct(opened, sent), "#10b981")}
+      ${sep}
+      ${kpiCell(fmt(clicked), "Clics", pct(clicked, sent), "#10b981")}
+    </tr>
+  </table>
+  <div style="height:10px"></div>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      ${kpiCell(fmt(bounced), "Rebotes", pct(bounced, total), "#dc2626")}
+      ${sep}
+      ${kpiCell(fmt(unsub), "Bajas", pct(unsub, sent), "#f59e0b")}
+      ${sep}
+      ${kpiCell(ctor.toFixed(1) + "%", "CTOR", "clic / apertura", "#6b7280")}
+      ${sep}
+      ${kpiCell(deliv.toFixed(1) + "%", "Entregabilidad", "", "#10b981")}
+    </tr>
+  </table>
+</div>
+
+<!-- ============== 4. RENDIMIENTO VS SECTOR ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">4 &middot; Rendimiento vs. sector B2B</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="1" width="100%" style="border-collapse:collapse;border-color:#e5e7eb">
+    <tr style="background-color:#1a1a1a;color:#ffffff">
+      <th style="padding:10px 12px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #1a1a1a">Métrica</th>
+      <th style="padding:10px 12px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #1a1a1a">Campaña</th>
+      <th style="padding:10px 12px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #1a1a1a">Benchmark</th>
+      <th style="padding:10px 12px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #1a1a1a">Valoración</th>
+    </tr>
+    <tr><td style="padding:9px 12px;font-weight:bold;border:1px solid #e5e7eb">Tasa de apertura</td><td style="padding:9px 12px;border:1px solid #e5e7eb"><strong>${openPct.toFixed(1)}%</strong></td><td style="padding:9px 12px;color:#666;border:1px solid #e5e7eb">22% media · 35% top</td><td style="padding:9px 12px;color:${gradeColor(gOpen)};font-weight:bold;border:1px solid #e5e7eb">${gOpen}</td></tr>
+    <tr style="background-color:#fafafa"><td style="padding:9px 12px;font-weight:bold;border:1px solid #e5e7eb">Tasa de clic</td><td style="padding:9px 12px;border:1px solid #e5e7eb"><strong>${clickPct.toFixed(2)}%</strong></td><td style="padding:9px 12px;color:#666;border:1px solid #e5e7eb">3% media · 7% top</td><td style="padding:9px 12px;color:${gradeColor(gClick)};font-weight:bold;border:1px solid #e5e7eb">${gClick}</td></tr>
+    <tr><td style="padding:9px 12px;font-weight:bold;border:1px solid #e5e7eb">Tasa de rebote</td><td style="padding:9px 12px;border:1px solid #e5e7eb"><strong>${bouncePct.toFixed(2)}%</strong></td><td style="padding:9px 12px;color:#666;border:1px solid #e5e7eb">≤ 2% (saludable)</td><td style="padding:9px 12px;color:${gradeColor(gBounce)};font-weight:bold;border:1px solid #e5e7eb">${gBounce}</td></tr>
+  </table>
+  <p style="background-color:#eef4ff;border-left:4px solid #3b82f6;padding:10px 14px;margin:14px 0 0;font-size:10pt;color:#1a1a1a"><strong>Interpretación:</strong> las campañas B2B del sector cultural y booking suelen tener aperturas altas (25-30%) pero clics moderados (2-4%) porque el contenido es informativo, no de compra directa.</p>
+</div>
+
+<!-- ============== 5. EMAIL ENVIADO ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">5 &middot; Email enviado</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="1" width="100%" style="border-collapse:collapse;border-color:#e5e7eb">
+    <tr><td style="padding:8px 12px;background-color:#1a1a1a;color:#FF6B00;font-weight:bold;width:25%;font-size:9pt;letter-spacing:1px;text-transform:uppercase;border:1px solid #1a1a1a">DE</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${esc(c.fromName || "RUBEN COTON")} &lt;${esc(c.fromEmail || "manager@rubencoton.com")}&gt;</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#1a1a1a;color:#FF6B00;font-weight:bold;font-size:9pt;letter-spacing:1px;text-transform:uppercase;border:1px solid #1a1a1a">PARA</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${fmt(recipients.length)} destinatarios</td></tr>
+    <tr><td style="padding:8px 12px;background-color:#1a1a1a;color:#FF6B00;font-weight:bold;font-size:9pt;letter-spacing:1px;text-transform:uppercase;border:1px solid #1a1a1a">ASUNTO</td><td style="padding:8px 12px;border:1px solid #e5e7eb"><strong>${esc(c.subject || "—")}</strong></td></tr>
+    <tr><td style="padding:8px 12px;background-color:#1a1a1a;color:#FF6B00;font-weight:bold;font-size:9pt;letter-spacing:1px;text-transform:uppercase;border:1px solid #1a1a1a">FECHA</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</td></tr>
+  </table>
+  <p style="margin:16px 0 6px;font-weight:bold;color:#888;font-size:9.5pt;text-transform:uppercase;letter-spacing:1px">Contenido (texto)</p>
+  <div style="background-color:#fafafa;border-left:3px solid #FF6B00;padding:14px 18px;font-size:10.5pt;color:#333;white-space:pre-wrap">${esc(emailPlain) || "Email sin contenido textual."}</div>
+</div>
+
+<!-- ============== 6. DESTINATARIOS ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">6 &middot; Destinatarios (${fmt(recipients.length)})</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <p style="background-color:#1a1a1a;color:#ffffff;padding:10px 14px;margin:0 0 12px;font-size:10pt;border-left:4px solid #FF6B00"><strong style="color:#FF6B00">Confidencialidad &amp; RGPD:</strong> sólo se muestra el nombre público de cada empresa/entidad y su localización. No incluimos emails, teléfonos ni nombres de personas físicas.</p>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">
+    <tr style="background-color:#1a1a1a;color:#FF6B00">
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px;width:40px">#</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Empresa / Entidad</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Municipio</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Provincia</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">CCAA</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Categoría</th>
+      <th style="padding:8px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Estado</th>
+    </tr>
+    ${recipientTbody}
+  </table>
+</div>
+
 ${topCCAA.length || topProv.length ? `
-<div class="section">
-  <h3><span class="num">7</span>Distribución geográfica</h3>
-  ${topCCAA.length ? `<h4>Top Comunidades Autónomas</h4><table>${topCCAA.map(([k, v]) => barRow(k, v, maxCCAA)).join("")}</table>` : ""}
-  ${topProv.length ? `<h4>Top Provincias</h4><table>${topProv.map(([k, v]) => barRow(k, v, maxProv)).join("")}</table>` : ""}
+<!-- ============== 7. GEOGRAFÍA ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">7 &middot; Distribución geográfica</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  ${topCCAA.length ? `<p style="color:#1a1a1a;font-size:11pt;font-weight:bold;border-left:3px solid #FF6B00;padding-left:10px;margin:8px 0 8px">Top Comunidades Autónomas</p><table cellpadding="0" cellspacing="0" border="0" width="100%">${barRows(topCCAA)}</table>` : ""}
+  ${topProv.length ? `<p style="color:#1a1a1a;font-size:11pt;font-weight:bold;border-left:3px solid #FF6B00;padding-left:10px;margin:18px 0 8px">Top Provincias</p><table cellpadding="0" cellspacing="0" border="0" width="100%">${barRows(topProv)}</table>` : ""}
 </div>` : ""}
 
-<!-- ========= 8. CATEGORÍAS ========= -->
 ${topCat.length ? `
-<div class="section">
-  <h3><span class="num">8</span>Análisis por categoría</h3>
-  <table>${topCat.map(([k, v]) => barRow(k, v, maxCat)).join("")}</table>
+<!-- ============== 8. CATEGORÍAS ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">8 &middot; Análisis por categoría</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">${barRows(topCat)}</table>
 </div>` : ""}
 
-<!-- ========= 9. CONCLUSIONES ========= -->
-<div class="section">
-  <h3><span class="num">9</span>Conclusiones y recomendaciones</h3>
-  <h4>Hallazgos principales</h4>
-  <ul>
-    <li>La campaña alcanzó a <strong>${fmt(sent)}</strong> destinatarios efectivos sobre ${fmt(total)} programados.</li>
-    ${sent > 0 ? `<li>Tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> (benchmark sector: 22%).</li>` : ""}
-    ${sent > 0 ? `<li>Tasa de clic del <strong>${clickPct.toFixed(2)}%</strong> (benchmark sector: 3%).</li>` : ""}
-    ${Object.keys(byCCAA).length > 0 ? `<li>Cobertura geográfica: <strong>${Object.keys(byCCAA).length}</strong> CCAA y <strong>${Object.keys(byProv).length}</strong> provincias.</li>` : ""}
-    ${Object.keys(byCat).length > 0 ? `<li>Categorías profesionales impactadas: <strong>${Object.keys(byCat).length}</strong>.</li>` : ""}
+<!-- ============== 9. CONCLUSIONES ============== -->
+<div style="padding:8px 32px 22px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">9 &middot; Conclusiones y recomendaciones</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <p style="color:#1a1a1a;font-size:11pt;font-weight:bold;border-left:3px solid #FF6B00;padding-left:10px;margin:0 0 8px">Hallazgos principales</p>
+  <ul style="margin:0 0 16px 22px;padding:0;font-size:10.5pt;color:#1a1a1a">
+    <li style="margin:6px 0">La campaña alcanzó a <strong>${fmt(sent)}</strong> destinatarios efectivos sobre ${fmt(total)} programados.</li>
+    ${sent > 0 ? `<li style="margin:6px 0">Tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> (benchmark sector: 22%).</li>` : ""}
+    ${sent > 0 ? `<li style="margin:6px 0">Tasa de clic del <strong>${clickPct.toFixed(2)}%</strong> (benchmark sector: 3%).</li>` : ""}
+    ${Object.keys(byCCAA).length > 0 ? `<li style="margin:6px 0">Cobertura geográfica: <strong>${Object.keys(byCCAA).length}</strong> CCAA y <strong>${Object.keys(byProv).length}</strong> provincias.</li>` : ""}
+    ${Object.keys(byCat).length > 0 ? `<li style="margin:6px 0">Categorías profesionales impactadas: <strong>${Object.keys(byCat).length}</strong>.</li>` : ""}
   </ul>
-  <h4>Recomendaciones estratégicas</h4>
-  <div class="callout warn">
-    ${recos.map((r) => `<p>${r}</p>`).join("")}
+  <p style="color:#1a1a1a;font-size:11pt;font-weight:bold;border-left:3px solid #FF6B00;padding-left:10px;margin:16px 0 8px">Recomendaciones</p>
+  <div style="background-color:#fff8e1;border-left:4px solid #f59e0b;padding:12px 16px;font-size:10.5pt;color:#1a1a1a">
+    ${recos.map((r) => `<p style="margin:6px 0">${r}</p>`).join("")}
   </div>
 </div>
 
-<!-- ========= 10. GLOSARIO ========= -->
-<div class="section">
-  <h3><span class="num">10</span>Glosario de términos</h3>
-  <dl class="glossary">
-    <dt>Tasa de apertura (Open Rate)</dt>
-    <dd>Porcentaje de destinatarios que abrieron el email al menos una vez.</dd>
-    <dt>Tasa de clic (CTR)</dt>
-    <dd>Porcentaje que hizo clic en algún enlace del email sobre los emails entregados.</dd>
-    <dt>CTOR (Click-to-Open Ratio)</dt>
-    <dd>Porcentaje de los que abrieron y además clicaron. Mide la calidad del contenido.</dd>
-    <dt>Rebote (Bounce)</dt>
-    <dd>Email que no pudo entregarse. Soft (temporal) o hard (permanente).</dd>
-    <dt>Entregabilidad</dt>
-    <dd>Porcentaje de emails que llegaron correctamente sin rebotar.</dd>
-    <dt>RGPD</dt>
-    <dd>Reglamento General de Protección de Datos. Marco legal UE que protege los datos personales.</dd>
-  </dl>
+<!-- ============== 10. GLOSARIO ============== -->
+<div style="padding:8px 32px 30px">
+  <h2 style="color:#1a1a1a;font-size:14pt;margin:0 0 4px;font-weight:bold">10 &middot; Glosario</h2>
+  <div style="height:3px;background-color:#FF6B00;width:60px;margin-bottom:14px"></div>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;width:30%;vertical-align:top">Apertura (Open Rate)</td><td style="padding:6px 8px;color:#555;font-size:10pt">% de destinatarios que abrieron el email al menos una vez.</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;vertical-align:top">Clic (CTR)</td><td style="padding:6px 8px;color:#555;font-size:10pt">% que hizo clic en algún enlace, sobre los emails entregados.</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;vertical-align:top">CTOR</td><td style="padding:6px 8px;color:#555;font-size:10pt">% de los que abrieron y además clicaron. Mide la calidad del contenido.</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;vertical-align:top">Rebote (Bounce)</td><td style="padding:6px 8px;color:#555;font-size:10pt">Email que no pudo entregarse. Soft (temporal) o hard (permanente).</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;vertical-align:top">Entregabilidad</td><td style="padding:6px 8px;color:#555;font-size:10pt">% de emails que llegaron correctamente sin rebotar.</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;color:#FF6B00;vertical-align:top">RGPD</td><td style="padding:6px 8px;color:#555;font-size:10pt">Reglamento General de Protección de Datos (UE 2016/679).</td></tr>
+  </table>
 </div>
 
-<!-- ========= FOOTER ========= -->
-<div class="footer">
-  <img src="${LOGO_URL}" alt="RUBEN COTON">
-  <p><strong>RUBEN COTON</strong></p>
-  <p>DJ · Booking &amp; Management de Artistas</p>
-  <p style="margin-top:6px">manager@rubencoton.com &middot; Madrid, España</p>
-  <p style="margin-top:10px;font-size:8.5pt;opacity:0.85">Este informe respeta el RGPD. No se comparten datos personales (emails, teléfonos, nombres de personas físicas).</p>
-  <p style="margin-top:4px;font-size:8pt;opacity:0.7">Documento generado automáticamente por la plataforma de Envío Masivo de RUBEN COTON</p>
-</div>
+<!-- ============== FOOTER ============== -->
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:14px">
+  <tr><td style="padding:24px 28px;background-color:#1a1a1a;color:#ffffff;text-align:center;border-top:6px solid #FF6B00">
+    <p style="color:#FF6B00;font-size:18pt;margin:0;letter-spacing:5px;font-weight:bold">RUBEN COTON</p>
+    <p style="color:#FFB74D;font-size:9pt;margin:4px 0 12px;letter-spacing:2.5px;text-transform:uppercase">DJ &middot; Booking &middot; Management</p>
+    <p style="font-size:10pt;margin:0;color:#ffffff">manager@rubencoton.com &middot; Madrid, España</p>
+    <p style="font-size:8.5pt;color:#aaa;margin:14px 0 0">Informe respeta el RGPD. No se comparten datos personales (emails, teléfonos, nombres de personas físicas).</p>
+    <p style="font-size:8pt;color:#888;margin:4px 0 0">Documento generado automáticamente por la plataforma de Envío Masivo de RUBEN COTON</p>
+  </td></tr>
+</table>
 
 </body>
 </html>`;
