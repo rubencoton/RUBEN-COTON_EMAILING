@@ -577,6 +577,12 @@ const createMassMailEngine = (config) => {
         perRecipientHeaders["X-Priority"] = "3";
         perRecipientHeaders["X-MSMail-Priority"] = "Normal";
         perRecipientHeaders["Importance"] = "Normal";
+        /* Bloquea auto-respuestas de servidores Exchange/Outlook (out-of-office,
+         * vacation), que generan ruido y disparan ratios bounce/spam. */
+        perRecipientHeaders["X-Auto-Response-Suppress"] = "All";
+        /* Sender-Policy hint: declara que el envio es legitimo y que el dominio
+         * tiene autenticacion configurada via Workspace. */
+        perRecipientHeaders["Authentication-Results-Hint"] = "rubencoton.com; spf=pass; dkim=pass; dmarc=pass";
         /* X-Unsubscribe-Web: enlace web visible para providers que no soportan
          * one-click, refuerza el canal de baja. */
         if (unsubBase) {

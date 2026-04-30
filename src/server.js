@@ -24,6 +24,7 @@ const googleHub = require("./googleHub");
 const executiveReports = require("./executiveReports");
 const replyTracker = require("./replyTracker");
 const localAgent = require("./localAgent");
+const spamShield = require("./spamShield");
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -2461,6 +2462,43 @@ app.post("/api/campaigns/:id/send", (req, res) => {
       );
     }
 
+    /* BLINDAJE ANTI-SPAM (2026-04-30): valida asunto + contenido antes de
+     * encolar.  Errores graves (HTML con script, palabras prohibidas) bloquean
+     * el envio.  Warnings se devuelven en la respuesta para que la UI los
+     * muestre.  Bypass solo via {"forceSend": true} explicito. */
+    const subjCheck = spamShield.validateSubject(resolved.campaign.subject);
+    const contCheck = spamShield.validateContent(resolved.campaign.html, resolved.campaign.text);
+    const blockingErrors = [...subjCheck.errors, ...contCheck.errors];
+    if (blockingErrors.length && !req.body.forceSend) {
+      return apiError(res, 422,
+        `Email rechazado por blindaje anti-spam: ${blockingErrors.join(" | ")}. ` +
+        `Si estas seguro, reenvia con {"forceSend": true}.`
+      );
+    }
+    const totalScore = subjCheck.score + contCheck.score;
+    if (totalScore > 80 && !req.body.forceSend) {
+      return apiError(res, 422,
+        `Score anti-spam alto (${totalScore}/200). ` +
+        `Asunto: ${subjCheck.warnings.join(", ") || "ok"}. ` +
+        `Contenido: ${contCheck.warnings.join(", ") || "ok"}. ` +
+        `Mejora el asunto/contenido o fuerza con {"forceSend": true}.`
+      );
+    }
+
+    /* Auto-pause si el motor lleva muchos bounces en las ultimas 24h. */
+    const engineStatus = massMailEngine.getStatus?.() || {};
+    const aggSent = engineStatus.dailyCap?.used || 0;
+    const aggBounce = (engineStatus.history || []).filter(h => h.type === "bounce").length;
+    if (aggSent >= 100) {
+      const pauseCheck = spamShield.shouldAutoPause({ sent: aggSent, bounced: aggBounce, complained: 0 });
+      if (pauseCheck.pause && !req.body.forceSend) {
+        return apiError(res, 422,
+          `BLOQUEO AUTO: ${pauseCheck.reason}. Pausa los envios y limpia la lista. ` +
+          `Forzar con {"forceSend": true}.`
+        );
+      }
+    }
+
     const job = massMailEngine.enqueueJob({
       campaignId, /* propagar para tracking pixel + click wrap */
       name: resolved.campaign.name,
@@ -3000,6 +3038,82 @@ app.get("/t/c/:cid/:eb64", (req, res) => {
     } catch (err) { console.warn("[tracking][click] addEvent:", err.message); }
   }
   res.redirect(302, finalUrl);
+});
+
+/* ── Anti-spam shield endpoints ── */
+app.post("/api/spam-shield/check", (req, res) => {
+  const { subject, html, text } = req.body || {};
+  const subjResult = spamShield.validateSubject(subject || "");
+  const contResult = spamShield.validateContent(html || "", text || "");
+  return apiOk(res, {
+    subject: subjResult,
+    content: contResult,
+    totalScore: subjResult.score + contResult.score,
+    verdict: subjResult.ok && contResult.ok ? "ok" : "warning"
+  });
+});
+
+/* AUDITORIA GLOBAL — combina DNS health + engine status + checklist en una
+ * sola llamada para diagnostico rapido pre-envio masivo. */
+app.get("/api/spam-shield/audit", async (_req, res) => {
+  try {
+    const fromEmail = process.env.SMTP_FROM_EMAIL || "manager@rubencoton.com";
+    const domain = fromEmail.split("@")[1] || "rubencoton.com";
+    const dnsHealth = await spamShield.checkDnsHealth(domain);
+    const engine = massMailEngine.getStatus?.() || {};
+    const dc = engine.dailyCap || {};
+    const aggSent = dc.used || 0;
+    const aggBounced = engine.history?.filter(h => h.type === "bounce").length || 0;
+    const autoPause = spamShield.shouldAutoPause({
+      sent: aggSent, bounced: aggBounced, complained: 0
+    });
+    const ready =
+      dnsHealth.dkim.ok &&
+      dnsHealth.dmarc.ok &&
+      !autoPause.pause &&
+      Boolean(process.env.GOOGLE_OAUTH_REFRESH_TOKEN);
+    return apiOk(res, {
+      ready,
+      dns: dnsHealth,
+      engine: {
+        mode: engine.mode || process.env.MAIL_TRANSPORT_MODE,
+        ratePerMinute: engine.ratePerMinute,
+        dailyCap: { limit: dc.limit, used: dc.used, remaining: dc.remaining },
+        sent24h: aggSent,
+        bounced24h: aggBounced,
+        bounceRatePct: aggSent ? Math.round((aggBounced / aggSent) * 1000) / 10 : 0
+      },
+      autoPause,
+      gmailApi: Boolean(process.env.GOOGLE_OAUTH_REFRESH_TOKEN),
+      drive: googleHub.isGoogleReady?.() || false
+    });
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
+app.get("/api/spam-shield/dns-health", async (_req, res) => {
+  try {
+    const fromEmail = process.env.SMTP_FROM_EMAIL || "manager@rubencoton.com";
+    const domain = fromEmail.split("@")[1] || "rubencoton.com";
+    const health = await spamShield.checkDnsHealth(domain);
+    /* DMARC en p=none es modo permisivo — recomendar p=quarantine tras 14 dias */
+    const recos = [];
+    if (!health.spf.ok) {
+      recos.push("Publica SPF: \"v=spf1 include:_spf.google.com ~all\" como TXT en " + domain);
+    }
+    if (!health.dkim.ok) {
+      recos.push("DKIM no detectado en selector google._domainkey. Activa firma DKIM en Workspace > Apps > Gmail > Authenticate email");
+    }
+    if (health.dmarc.ok && health.dmarc.policy === "none") {
+      recos.push("DMARC en p=none. Tras 2 semanas sube a p=quarantine para hardening.");
+    } else if (!health.dmarc.ok) {
+      recos.push("Publica DMARC: \"v=DMARC1; p=quarantine; rua=mailto:postmaster@" + domain + "\" en _dmarc." + domain);
+    }
+    return apiOk(res, { ...health, recommendations: recos });
+  } catch (err) {
+    return apiError(res, 500, err.message || "DNS check failed");
+  }
 });
 
 /* ── Unsubscribe endpoint (CRITICO para entregabilidad) ── */
