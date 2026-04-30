@@ -3,7 +3,7 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
-const APP_PASSWORD = process.env.APP_ACCESS_PASSWORD || "+artesbuho26";
+const APP_PASSWORD = process.env.APP_ACCESS_PASSWORD || "+ruben93";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -180,8 +180,8 @@ const testBounceNoDuplication = async () => {
     MAIL_TRANSPORT_MODE: "smtp",
     SMTP_HOST: "127.0.0.1",
     SMTP_PORT: "9",
-    SMTP_FROM_EMAIL: "booking@artesbuhomanagement.com",
-    SMTP_REPLY_TO: "booking@artesbuhomanagement.com",
+    SMTP_FROM_EMAIL: "manager@rubencoton.com",
+    SMTP_REPLY_TO: "manager@rubencoton.com",
     MAIL_RATE_LIMIT_PER_MIN: "120",
     MAIL_MAX_RETRIES: "0"
   });

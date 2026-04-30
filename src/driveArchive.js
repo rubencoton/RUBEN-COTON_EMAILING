@@ -2,7 +2,7 @@
 
 /**
  * driveArchive — Sube campañas (email + informe + datos) al Drive de
- * booking@artesbuhomanagement.com con sistema de codificación único.
+ * manager@rubencoton.com con sistema de codificación único.
  *
  * Estructura en Drive:
  *   Mi unidad/

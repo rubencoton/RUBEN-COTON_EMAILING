@@ -49,7 +49,7 @@ const sortByCreatedDesc = (list) =>
 
 /* ════════════════════════════════════════════════════════════════
    BORRADORES ESTANDAR RUBEN COTON (plantillas seed)
-   Colores corporativos OFICIALES: ROJO #D62828, AMARILLO #F4B400,
+   Colores corporativos OFICIALES: NARANJA #FF6B00, NEGRO #1A1A1A,
    BLANCO #ffffff.
    Bump SEED_VERSION + SEED_RESET_VERSION para forzar limpieza total.
    ═══════════════════════════════════════════════════════════════ */
@@ -59,10 +59,10 @@ const SEED_VERSION = 4;
  * explicitamente un reset completo de plantillas. */
 const SEED_RESET_VERSION = 2;
 
-const getDefaultBuhoDrafts = () => {
+const getDefaultDrafts = () => {
   /* HTML corporativo NOCHES DE NEÓN. Preservado VERBATIM desde el
    * artwork aprobado por RUBEN COTON (correo-noches-de-neon.html).
-   * Colores oficiales: ROJO #D62828, AMARILLO #F4B400, BLANCO #ffffff. */
+   * Colores oficiales: ROJO #FF6B00, AMARILLO #FFB74D, BLANCO #ffffff. */
   const nochesHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -96,24 +96,24 @@ const getDefaultBuhoDrafts = () => {
 
           <!-- HEADER ROJO -->
           <tr>
-            <td style="background-color:#D62828; padding:28px 40px 22px; text-align:center;">
+            <td style="background-color:#FF6B00; padding:28px 40px 22px; text-align:center;">
               <img src="https://lh3.googleusercontent.com/d/1yvary28jzeD8nQyul9iSYqFPXKTn9Hyw=w240"
                    alt="RUBEN COTON" width="90"
                    style="display:block; margin:0 auto 10px; width:90px; height:auto; border:0; background-color:#ffffff; border-radius:50%; padding:6px;" border="0">
               <h1 style="margin:4px 0 2px; color:#ffffff; font-size:24px; font-weight:bold; letter-spacing:4px;">RUBEN COTON</h1>
-              <p style="margin:0; color:#F4B400; font-size:11px; letter-spacing:5px; text-transform:uppercase; font-weight:700;">Management</p>
+              <p style="margin:0; color:#FFB74D; font-size:11px; letter-spacing:5px; text-transform:uppercase; font-weight:700;">Management</p>
             </td>
           </tr>
 
           <!-- BARRA AMARILLA -->
-          <tr><td style="height:4px; background-color:#F4B400;"></td></tr>
+          <tr><td style="height:4px; background-color:#FFB74D;"></td></tr>
 
           <!-- BADGE ARTISTA -->
           <tr>
             <td style="background-color:#FFF8E7; padding:14px 40px; text-align:center; border-bottom:1px solid #f0e6c8;">
               <span style="font-size:11px; color:#888888; letter-spacing:2px; font-weight:700;">ARTISTA REPRESENTADO</span>
               <br>
-              <span style="font-size:16px; color:#D62828; font-weight:bold; letter-spacing:1px;">NOCHES DE NEÓN</span>
+              <span style="font-size:16px; color:#FF6B00; font-weight:bold; letter-spacing:1px;">NOCHES DE NEÓN</span>
             </td>
           </tr>
 
@@ -131,8 +131,8 @@ const getDefaultBuhoDrafts = () => {
 
           <!-- BARRA TÍTULO BAJO FOTO -->
           <tr>
-            <td style="background-color:#D62828; padding:14px 40px; text-align:center;">
-              <p style="margin:0; color:#F4B400; font-size:11px; letter-spacing:3px; font-weight:700; text-transform:uppercase;">El show de las 5 décadas</p>
+            <td style="background-color:#FF6B00; padding:14px 40px; text-align:center;">
+              <p style="margin:0; color:#FFB74D; font-size:11px; letter-spacing:3px; font-weight:700; text-transform:uppercase;">El show de las 5 décadas</p>
               <p style="margin:4px 0 0; color:#ffffff; font-size:18px; font-weight:bold; letter-spacing:1px;">60 · 70 · 80 · 90 · 2000</p>
             </td>
           </tr>
@@ -153,7 +153,7 @@ const getDefaultBuhoDrafts = () => {
           <!-- STATS BOX -->
           <tr>
             <td style="padding:0 40px 20px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF8E7; border-left:4px solid #D62828; border-radius:4px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF8E7; border-left:4px solid #FF6B00; border-radius:4px;">
                 <tr>
                   <td style="padding:16px 20px; text-align:center;">
                     <p style="margin:0; color:#1a1a1a; font-size:14px; font-weight:bold; line-height:1.5;">
@@ -198,7 +198,7 @@ const getDefaultBuhoDrafts = () => {
                     </td>
                   </tr>
                   <tr>
-                    <td style="background-color:#D62828; padding:10px; text-align:center;">
+                    <td style="background-color:#FF6B00; padding:10px; text-align:center;">
                       <span style="color:#ffffff; font-size:13px; font-weight:bold; letter-spacing:1px;">▶ VER DIRECTO EN YOUTUBE</span>
                     </td>
                   </tr>
@@ -234,7 +234,7 @@ const getDefaultBuhoDrafts = () => {
           <!-- CAJA CIERRE -->
           <tr>
             <td style="padding:0 40px 30px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4B400; border-radius:6px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFB74D; border-radius:6px;">
                 <tr>
                   <td style="padding:22px 26px;">
                     <p style="margin:0 0 12px; color:#1a1a1a; font-size:16px; font-weight:bold; line-height:1.4;">
@@ -262,7 +262,7 @@ const getDefaultBuhoDrafts = () => {
             <td style="padding:0 40px 12px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="background-color:#D62828; border-radius:6px;">
+                  <td align="center" style="background-color:#FF6B00; border-radius:6px;">
                     <a href="mailto:manager@rubencoton.com"
                        style="display:block; padding:16px 20px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:bold;">
                       Responder a este correo
@@ -278,7 +278,7 @@ const getDefaultBuhoDrafts = () => {
             <td style="padding:0 40px 12px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="background-color:#F4B400; border-radius:6px;">
+                  <td align="center" style="background-color:#FFB74D; border-radius:6px;">
                     <a href="https://wa.me/34613009336" target="_blank"
                        style="display:block; padding:16px 20px; color:#1a1a1a; text-decoration:none; font-size:16px; font-weight:bold;">
                       Escribir por WhatsApp
@@ -294,11 +294,11 @@ const getDefaultBuhoDrafts = () => {
             <td style="padding:0 40px 30px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="background-color:#ffffff; border:2px solid #D62828; border-radius:6px;">
+                  <td align="center" style="background-color:#ffffff; border:2px solid #FF6B00; border-radius:6px;">
                     <a href="tel:+34613009336"
                        style="display:block; padding:14px 20px; color:#1a1a1a; text-decoration:none;">
                       <span style="display:block; font-size:12px; font-weight:bold; color:#888888; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Llamar o WhatsApp</span>
-                      <span style="display:block; font-size:22px; font-weight:bold; color:#D62828; letter-spacing:1px;">+34 613 00 93 36</span>
+                      <span style="display:block; font-size:22px; font-weight:bold; color:#FF6B00; letter-spacing:1px;">+34 613 00 93 36</span>
                       <span style="display:block; font-size:11px; color:#888888; margin-top:4px;">Rubén · CEO RUBEN COTON</span>
                     </a>
                   </td>
@@ -317,7 +317,7 @@ const getDefaultBuhoDrafts = () => {
 
           <!-- FOOTER ROJO -->
           <tr>
-            <td style="background-color:#D62828; padding:24px 40px; text-align:center;">
+            <td style="background-color:#FF6B00; padding:24px 40px; text-align:center;">
               <img src="https://lh3.googleusercontent.com/d/16UZKQnCW0J9qqd9yLZ9t4jukrp3p9hcj=w160"
                    alt="RUBEN COTON" width="72"
                    style="display:block; margin:0 auto 10px; width:72px; height:auto; border:0; background-color:#ffffff; border-radius:50%; padding:5px;" border="0">
@@ -360,7 +360,7 @@ Le escribo porque representamos a Noches de Neón, una de las formaciones con m�
 
 +300 conciertos · 4 h de directo · 5 décadas (60 → 2000)
 
-Soy Román, CEO de ARTES BÚHO Management. Noches de Neón es una formación de músicos de sesión que han acompañado a Operación Triunfo, Antonio Orozco, Rozalén, La Pegatina, Andrés Suárez, Funambulista y Sara Socas, entre otros. Acaban de pasar por la Plaza de Toros de Guadalajara y por las fiestas de Villaverde (Madrid).
+Soy Rubén, CEO de RUBEN COTON. Noches de Neón es una formación de músicos de sesión que han acompañado a Operación Triunfo, Antonio Orozco, Rozalén, La Pegatina, Andrés Suárez, Funambulista y Sara Socas, entre otros. Acaban de pasar por la Plaza de Toros de Guadalajara y por las fiestas de Villaverde (Madrid).
 
 Vídeo del directo: https://www.youtube.com/watch?v=trdXcBzJKf0
 
@@ -375,11 +375,11 @@ Si encaja en su agenda, le envío propuesta cerrada en 24 h. Solo necesito tres 
 3. Aforo aproximado
 
 Responda a este correo con esos datos o contacte por:
-- Email: booking@artesbuhomanagement.com
-- WhatsApp: https://wa.me/34649635907
-- Teléfono: +34 649 63 59 07
+- Email: manager@rubencoton.com
+- WhatsApp: https://wa.me/34613009336
+- Teléfono: +34 613 00 93 36
 
-Román · CEO ARTES BÚHO Management
+Rubén · CEO RUBEN COTON
 
 Si no desea seguir recibiendo comunicaciones comerciales, responda a este correo con la palabra BAJA.`;
 
@@ -464,7 +464,7 @@ const createDemoStore = () => {
     {
       id: createId("tpl"),
       name: "Bienvenida",
-      subject: "Bienvenido a Artes Buho",
+      subject: "Bienvenido a RUBEN COTON",
       html: "<h1>Hola {{first_name}}</h1><p>Gracias por unirte.</p>",
       text: "Hola {{first_name}}. Gracias por unirte.",
       status: "borrador",
@@ -476,8 +476,8 @@ const createDemoStore = () => {
       id: createId("tpl"),
       name: "Promo semanal",
       subject: "Novedades de la semana",
-      html: "<h2>Novedades</h2><p>Mira nuestras novedades.</p><a href='https://artesbuhomanagement.com'>Ver</a>",
-      text: "Novedades de la semana. Visita artesbuhomanagement.com",
+      html: "<h2>Novedades</h2><p>Mira nuestras novedades.</p><a href='https://rubencoton.com'>Ver</a>",
+      text: "Novedades de la semana. Visita rubencoton.com",
       status: "borrador",
       validatedAt: null,
       createdAt,
@@ -545,11 +545,11 @@ const createDemoStore = () => {
       updatedAt: createdAt
     },
     settings: {
-      workspaceName: "ARTES-BUHO_EMAILING",
-      senderName: "Artes Buho Management",
-      senderEmail: "booking@artesbuhomanagement.com",
-      replyTo: "booking@artesbuhomanagement.com",
-      addressLine: "Artes Buho Management, España"
+      workspaceName: "RUBEN-COTON_EMAILING",
+      senderName: "RUBEN COTON",
+      senderEmail: "manager@rubencoton.com",
+      replyTo: "manager@rubencoton.com",
+      addressLine: "RUBEN COTON, España"
     },
     contacts,
     templates,
@@ -1102,7 +1102,7 @@ class DataStore {
     }));
   }
 
-  /* Inserta / actualiza los borradores estandar ARTES BUHO.
+  /* Inserta / actualiza los borradores estandar RUBEN COTON.
    * - Si no existe el seed por seedKey, lo INSERTA.
    * - Si existe y tiene seedKey (nunca editado por el usuario) y su
    *   seedVersion es menor que SEED_VERSION actual, lo ACTUALIZA.
@@ -1112,7 +1112,7 @@ class DataStore {
    *   se le asigna seedKey para futuras actualizaciones solo la primera
    *   vez (migracion). */
   ensureDefaultTemplates() {
-    const DEFAULT_DRAFTS = getDefaultBuhoDrafts();
+    const DEFAULT_DRAFTS = getDefaultDrafts();
     return this.mutate((store) => {
       store.meta = store.meta || {};
       let added = 0;
@@ -1922,7 +1922,7 @@ class DataStore {
           email: recipient.email,
           url:
             eventType === "click"
-              ? "https://artesbuhomanagement.com/oferta"
+              ? "https://rubencoton.com/oferta"
               : null,
           occurredAt: nowIso(),
           source: "simulation"

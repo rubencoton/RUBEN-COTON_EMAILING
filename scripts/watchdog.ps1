@@ -3,7 +3,7 @@
 # Si algo cae, lo relanza automáticamente.
 # ============================================================
 $ErrorActionPreference = "Continue"
-$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\ARTES-BUHO_EMAILING"
+$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\RUBEN-COTON_EMAILING"
 $logDir = Join-Path $projDir "logs"
 $watchdogLog = Join-Path $logDir "watchdog.log"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null

@@ -96,7 +96,7 @@ const SKIP_TABS = ["ccaa"];
 
 /* ─── Auth: soporta OAuth (recomendado), API Key, o Service Account ─── */
 const getAuth = () => {
-  /* Modo 1 (RECOMENDADO): OAuth con refresh token de booking@artesbuhomanagement.com */
+  /* Modo 1 (RECOMENDADO): OAuth con refresh token de manager@rubencoton.com */
   if (OAUTH_CLIENT_ID && OAUTH_CLIENT_SECRET && OAUTH_REFRESH_TOKEN) {
     const oauth2 = new google.auth.OAuth2(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET);
     oauth2.setCredentials({ refresh_token: OAUTH_REFRESH_TOKEN });

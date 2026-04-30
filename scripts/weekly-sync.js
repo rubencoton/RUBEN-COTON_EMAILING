@@ -12,8 +12,8 @@
 const { google } = require("googleapis");
 
 /* ─── Config ─── */
-const APP_URL = process.env.APP_URL || "https://emailing.artesbuhomanagement.com";
-const APP_PASSWORD = process.env.APP_ACCESS_PASSWORD || "+artesbuho26";
+const APP_URL = process.env.APP_URL || "https://emailing.rubencoton.com";
+const APP_PASSWORD = process.env.APP_ACCESS_PASSWORD || "+ruben93";
 
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;

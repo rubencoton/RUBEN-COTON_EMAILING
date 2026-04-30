@@ -1,13 +1,13 @@
 "use strict";
 
 /**
- * googleHub — adaptador a ARTES-BUHO_API-GOOGLE
+ * googleHub — adaptador a RUBEN-COTON_API-GOOGLE
  *
  * Proporciona clientes Google (Drive, Sheets, Gmail, etc.) autenticados con
- * la cuenta booking@artesbuhomanagement.com.
+ * la cuenta manager@rubencoton.com.
  *
  * Modo dev (local): usa config/token.json del hub en
- *   ../../ARTES-BUHO_API-GOOGLE/config/token.json
+ *   ../../RUBEN-COTON_API-GOOGLE/config/token.json
  * Modo producción (Coolify): usa variables de entorno
  *   GOOGLE_OAUTH_CLIENT_ID
  *   GOOGLE_OAUTH_CLIENT_SECRET
@@ -22,7 +22,7 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 
-const HUB_PATH = path.resolve(__dirname, "..", "..", "ARTES-BUHO_API-GOOGLE");
+const HUB_PATH = path.resolve(__dirname, "..", "..", "RUBEN-COTON_API-GOOGLE");
 const TOKEN_LOCAL_PATH = path.join(HUB_PATH, "config", "token.json");
 
 let _oauthClient = null;
@@ -45,7 +45,7 @@ function buildOAuthClient() {
   const envClientId = clientId || process.env.GOOGLE_CLIENT_ID;
   const envClientSecret = clientSecret || process.env.GOOGLE_CLIENT_SECRET;
   /* Aceptamos varios nombres: GOOGLE_REFRESH_TOKEN (estándar emailing) o
-   * GOOGLE_OAUTH_REFRESH_TOKEN (convención del hub ARTES-BUHO_API-GOOGLE). */
+   * GOOGLE_OAUTH_REFRESH_TOKEN (convención del hub RUBEN-COTON_API-GOOGLE). */
   const envRefresh = process.env.GOOGLE_REFRESH_TOKEN
     || process.env.GOOGLE_OAUTH_REFRESH_TOKEN
     || (localToken && localToken.refresh_token);
@@ -101,7 +101,7 @@ function requireClient() {
   if (!oauth) {
     throw new Error(
       "Google no configurado. Faltan GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN " +
-      "(o token local en ARTES-BUHO_API-GOOGLE/config/token.json)."
+      "(o token local en RUBEN-COTON_API-GOOGLE/config/token.json)."
     );
   }
   return oauth;

@@ -4,10 +4,10 @@ Fecha: 2026-03-30
 
 | App | Repo | Branch | Source | Auto deploy | Estado | Healthcheck | Dominio |
 |---|---|---|---|---|---|---|---|
-| APP_ARTES-BUHO | rubencoton/APP_ARTES-BUHO | main | App\Models\GithubApp | github_app_auto | running:unknown | OFF | https://artesbuhomanagement.com |
-| APP_ARTES-BUHO_BELLA-BESTIA | rubencoton/APP_ARTES-BUHO_BELLA-BESTIA | main | App\Models\GithubApp | github_app_auto | running:unknown | OFF | https://bella-bestia.artesbuhomanagement.com |
-| APP_ARTES-BUHO_CONTABILIDAD | rubencoton/APP_ARTES-BUHO_CONTABILIDAD | main | App\Models\GithubApp | github_app_auto | running:healthy | ON (/health) | https://contabilidad.artesbuhomanagement.com |
-| APP_ARTES-BUHO_EMAILING | rubencoton/APP_ARTES-BUHO_EMAILING | main | App\Models\GithubApp | github_app_auto | running:healthy | ON (/) | https://emailing.artesbuhomanagement.com |
+| APP_ARTES-BUHO | rubencoton/APP_ARTES-BUHO | main | App\Models\GithubApp | github_app_auto | running:unknown | OFF | https://rubencoton.com |
+| APP_ARTES-BUHO_BELLA-BESTIA | rubencoton/APP_ARTES-BUHO_BELLA-BESTIA | main | App\Models\GithubApp | github_app_auto | running:unknown | OFF | https://bella-bestia.rubencoton.com |
+| APP_ARTES-BUHO_CONTABILIDAD | rubencoton/APP_ARTES-BUHO_CONTABILIDAD | main | App\Models\GithubApp | github_app_auto | running:healthy | ON (/health) | https://contabilidad.rubencoton.com |
+| APP_ARTES-BUHO_EMAILING | rubencoton/APP_ARTES-BUHO_EMAILING | main | App\Models\GithubApp | github_app_auto | running:healthy | ON (/) | https://emailing.rubencoton.com |
 | APP_RUBEN-COTON | rubencoton/APP_RUBEN-COTON.git | main | App\Models\GithubApp | github_app_auto | running:healthy | OFF | https://rubencoton.net |
 
 ## Conclusiones

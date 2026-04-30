@@ -2,8 +2,8 @@
 # setup-autostart.ps1 - Registra la app para arrancar con Windows
 # ============================================================
 $ErrorActionPreference = "Stop"
-$taskName = "ArtesBuho_Emailing_Local"
-$startScript = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\ARTES-BUHO_EMAILING\scripts\start-local-silent.ps1"
+$taskName = "RubenCoton_Emailing_Local"
+$startScript = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\RUBEN-COTON_EMAILING\scripts\start-local-silent.ps1"
 
 Write-Host ""
 Write-Host "Registrando tarea programada: $taskName"

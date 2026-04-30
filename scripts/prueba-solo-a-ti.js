@@ -11,8 +11,8 @@
  *  - Monitorea el job hasta "completed" o timeout.
  */
 
-const BASE = "https://emailing.artesbuhomanagement.com";
-const PASSWORD = "+artesbuho26";
+const BASE = "https://emailing.rubencoton.com";
+const PASSWORD = "+ruben93";
 const EMAIL = "rubencoton1993@gmail.com";
 
 const FAIL = (m) => { console.error("❌", m); process.exit(1); };
@@ -62,13 +62,13 @@ async function main() {
     '<body style="margin:0;font-family:Arial;background:#f5f5f5;padding:40px">',
     '<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;border-top:6px solid #D62828">',
     '  <div style="padding:32px 28px">',
-    '    <h1 style="color:#a81117;margin:0 0 14px;font-size:26px">✅ Prueba auditoría</h1>',
+    '    <h1 style="color:#E65100;margin:0 0 14px;font-size:26px">✅ Prueba auditoría</h1>',
     '    <p style="color:#333;font-size:15px;line-height:1.5">Hola <strong>RUBEN COTON</strong>,</p>',
     '    <p style="color:#333;font-size:15px;line-height:1.5">Este email confirma que el <strong>envío, el tracking y el HTML</strong> de tu app funcionan tras la auditoría profunda.</p>',
     '    <p style="color:#333;font-size:15px;line-height:1.5">Si lo ves, puedes marcar la prueba como ✅ OK.</p>',
     '  </div>',
     '  <div style="background:#F4B400;padding:14px 28px;text-align:center">',
-    '    <span style="color:#a81117;font-weight:800;font-size:13px">ARTES BÚHO MANAGEMENT</span>',
+    '    <span style="color:#E65100;font-weight:800;font-size:13px">RUBEN COTON</span>',
     '  </div>',
     '  <div style="background:#2a2a2a;padding:14px 28px;text-align:center">',
     '    <a href="%%UNSUBSCRIBE_URL%%" style="color:#F4B400;font-size:11px;text-decoration:underline">Darse de baja</a>',
@@ -79,7 +79,7 @@ async function main() {
   log(`3. Encolando job de PRUEBA con recipients=[${recipients[0]}]…`);
   const enq = await call("POST", "/api/mass-mail/jobs", {
     name: "TEST AUDITORIA · rubencoton1993",
-    subject: "Prueba auditoría — ARTES BÚHO EMAILING",
+    subject: "Prueba auditoría — RUBEN COTON EMAILING",
     html,
     text: "Prueba auditoria OK. Si ves este email, envio y tracking funcionan.",
     recipients

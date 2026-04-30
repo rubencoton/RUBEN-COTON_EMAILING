@@ -42,7 +42,7 @@ const req = (method, path, body, cookie) =>
     fs.writeFileSync("./data/store.json", JSON.stringify(d, null, 2), "utf-8");
   }
 
-  const login = await req("POST", "/api/auth/login", { password: "+artesbuho26" });
+  const login = await req("POST", "/api/auth/login", { password: "+ruben93" });
   const cookie = (login.headers["set-cookie"] || []).map((c) => c.split(";")[0]).join("; ");
 
   // Segmento limpio
@@ -60,18 +60,18 @@ const req = (method, path, body, cookie) =>
   // Campaña real
   const cmp = await req("POST", "/api/campaigns", {
     name: "FINAL E2E — Test completo tracking",
-    subject: "🚀 Test FINAL — Sistema Artes Búho operativo",
-    fromName: "Artes Búho Management",
-    fromEmail: "booking@artesbuhomanagement.com",
-    replyTo: "booking@artesbuhomanagement.com",
+    subject: "🚀 Test FINAL — Sistema RUBEN COTON operativo",
+    fromName: "RUBEN COTON",
+    fromEmail: "manager@rubencoton.com",
+    replyTo: "manager@rubencoton.com",
     segmentId: segId,
     html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;background:#fafafa">
-<div style="background:#a81117;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0">
-  <h1 style="margin:0;font-size:24px">🦉 Artes Búho Management</h1>
+<div style="background:#E65100;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0">
+  <h1 style="margin:0;font-size:24px">RUBEN COTON</h1>
   <p style="margin:8px 0 0;opacity:0.9">Sistema de mensajería operativo</p>
 </div>
 <div style="background:#fff;padding:24px;border-radius:0 0 8px 8px">
-  <h2 style="color:#a81117">¡Hola Rubén! 👋</h2>
+  <h2 style="color:#E65100">¡Hola Rubén! 👋</h2>
   <p>Esta es la <strong>campaña final de verificación end-to-end</strong>. Si la lees:</p>
   <ul>
     <li>✅ Sistema de envío via Gmail API funcionando</li>
@@ -81,10 +81,10 @@ const req = (method, path, body, cookie) =>
     <li>✅ Cap diario 1500/24h funcionando</li>
     <li>✅ Velocidad 5/min anti-spam</li>
   </ul>
-  <h3 style="color:#a81117;margin-top:24px">🖱 Haz click para verificar tracking de clics:</h3>
+  <h3 style="color:#E65100;margin-top:24px">🖱 Haz click para verificar tracking de clics:</h3>
   <p style="text-align:center;margin:24px 0">
-    <a href="https://artesbuhomanagement.com" style="display:inline-block;background:#a81117;color:#fff;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold">
-      🌐 Ver web Artes Búho
+    <a href="https://rubencoton.com" style="display:inline-block;background:#E65100;color:#fff;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold">
+      🌐 Ver web RUBEN COTON
     </a>
   </p>
   <p>Otros enlaces de prueba:</p>
@@ -93,13 +93,13 @@ const req = (method, path, body, cookie) =>
     <li><a href="https://drive.google.com">📁 Drive</a></li>
     <li><a href="https://www.youtube.com">📺 YouTube</a></li>
   </ul>
-  <p style="margin-top:32px">Saludos,<br><strong>Booking — Artes Búho</strong></p>
+  <p style="margin-top:32px">Saludos,<br><strong>RUBEN COTON</strong></p>
 </div>
 <p style="text-align:center;font-size:11px;color:#999;margin-top:16px">
   Sistema construido por RUBEN COTON · Local + Cloudflare Tunnel
 </p>
 </div>`,
-    plainText: "Test FINAL E2E - Sistema Artes Búho operativo. Saludos."
+    plainText: "Test FINAL E2E - Sistema RUBEN COTON operativo. Saludos."
   }, cookie);
 
   const cmpId = cmp.body.campaign.id;

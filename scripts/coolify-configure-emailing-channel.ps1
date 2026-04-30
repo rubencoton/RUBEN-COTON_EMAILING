@@ -4,20 +4,20 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$CoolifyToken,
   [Parameter(Mandatory = $false)]
-  [string]$AppName = "ARTES-BUHO_EMAILING",
+  [string]$AppName = "RUBEN-COTON_EMAILING",
   [Parameter(Mandatory = $false)]
-  [string]$AccessPassword = "+artesbuho26",
+  [string]$AccessPassword = "+ruben93",
   [Parameter(Mandatory = $false)]
   [string]$AccessSecret = "",
   [Parameter(Mandatory = $false)]
   [ValidateSet("direct", "smtp", "botavia")]
   [string]$TransportMode = "direct",
   [Parameter(Mandatory = $false)]
-  [string]$FromName = "Artes Buho Management",
+  [string]$FromName = "RUBEN COTON",
   [Parameter(Mandatory = $false)]
-  [string]$FromEmail = "booking@artesbuhomanagement.com",
+  [string]$FromEmail = "manager@rubencoton.com",
   [Parameter(Mandatory = $false)]
-  [string]$ReplyTo = "booking@artesbuhomanagement.com",
+  [string]$ReplyTo = "manager@rubencoton.com",
   [Parameter(Mandatory = $false)]
   [int]$RatePerMinute = 5,
   [Parameter(Mandatory = $false)]
@@ -26,7 +26,7 @@ param(
   [Parameter(Mandatory = $false)]
   [string]$HealthCheckPath = "/health",
   [Parameter(Mandatory = $false)]
-  [string]$DirectHostname = "mailer.artesbuhomanagement.com",
+  [string]$DirectHostname = "mailer.rubencoton.com",
   [Parameter(Mandatory = $false)]
   [string]$BotaviaApiBaseUrl = "",
   [Parameter(Mandatory = $false)]

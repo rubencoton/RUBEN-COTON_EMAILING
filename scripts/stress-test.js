@@ -1,11 +1,11 @@
 /**
- * Stress Test - ARTES-BUHO_EMAILING
+ * Stress Test - RUBEN-COTON_EMAILING
  * Bateria completa contra la API en produccion.
  * Uso: node scripts/stress-test.js
  */
 
-const BASE = "https://emailing.artesbuhomanagement.com";
-const PASSWORD = "+artesbuho26";
+const BASE = "https://emailing.rubencoton.com";
+const PASSWORD = "+ruben93";
 const SLOW_MS = 3000;
 
 let authCookie = "";
@@ -367,7 +367,7 @@ async function waitForRateLimitClear() {
 
 async function main() {
   console.log("=".repeat(70));
-  console.log("  STRESS TEST - ARTES-BUHO_EMAILING");
+  console.log("  STRESS TEST - RUBEN-COTON_EMAILING");
   console.log(`  Target: ${BASE}`);
   console.log(`  Date:   ${new Date().toISOString()}`);
   console.log(`  Tests:  ${tests.length}`);

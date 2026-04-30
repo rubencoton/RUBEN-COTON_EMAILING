@@ -6,7 +6,7 @@
  *   4. Mantiene rubencoton1993 SOLO en CRM 7 (PRUEBAS)
  *
  * Estructura final:
- *   📁 ARTES BUHO — CRMs
+ *   📁 RUBEN COTON — CRMs
  *      ├── CRM 1 — Booking
  *      ├── CRM 2 — Newsletter
  *      ├── CRM 3 — Leads

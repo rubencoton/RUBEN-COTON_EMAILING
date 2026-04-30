@@ -31,11 +31,11 @@ const drive = google.drive({ version: "v3", auth: oauth });
 const sheets = google.sheets({ version: "v4", auth: oauth });
 
 (async () => {
-  // 1. Crear carpeta paraguas "ARTES BUHO — CRMs"
+  // 1. Crear carpeta paraguas "RUBEN COTON — CRMs"
   console.log("Creando carpeta paraguas…");
   const umbrella = await drive.files.create({
     requestBody: {
-      name: "ARTES BUHO — CRMs (Emailing local)",
+      name: "RUBEN COTON — CRMs (Emailing local)",
       mimeType: "application/vnd.google-apps.folder"
     },
     fields: "id, name, webViewLink"

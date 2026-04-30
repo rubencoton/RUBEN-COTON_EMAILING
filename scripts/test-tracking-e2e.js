@@ -13,12 +13,12 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 
-const APP_BASE = "https://emailing.artesbuhomanagement.com";
-const APP_PW = "+artesbuho26";
+const APP_BASE = "https://emailing.rubencoton.com";
+const APP_PW = "+ruben93";
 const TEST_EMAIL = "rubencoton1993@gmail.com";
 
-/* ========= Login Gmail (hub ARTES-BUHO_API-GOOGLE) ========= */
-const HUB_ROOT = path.resolve(__dirname, "..", "..", "ARTES-BUHO_API-GOOGLE");
+/* ========= Login Gmail (hub RUBEN-COTON_API-GOOGLE) ========= */
+const HUB_ROOT = path.resolve(__dirname, "..", "..", "RUBEN-COTON_API-GOOGLE");
 const tokenPath = path.join(HUB_ROOT, "config", "token.json");
 const envPath = path.join(HUB_ROOT, ".env");
 
@@ -144,13 +144,13 @@ async function main() {
   const html = `<div dir="ltr">
 <p>Hola Rub&eacute;n,</p>
 <p>Esto es un test autom&aacute;tico. Por favor no respondas.</p>
-<p>Visita nuestra web: <a href="https://artesbuhomanagement.com">https://artesbuhomanagement.com</a></p>
+<p>Visita nuestra web: <a href="https://rubencoton.com">https://rubencoton.com</a></p>
 <p>Un saludo,<br>Test automation</p>
 </div>`;
   log("create", `Creando campaña "${subject}"…`);
   const created = await appCall("POST", "/api/campaigns", {
     name: subject, subject, html,
-    text: "Hola Ruben, test. Visita https://artesbuhomanagement.com",
+    text: "Hola Ruben, test. Visita https://rubencoton.com",
     segmentId: "seg_f877d5f148cd50"
   });
   const cid = created.data?.campaign?.id;
@@ -190,8 +190,8 @@ async function main() {
   log("tracking", "Reconstruyendo URLs de tracking…");
   const emailB64 = Buffer.from(TEST_EMAIL).toString("base64url");
   const pixelUrl = `${APP_BASE}/t/o/${cid}/${emailB64}.gif`;
-  /* URL de click → wrappea https://artesbuhomanagement.com */
-  const targetUrl = "https://artesbuhomanagement.com";
+  /* URL de click → wrappea https://rubencoton.com */
+  const targetUrl = "https://rubencoton.com";
   const urlB64 = Buffer.from(targetUrl).toString("base64url");
   const clickUrl = `${APP_BASE}/t/c/${cid}/${emailB64}?u=${urlB64}`;
 
@@ -220,7 +220,7 @@ async function main() {
      * rubencoton1993 para confirmar que el email salió de verdad. */
     const list = await gmail.users.messages.list({
       userId: "me",
-      q: `from:booking@artesbuhomanagement.com newer_than:1d subject:"${subject}"`,
+      q: `from:manager@rubencoton.com newer_than:1d subject:"${subject}"`,
       maxResults: 5
     });
     log("gmail", `mensajes relacionados encontrados: ${list.data.messages?.length || 0}`);

@@ -55,7 +55,7 @@ if (!accessPasswordRaw) {
 }
 const accessPassword = normalizePasswordValue(accessPasswordRaw);
 const authSecret =
-  process.env.APP_ACCESS_SECRET || "app-artes-buho-emailing-default-secret";
+  process.env.APP_ACCESS_SECRET || "ruben-coton-emailing-default-secret";
 const authCookieName = "app_auth";
 const loginHtmlPath = path.join(__dirname, "..", "public", "login.html");
 const appHtmlPath = path.join(__dirname, "..", "public", "index.html");
@@ -91,9 +91,9 @@ const massMailEngine = createMassMailEngine({
   botaviaApiKey: process.env.BOTAVIA_API_KEY || "",
   botaviaSendPath: process.env.BOTAVIA_SEND_PATH || "/send",
   botaviaHealthPath: process.env.BOTAVIA_HEALTH_PATH || "/health",
-  fromName: process.env.SMTP_FROM_NAME || "ARTES BUHO EMAILING",
+  fromName: process.env.SMTP_FROM_NAME || "RUBEN COTON",
   fromEmail: process.env.SMTP_FROM_EMAIL,
-  replyTo: process.env.SMTP_REPLY_TO || "booking@artesbuhomanagement.com",
+  replyTo: process.env.SMTP_REPLY_TO || "manager@rubencoton.com",
   ratePerMinute: process.env.MAIL_RATE_LIMIT_PER_MIN || 5,
   /* Cap diario de envíos (rolling 24h). Default 1500 (debajo del 2000/día
    * de Workspace para tener margen y no agotar la cuota). */
@@ -313,7 +313,7 @@ const syncCampaignsWithEngine = () => {
 
 const buildRuntimeStatus = async () => {
   const runtime = {
-    app: "ARTES-BUHO_EMAILING",
+    app: "RUBEN-COTON_EMAILING",
     release: appRelease,
     status: "ok",
     environment: process.env.NODE_ENV || "production",
@@ -1206,11 +1206,11 @@ app.get("/campaigns/:id/preview", (req, res) => {
   const statusRaw = campaign.status || "draft";
   const STATUS_ES = { draft: "Borrador", queued: "En cola", sending: "Enviando", sent: "Enviada", paused: "Pausada", failed: "Error", scheduled: "Programada", completed: "Completada" };
   const status = escHtml(STATUS_ES[statusRaw] || statusRaw);
-  const bar = `<div style="position:sticky;top:0;z-index:9999;background:linear-gradient(135deg,#a81117 0%,#D62828 100%);color:#fff;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;border-bottom:3px solid #F4B400">
-    <strong style="color:#F4B400">VISTA PREVIA — ${name}</strong>
+  const bar = `<div style="position:sticky;top:0;z-index:9999;background:linear-gradient(135deg,#E65100 0%,#FF6B00 100%);color:#fff;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;border-bottom:3px solid #FFB74D">
+    <strong style="color:#FFB74D">VISTA PREVIA — ${name}</strong>
     &nbsp;·&nbsp; Asunto: <em>${subject}</em>
-    &nbsp;·&nbsp; Estado: <span style="background:#F4B400;color:#a81117;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase">${status}</span>
-    <a href="javascript:window.close()" style="float:right;color:#F4B400;text-decoration:none">✖ Cerrar</a>
+    &nbsp;·&nbsp; Estado: <span style="background:#FFB74D;color:#E65100;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase">${status}</span>
+    <a href="javascript:window.close()" style="float:right;color:#FFB74D;text-decoration:none">✖ Cerrar</a>
   </div>`;
   /* Si el html ya contiene <body>, inyectamos la barra justo después. */
   let out;
@@ -1397,7 +1397,7 @@ app.get("/api/campaigns/:id/download-pack", (req, res) => {
 
     /* Ficha identificativa del pack */
     const ficha = [
-      `PACK DE CAMPAÑA · ARTES BÚHO MANAGEMENT`,
+      `PACK DE CAMPAÑA · RUBEN COTON`,
       `========================================`,
       ``,
       `Código:     ${code}`,
@@ -1422,7 +1422,7 @@ app.get("/api/campaigns/:id/download-pack", (req, res) => {
       `  Abre INFORME_${code}.html en cualquier navegador.`,
       `  Pulsa "Descargar PDF" o Ctrl+P → Guardar como PDF.`,
       ``,
-      `booking@artesbuhomanagement.com`
+      `manager@rubencoton.com`
     ].join("\n");
     archive.append(ficha, { name: `${folder}/FICHA_${code}.txt` });
 
@@ -1475,7 +1475,7 @@ app.get("/api/campaigns/download-all", (_req, res) => {
       archive.append(JSON.stringify({ code, folder, ...data }, null, 2), { name: `${rootFolder}/${folder}/DATOS_${code}.json` });
 
       const ficha = [
-        `PACK DE CAMPAÑA · ARTES BÚHO MANAGEMENT`,
+        `PACK DE CAMPAÑA · RUBEN COTON`,
         `========================================`,
         ``,
         `Código:     ${code}`,
@@ -1487,7 +1487,7 @@ app.get("/api/campaigns/download-all", (_req, res) => {
         `  INFORME_${code}.html  → Informe ejecutivo completo`,
         `  DATOS_${code}.json    → Datos brutos JSON`,
         ``,
-        `booking@artesbuhomanagement.com`
+        `manager@rubencoton.com`
       ].join("\n");
       archive.append(ficha, { name: `${rootFolder}/${folder}/FICHA_${code}.txt` });
 
@@ -1496,20 +1496,20 @@ app.get("/api/campaigns/download-all", (_req, res) => {
 
     /* Índice global HTML */
     const indexHtml = [
-      `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Índice histórico · ARTES BÚHO</title>`,
+      `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Índice histórico · RUBEN COTON</title>`,
       `<style>body{font-family:Arial,sans-serif;max-width:1100px;margin:40px auto;padding:20px;color:#1a1a1a}`,
-      `h1{color:#a81117;border-bottom:4px solid #F4B400;padding-bottom:12px;font-size:26pt}`,
-      `.meta{background:#fff8e1;border-left:5px solid #F4B400;padding:14px 18px;border-radius:6px;margin:16px 0}`,
+      `h1{color:#E65100;border-bottom:4px solid #FFB74D;padding-bottom:12px;font-size:26pt}`,
+      `.meta{background:#fff8e1;border-left:5px solid #FFB74D;padding:14px 18px;border-radius:6px;margin:16px 0}`,
       `table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}`,
-      `th{background:#a81117;color:#fff;padding:12px;text-align:left;border-bottom:4px solid #F4B400;text-transform:uppercase;font-size:11px;letter-spacing:1px}`,
+      `th{background:#E65100;color:#fff;padding:12px;text-align:left;border-bottom:4px solid #FFB74D;text-transform:uppercase;font-size:11px;letter-spacing:1px}`,
       `td{padding:10px;border-bottom:1px solid #eee;vertical-align:top}`,
       `tr:nth-child(even) td{background:#fafafa}`,
-      `.code{font-family:monospace;background:#fff1f1;color:#a81117;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700}`,
-      `a{color:#a81117;font-weight:700;text-decoration:none}`,
+      `.code{font-family:monospace;background:#fff5e6;color:#E65100;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700}`,
+      `a{color:#E65100;font-weight:700;text-decoration:none}`,
       `a:hover{text-decoration:underline}`,
-      `.btn-inline{display:inline-block;padding:4px 10px;background:#a81117;color:#fff !important;border-radius:4px;font-size:11px;margin:2px 3px}`,
-      `.btn-inline.amarillo{background:#F4B400;color:#a81117 !important}</style></head><body>`,
-      `<h1>🦉 HISTÓRICO DE CAMPAÑAS · ARTES BÚHO MANAGEMENT</h1>`,
+      `.btn-inline{display:inline-block;padding:4px 10px;background:#E65100;color:#fff !important;border-radius:4px;font-size:11px;margin:2px 3px}`,
+      `.btn-inline.amarillo{background:#FFB74D;color:#E65100 !important}</style></head><body>`,
+      `<h1>HISTÓRICO DE CAMPAÑAS · RUBEN COTON</h1>`,
       `<div class="meta">`,
       `  <strong>Total campañas:</strong> ${campaigns.length}<br>`,
       `  <strong>Generado:</strong> ${new Date().toLocaleString("es-ES")}<br>`,
@@ -1535,8 +1535,8 @@ app.get("/api/campaigns/download-all", (_req, res) => {
           + `</td></tr>`;
       }),
       `</tbody></table>`,
-      `<p style="margin-top:40px;padding:16px;background:#fff8e1;border-left:5px solid #F4B400;border-radius:6px;font-size:12px">`,
-      `<strong>🦉 ARTES BÚHO MANAGEMENT</strong> · booking@artesbuhomanagement.com<br>`,
+      `<p style="margin-top:40px;padding:16px;background:#fff8e1;border-left:5px solid #FFB74D;border-radius:6px;font-size:12px">`,
+      `<strong>RUBEN COTON</strong> · manager@rubencoton.com<br>`,
       `Cada carpeta contiene el email enviado, el informe ejecutivo y los datos JSON con codificación única.`,
       `</p></body></html>`
     ].join("");
@@ -1544,7 +1544,7 @@ app.get("/api/campaigns/download-all", (_req, res) => {
 
     /* README raíz */
     const readme = [
-      `HISTÓRICO DE CAMPAÑAS · ARTES BÚHO MANAGEMENT`,
+      `HISTÓRICO DE CAMPAÑAS · RUBEN COTON`,
       `=================================================`,
       ``,
       `Generado:         ${new Date().toLocaleString("es-ES")}`,
@@ -1572,7 +1572,7 @@ app.get("/api/campaigns/download-all", (_req, res) => {
       `  2. Abre 00-INDICE.html en el navegador`,
       `  3. Navega por las campañas desde ahí`,
       ``,
-      `booking@artesbuhomanagement.com`
+      `manager@rubencoton.com`
     ].join("\n");
     archive.append(readme, { name: `${rootFolder}/LEEME.txt` });
 
@@ -1584,8 +1584,8 @@ app.get("/api/campaigns/download-all", (_req, res) => {
 });
 
 /* ==========================================================
- * GOOGLE DRIVE ARCHIVE · booking@artesbuhomanagement.com
- * Integración vía hub ARTES-BUHO_API-GOOGLE
+ * GOOGLE DRIVE ARCHIVE · manager@rubencoton.com
+ * Integración vía hub RUBEN-COTON_API-GOOGLE
  * ========================================================== */
 
 /* Helper: construye el pack de archivos para subir al Drive */
@@ -1596,7 +1596,7 @@ function buildCampaignPackForDrive(campaign, seq) {
   const emailHtml = buildStandaloneEmailHtml(campaign);
   const reportHtml = buildStandaloneReportHtml(data);
   const ficha = [
-    `PACK DE CAMPAÑA · ARTES BÚHO MANAGEMENT`,
+    `PACK DE CAMPAÑA · RUBEN COTON`,
     `========================================`,
     ``,
     `Código:     ${code}`,
@@ -1608,7 +1608,7 @@ function buildCampaignPackForDrive(campaign, seq) {
     ``,
     `Contenido: CORREO_${code}.html · INFORME_${code}.html · DATOS_${code}.json`,
     ``,
-    `booking@artesbuhomanagement.com`
+    `manager@rubencoton.com`
   ].join("\n");
   return { code, folder, data, emailHtml, reportHtml, ficha };
 }
@@ -1907,7 +1907,7 @@ app.post("/api/admin/cleanup-local-reports", (_req, res) => {
   }
 });
 
-/* Scan manual de inbox booking@ para detectar respuestas a campañas */
+/* Scan manual de inbox manager@ para detectar respuestas a campañas */
 app.post("/api/reply-tracker/scan-now", async (_req, res) => {
   try {
     const result = await replyTracker.scanReplies();
@@ -2171,12 +2171,12 @@ app.post("/api/dev/seed-demo-campaigns", devOnlyGuard, (req, res) => {
           status: "sent",
           templateId: null,
           segmentId: null,
-          html: `<!doctype html><html><body style="font-family:Arial,sans-serif;padding:20px;background:#f4f4f4"><div style="max-width:600px;margin:0 auto;background:#fff;padding:32px;border-radius:8px"><h1 style="color:#a81117">RUBEN COTON</h1><h2>${tpl.subject}</h2><p>Hola,</p><p>Te escribo desde ARTES BUHO MANAGEMENT para proponerte colaborar con <strong>RUBEN COTON</strong>, DJ con mas de 43.000 seguidores en Instagram y experiencia en Mad Cool, Palau Alameda y grandes festivales.</p><p>Te paso <a href="https://rubencoton.com" style="color:#a81117">su web</a> y quedo a tu disposicion para detalles, fechas y cache.</p><p style="margin-top:24px"><strong>Rocio</strong><br/>ARTES BUHO MANAGEMENT<br/>booking@artesbuhomanagement.com</p></div></body></html>`,
-          text: `Hola, te escribo desde ARTES BUHO MANAGEMENT para proponerte colaborar con RUBEN COTON. Mas info en rubencoton.com\n\nRocio · booking@artesbuhomanagement.com`,
+          html: `<!doctype html><html><body style="font-family:Arial,sans-serif;padding:20px;background:#f4f4f4"><div style="max-width:600px;margin:0 auto;background:#fff;padding:32px;border-radius:8px"><h1 style="color:#E65100">RUBEN COTON</h1><h2>${tpl.subject}</h2><p>Hola,</p><p>Te escribo desde RUBEN COTON para proponerte colaborar con <strong>RUBEN COTON</strong>, DJ con mas de 43.000 seguidores en Instagram y experiencia en Mad Cool, Palau Alameda y grandes festivales.</p><p>Te paso <a href="https://rubencoton.com" style="color:#E65100">su web</a> y quedo a tu disposicion para detalles, fechas y cache.</p><p style="margin-top:24px"><strong>Rocio</strong><br/>RUBEN COTON<br/>manager@rubencoton.com</p></div></body></html>`,
+          text: `Hola, te escribo desde RUBEN COTON para proponerte colaborar con RUBEN COTON. Mas info en rubencoton.com\n\nRocio · manager@rubencoton.com`,
           tags: ["demo"],
-          fromName: "ARTES BUHO MANAGEMENT",
-          fromEmail: "booking@artesbuhomanagement.com",
-          replyTo: "booking@artesbuhomanagement.com",
+          fromName: "RUBEN COTON",
+          fromEmail: "manager@rubencoton.com",
+          replyTo: "manager@rubencoton.com",
           createdAt,
           updatedAt: sentAt,
           scheduledAt: null,
@@ -2285,39 +2285,39 @@ app.post("/api/campaigns/:id/send-report", async (req, res) => {
 
     const intro = customMessage
       ? `<p style="margin:0 0 16px;color:#2a2a2a;font-size:15px;line-height:1.6">${escapeHtml(customMessage).replace(/\n/g, "<br/>")}</p>`
-      : `<p style="margin:0 0 16px;color:#2a2a2a;font-size:15px;line-height:1.6">Adjuntamos el informe ejecutivo de la campana de email marketing realizada desde <strong>ARTES BUHO MANAGEMENT</strong>. Haz clic en el boton inferior para ver el informe completo con KPIs, benchmarks del sector y recomendaciones.</p>`;
+      : `<p style="margin:0 0 16px;color:#2a2a2a;font-size:15px;line-height:1.6">Adjuntamos el informe ejecutivo de la campana de email marketing realizada desde <strong>RUBEN COTON</strong>. Haz clic en el boton inferior para ver el informe completo con KPIs, benchmarks del sector y recomendaciones.</p>`;
 
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f4;font-family:'Segoe UI',Arial,sans-serif">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0">
     <tr><td align="center">
       <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)">
-        <tr><td style="background:#a81117;padding:28px 32px;text-align:center">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:1px">ARTES BUHO MANAGEMENT</h1>
+        <tr><td style="background:#E65100;padding:28px 32px;text-align:center">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:1px">RUBEN COTON</h1>
           <p style="margin:6px 0 0;color:#ffd84d;font-size:13px;letter-spacing:2px;text-transform:uppercase">Informe de campana</p>
         </td></tr>
         <tr><td style="padding:28px 32px">
-          <h2 style="margin:0 0 8px;color:#a81117;font-size:20px">${escapeHtml(safeName)}</h2>
+          <h2 style="margin:0 0 8px;color:#E65100;font-size:20px">${escapeHtml(safeName)}</h2>
           <p style="margin:0 0 20px;color:#666;font-size:13px">Asunto enviado: <em>${escapeHtml(safeSubject)}</em></p>
           ${intro}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;margin:16px 0 20px">
             <tr>
-              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Destinatarios</div><div style="font-size:22px;color:#a81117;font-weight:700;margin-top:4px">${fmt(total)}</div></td>
-              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Enviados</div><div style="font-size:22px;color:#a81117;font-weight:700;margin-top:4px">${fmt(sent)}</div></td>
-              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Aperturas</div><div style="font-size:22px;color:#a81117;font-weight:700;margin-top:4px">${fmt(opened)}<span style="font-size:12px;color:#666;font-weight:400"> · ${pct(opened)}%</span></div></td>
-              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Clics</div><div style="font-size:22px;color:#a81117;font-weight:700;margin-top:4px">${fmt(clicked)}<span style="font-size:12px;color:#666;font-weight:400"> · ${pct(clicked)}%</span></div></td>
+              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Destinatarios</div><div style="font-size:22px;color:#E65100;font-weight:700;margin-top:4px">${fmt(total)}</div></td>
+              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Enviados</div><div style="font-size:22px;color:#E65100;font-weight:700;margin-top:4px">${fmt(sent)}</div></td>
+              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Aperturas</div><div style="font-size:22px;color:#E65100;font-weight:700;margin-top:4px">${fmt(opened)}<span style="font-size:12px;color:#666;font-weight:400"> · ${pct(opened)}%</span></div></td>
+              <td style="background:#fff8e1;border:1px solid #ffd84d;border-radius:8px;padding:12px;text-align:center;width:25%"><div style="font-size:11px;color:#8a6d00;text-transform:uppercase;letter-spacing:1px">Clics</div><div style="font-size:22px;color:#E65100;font-weight:700;margin-top:4px">${fmt(clicked)}<span style="font-size:12px;color:#666;font-weight:400"> · ${pct(clicked)}%</span></div></td>
             </tr>
           </table>
           <p style="margin:0 0 6px;color:#666;font-size:13px"><strong>Fecha de envio:</strong> ${escapeHtml(fechaEnvio)}</p>
           <p style="margin:0 0 6px;color:#666;font-size:13px"><strong>Rebotes:</strong> ${fmt(bounced)}</p>
           <p style="margin:0 0 24px;color:#666;font-size:13px"><strong>Estado:</strong> ${escapeHtml(({ draft: "Borrador", queued: "En cola", sending: "Enviando", sent: "Enviada", paused: "Pausada", failed: "Error", scheduled: "Programada", completed: "Completada" })[campaign.status] || campaign.status || "")}</p>
           <div style="text-align:center;margin:28px 0 20px">
-            <a href="${reportUrl}" style="display:inline-block;background:#a81117;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;letter-spacing:0.5px">Ver informe completo</a>
+            <a href="${reportUrl}" style="display:inline-block;background:#E65100;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;letter-spacing:0.5px">Ver informe completo</a>
           </div>
-          <p style="margin:16px 0 0;color:#999;font-size:11px;text-align:center">Enlace directo: <a href="${reportUrl}" style="color:#a81117">${escapeHtml(reportUrl)}</a></p>
+          <p style="margin:16px 0 0;color:#999;font-size:11px;text-align:center">Enlace directo: <a href="${reportUrl}" style="color:#E65100">${escapeHtml(reportUrl)}</a></p>
         </td></tr>
         <tr><td style="background:#f4f4f4;padding:16px 32px;text-align:center;border-top:1px solid #e0e0e0">
-          <p style="margin:0;color:#666;font-size:11px">ARTES BUHO MANAGEMENT &middot; booking@artesbuhomanagement.com</p>
+          <p style="margin:0;color:#666;font-size:11px">RUBEN COTON &middot; manager@rubencoton.com</p>
           <p style="margin:4px 0 0;color:#999;font-size:10px">Informe generado conforme a RGPD &middot; No se comparten datos personales de contactos.</p>
         </td></tr>
       </table>
@@ -2325,7 +2325,7 @@ app.post("/api/campaigns/:id/send-report", async (req, res) => {
   </table>
 </body></html>`;
 
-    const text = `INFORME DE CAMPANA - ARTES BUHO MANAGEMENT
+    const text = `INFORME DE CAMPANA - RUBEN COTON
 
 Campana: ${safeName}
 Asunto: ${safeSubject}
@@ -2342,17 +2342,17 @@ ${customMessage ? customMessage + "\n\n" : ""}Ver informe completo:
 ${reportUrl}
 
 ---
-ARTES BUHO MANAGEMENT
-booking@artesbuhomanagement.com`;
+RUBEN COTON
+manager@rubencoton.com`;
 
     const job = massMailEngine.enqueueJob({
       recipients,
       subject,
       html,
       text,
-      fromName: process.env.SMTP_FROM_NAME || "ARTES BUHO MANAGEMENT",
-      fromEmail: process.env.SMTP_FROM_EMAIL || "booking@artesbuhomanagement.com",
-      replyTo: process.env.SMTP_REPLY_TO || "booking@artesbuhomanagement.com",
+      fromName: process.env.SMTP_FROM_NAME || "RUBEN COTON",
+      fromEmail: process.env.SMTP_FROM_EMAIL || "manager@rubencoton.com",
+      replyTo: process.env.SMTP_REPLY_TO || "manager@rubencoton.com",
       tag: `report:${campaign.id}`
     });
 
@@ -2591,7 +2591,7 @@ app.post("/api/mass-mail/send-test", (req, res) => {
   try {
     const to = normalizeEmail(req.body.to);
     const subject = String(req.body.subject || "Prueba tecnica de envio").trim();
-    const text = String(req.body.text || "Prueba tecnica de ARTES-BUHO_EMAILING.").trim();
+    const text = String(req.body.text || "Prueba tecnica de RUBEN-COTON_EMAILING.").trim();
 
     if (!isValidEmail(to)) {
       return apiError(res, 400, "Email destino no valido");
@@ -2806,7 +2806,7 @@ app.post("/api/ai/complaint-reply", async (req, res) => {
   } catch (e) { return apiError(res, 500, e.message); }
 });
 
-/* Email Builder: genera HTML completo con plantilla ARTES BUHO */
+/* Email Builder: genera HTML completo con plantilla RUBEN COTON */
 app.post("/api/ai/build-email", async (req, res) => {
   const t0 = Date.now();
   try {
@@ -2854,7 +2854,7 @@ app.post("/api/ai/chat-edit", async (req, res) => {
     if (!message) return apiError(res, 400, "Falta message");
 
     const aiRouter = require("./aiRouter");
-    const system = `Eres editor de email marketing para ARTES BUHO MANAGEMENT. Booking y management de artistas en Madrid, Espana.
+    const system = `Eres editor de email marketing para RUBEN COTON. Booking y management de artistas en Madrid, Espana.
 Escribes en castellano de Espana con tildes, enie (n) y signos de apertura.
 
 Recibes:
@@ -2870,7 +2870,7 @@ REGLAS:
 - Si hay HTML previo Y seleccion, modifica SOLO la parte seleccionada, preservando el resto del HTML.
 - Si hay HTML previo sin seleccion, aplica la instruccion al email entero.
 - Usa inline styles, nada de <style> global.
-- Colores marca: rojo #D62828, amarillo #F4B400, negro #1a1a1a, blanco.
+- Colores marca: rojo #FF6B00, amarillo #FFB74D, negro #1a1a1a, blanco.
 - No inventes datos, artistas ni fechas.
 - max 300 palabras de cuerpo.`;
 
@@ -3038,13 +3038,13 @@ app.get("/unsubscribe", (req, res) => {
       <html><body style="font-family:sans-serif;text-align:center;padding:60px">
         <h2 style="color:#10b981">Baja confirmada</h2>
         <p>Has sido dado de baja correctamente. No recibiras mas emails de nuestra parte.</p>
-        <p style="color:#999;font-size:13px">ARTES BUHO MANAGEMENT</p>
+        <p style="color:#999;font-size:13px">RUBEN COTON</p>
       </body></html>
     `);
   } catch (error) {
     return res.status(500).send(`
       <html><body style="font-family:sans-serif;text-align:center;padding:60px">
-        <h2>Error</h2><p>Hubo un problema procesando tu baja. Contacta con booking@artesbuhomanagement.com</p>
+        <h2>Error</h2><p>Hubo un problema procesando tu baja. Contacta con manager@rubencoton.com</p>
       </body></html>
     `);
   }
@@ -3060,7 +3060,7 @@ let server = null;
 const startServer = async () => {
   await dataStore.init();
 
-  /* Insertar borradores estandar ARTES BUHO si no existen (idempotente). */
+  /* Insertar borradores estandar RUBEN COTON si no existen (idempotente). */
   try {
     const seedResult = dataStore.ensureDefaultTemplates();
     if (seedResult) {
@@ -3077,13 +3077,13 @@ const startServer = async () => {
   }
 
   server = app.listen(port, () => {
-    console.log(`ARTES-BUHO_EMAILING listening on port ${port}`);
+    console.log(`RUBEN-COTON_EMAILING listening on port ${port}`);
     /* Scheduler de informes ejecutivos (semanal + mensual) */
     try {
       executiveReports.startScheduler({ getDataStore: () => dataStore });
       if (googleHub.isGoogleReady()) {
-        console.log("[drive] ecosistema Google listo (booking@artesbuhomanagement.com)");
-        /* Reply tracker: escanea inbox de booking@ cada 10 min */
+        console.log("[drive] ecosistema Google listo (manager@rubencoton.com)");
+        /* Reply tracker: escanea inbox de manager@ cada 10 min */
         try {
           replyTracker.start({ dataStore });
         } catch (e) {
@@ -3139,22 +3139,39 @@ const periodicSync = setInterval(() => {
   }
 }, 60000);
 
-/* Sheets sync periodico + arranque */
+/* Sheets sync — solo L-V 8:00-20:00 Europe/Madrid, cada 30 min */
 const SHEETS_AUTOSYNC_ENABLED = String(process.env.SHEETS_AUTOSYNC_ENABLED || "true").toLowerCase() !== "false";
+const SYNC_INTERVAL_MIN = Number(process.env.SHEETS_SYNC_INTERVAL_MIN) || 30;
+
+const isBusinessHours = () => {
+  const now = new Date();
+  const madrid = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
+  const day = madrid.getDay();
+  const hour = madrid.getHours();
+  return day >= 1 && day <= 5 && hour >= 8 && hour < 20;
+};
+
 if (sheetsSync.getSheetIds().length > 0 && SHEETS_AUTOSYNC_ENABLED) {
-  const sheetsSyncMs = sheetsSync.SYNC_INTERVAL_HOURS * 3600000;
-  console.log(`[sheetsSync] Auto-sync cada ${sheetsSync.SYNC_INTERVAL_HOURS}h (${sheetsSync.getSheetIds().length} hojas)`);
-  /* Sync inicial tras 30s (deja arrancar el server) */
+  const syncIntervalMs = SYNC_INTERVAL_MIN * 60000;
+  console.log(`[sheetsSync] Auto-sync cada ${SYNC_INTERVAL_MIN}min L-V 8:00-20:00 Madrid (${sheetsSync.getSheetIds().length} hojas)`);
+
+  /* Sync inicial tras 30s si estamos en horario */
   setTimeout(() => {
-    sheetsSync.runSync(dataStore).catch((err) => {
-      console.error("[sheetsSync] Initial sync error:", err.message);
-    });
+    if (isBusinessHours()) {
+      sheetsSync.runSync(dataStore).catch((err) => {
+        console.error("[sheetsSync] Initial sync error:", err.message);
+      });
+    } else {
+      console.log("[sheetsSync] Fuera de horario laboral — sync inicial omitido");
+    }
   }, 30000);
+
   setInterval(() => {
+    if (!isBusinessHours()) return;
     sheetsSync.runSync(dataStore).catch((err) => {
       console.error("[sheetsSync] Auto-sync error:", err.message);
     });
-  }, sheetsSyncMs);
+  }, syncIntervalMs);
 } else {
   console.log(`[sheetsSync] Auto-sync DESACTIVADO (SHEETS_AUTOSYNC_ENABLED=${SHEETS_AUTOSYNC_ENABLED}, hojas=${sheetsSync.getSheetIds().length})`);
 }

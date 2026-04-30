@@ -5,11 +5,11 @@
  *
  *   node scripts/prueba-envio-rubencoton.js
  *
- * Prerrequisito: app arriba en https://emailing.artesbuhomanagement.com.
+ * Prerrequisito: app arriba en https://emailing.rubencoton.com.
  */
 
-const BASE = "https://emailing.artesbuhomanagement.com";
-const PASSWORD = "+artesbuho26";
+const BASE = "https://emailing.rubencoton.com";
+const PASSWORD = "+ruben93";
 const EMAIL = "rubencoton1993@gmail.com";
 
 let cookie = null;
@@ -101,22 +101,22 @@ async function main() {
   const html = [
     '<!DOCTYPE html><html><body style="font-family:Arial;background:#f5f5f5;padding:40px">',
     '<div style="max-width:560px;margin:0 auto;background:#fff;padding:32px;border-radius:10px;border-top:6px solid #D62828">',
-    '  <h1 style="color:#a81117;margin:0 0 10px">Prueba auditoría OK</h1>',
+    '  <h1 style="color:#E65100;margin:0 0 10px">Prueba auditoría OK</h1>',
     '  <p style="color:#333">Hola <strong>RUBEN COTON</strong>, este es el email de prueba tras la auditoría profunda.</p>',
     '  <p style="color:#333">Si ves este mensaje: <strong>envío + tracking + Drive funcionan.</strong></p>',
-    '  <p style="color:#666;font-size:13px;margin-top:24px">ARTES BÚHO MANAGEMENT · booking@artesbuhomanagement.com</p>',
-    '  <p style="font-size:12px;color:#999;margin-top:18px"><a href="%%UNSUBSCRIBE_URL%%" style="color:#a81117">Darse de baja</a></p>',
+    '  <p style="color:#666;font-size:13px;margin-top:24px">RUBEN COTON · manager@rubencoton.com</p>',
+    '  <p style="font-size:12px;color:#999;margin-top:18px"><a href="%%UNSUBSCRIBE_URL%%" style="color:#E65100">Darse de baja</a></p>',
     '</div></body></html>'
   ].join("\n");
   const created = await call("POST", "/api/campaigns", {
     body: {
       name: `PRUEBA AUDIT ${new Date().toISOString().slice(0, 16)}`,
-      subject: "Prueba envío — test auditoría ARTES BÚHO",
+      subject: "Prueba envío — test auditoría RUBEN COTON",
       html,
       text: "Prueba auditoría OK. Si ves este email, el envío y tracking funcionan.",
-      fromName: "Artes Buho Management",
-      fromEmail: "booking@artesbuhomanagement.com",
-      replyTo: "booking@artesbuhomanagement.com",
+      fromName: "RUBEN COTON",
+      fromEmail: "manager@rubencoton.com",
+      replyTo: "manager@rubencoton.com",
       segmentId: seg ? seg.id : null,
       status: "draft"
     }

@@ -13,9 +13,9 @@ const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").re
 
 /* =========================================================
  * Modal de confirmación bonito (reemplaza window.confirm)
- * Uso: const ok = await artesBuhoConfirm({ title, body, confirmText, cancelText });
+ * Uso: const ok = await rubenCotonConfirm({ title, body, confirmText, cancelText });
  * ========================================================= */
-function artesBuhoConfirm({ title = "Confirmar", subtitle = "", body = "", icon = "⚠️", confirmText = "Aceptar", cancelText = "Cancelar" } = {}) {
+function rubenCotonConfirm({ title = "Confirmar", subtitle = "", body = "", icon = "⚠️", confirmText = "Aceptar", cancelText = "Cancelar" } = {}) {
   return new Promise((resolve) => {
     const existing = document.getElementById("abConfirmModal");
     if (existing) existing.remove();
@@ -26,10 +26,10 @@ function artesBuhoConfirm({ title = "Confirmar", subtitle = "", body = "", icon 
       <style>
         @keyframes abFadeIn { from { opacity:0 } to { opacity:1 } }
         @keyframes abSlideUp { from { transform:translateY(30px);opacity:0 } to { transform:translateY(0);opacity:1 } }
-        .ab-modal-btn:hover { transform:translateY(-1px); box-shadow:0 6px 14px rgba(168,17,23,0.3) !important; }
+        .ab-modal-btn:hover { transform:translateY(-1px); box-shadow:0 6px 14px rgba(230,81,0,0.3) !important; }
       </style>
-      <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.45);animation:abSlideUp 0.22s ease-out;border-top:6px solid #F4B400">
-        <div style="background:linear-gradient(135deg,#a81117 0%,#D62828 100%);color:#fff;padding:24px 28px">
+      <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.45);animation:abSlideUp 0.22s ease-out;border-top:6px solid #FFB74D">
+        <div style="background:linear-gradient(135deg,#E65100 0%,#FF6B00 100%);color:#fff;padding:24px 28px">
           <div style="font-size:44px;line-height:1;margin-bottom:8px">${esc(icon)}</div>
           <h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:0.3px">${esc(title)}</h2>
           ${subtitle ? `<div style="margin-top:6px;font-size:14px;color:#ffe7a8;font-weight:600">${esc(subtitle)}</div>` : ""}
@@ -37,7 +37,7 @@ function artesBuhoConfirm({ title = "Confirmar", subtitle = "", body = "", icon 
         <div style="padding:24px 28px;color:#333;font-size:15px;line-height:1.55">${body}</div>
         <div style="padding:0 28px 24px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
           <button type="button" id="abCancelBtn" class="ab-modal-btn" style="background:#fff;color:#666;border:2px solid #ddd;padding:12px 22px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.15s">${esc(cancelText)}</button>
-          <button type="button" id="abConfirmBtn" class="ab-modal-btn" style="background:linear-gradient(135deg,#a81117,#D62828);color:#fff;border:0;padding:12px 26px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 10px rgba(168,17,23,0.25)">${esc(confirmText)}</button>
+          <button type="button" id="abConfirmBtn" class="ab-modal-btn" style="background:linear-gradient(135deg,#E65100,#FF6B00);color:#fff;border:0;padding:12px 26px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 10px rgba(230,81,0,0.25)">${esc(confirmText)}</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
@@ -233,6 +233,15 @@ const fillSelectOptions = (select, items, placeholder, getLabel) => {
   select.innerHTML = options.join("\n");
 };
 
+const CONTACT_STATUS_ES = {
+  subscribed: "Suscrito",
+  non_subscribed: "No suscrito",
+  unsubscribed: "Dado de baja",
+  bounced: "Rebotado",
+  complained: "Queja spam",
+  suppressed: "Suprimido"
+};
+
 const renderContacts = (contacts) => {
   contactsTableBody.innerHTML = contacts
     .map(
@@ -240,7 +249,7 @@ const renderContacts = (contacts) => {
       <tr>
         <td>${esc(contact.email)}</td>
         <td>${esc([contact.firstName || "", contact.lastName || ""].join(" ").trim())}</td>
-        <td><span class="status-badge status-${esc(contact.status)}">${esc(contact.status)}</span></td>
+        <td><span class="status-badge status-${esc(contact.status)}">${esc(CONTACT_STATUS_ES[contact.status] || contact.status)}</span></td>
         <td>${(contact.tags || []).slice(0, 3).map(t => `<span class="seg-chip" style="font-size:10px;padding:2px 6px">${esc(t)}</span>`).join(" ")}${(contact.tags || []).length > 3 ? ` <span class="muted" style="font-size:10px">+${contact.tags.length - 3}</span>` : ""}</td>
       </tr>
     `
@@ -1568,12 +1577,12 @@ campaignForm?.addEventListener("submit", async (event) => {
   if (action === "send") {
     const nombre = String(new FormData(campaignForm).get("name") || "tu campana").trim() || "tu campana";
     const listCount = (qs("#campaignRecipientCount")?.textContent || "").trim();
-    const ok = await artesBuhoConfirm({
+    const ok = await rubenCotonConfirm({
       title: "Lanzar campaña",
       icon: "🚀",
       subtitle: nombre,
       body: `Vas a lanzar la campaña <strong>"${esc(nombre)}"</strong> ahora mismo.<br><br>` +
-            `<strong style="color:#a81117">${esc(listCount) || "Comprobando destinatarios…"}</strong><br><br>` +
+            `<strong style="color:#E65100">${esc(listCount) || "Comprobando destinatarios…"}</strong><br><br>` +
             `Los emails empezarán a enviarse inmediatamente.<br>` +
             `Esta acción <strong>no se puede deshacer</strong> una vez iniciada.`,
       confirmText: "🚀 Sí, LANZAR ahora",
@@ -1587,8 +1596,8 @@ campaignForm?.addEventListener("submit", async (event) => {
 
   /* Helper: renderiza barra de progreso visual con porcentaje y mensaje. */
   const setProgress = (percent, message, ok) => {
-    const color = ok === false ? "#dc2626" : "#D62828";
-    const yellow = "#F4B400";
+    const color = ok === false ? "#dc2626" : "#FF6B00";
+    const yellow = "#FFB74D";
     const barColor = percent >= 100 ? "linear-gradient(90deg,#16a34a,#22c55e)" : `linear-gradient(90deg,${color},${yellow})`;
     campaignResult.innerHTML = `
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.05)">
@@ -1597,7 +1606,7 @@ campaignForm?.addEventListener("submit", async (event) => {
           <span style="font-weight:800;color:${color};font-size:14px">${Math.min(100,Math.round(percent))}%</span>
         </div>
         <div style="background:#f3f4f6;border-radius:6px;height:10px;overflow:hidden">
-          <div style="background:${barColor};height:100%;width:${Math.min(100,percent)}%;transition:width 0.4s ease-out;box-shadow:0 0 8px rgba(214,40,40,0.4)"></div>
+          <div style="background:${barColor};height:100%;width:${Math.min(100,percent)}%;transition:width 0.4s ease-out;box-shadow:0 0 8px rgba(255,107,0,0.4)"></div>
         </div>
       </div>`;
   };
@@ -1666,7 +1675,7 @@ campaignForm?.addEventListener("submit", async (event) => {
         } catch (err) {
           const msg = String(err && err.message || "");
           if (/SIN segmento/i.test(msg) || /confirmSendAll/i.test(msg) || /threshold/i.test(msg)) {
-            const ok = await artesBuhoConfirm({
+            const ok = await rubenCotonConfirm({
               title: "Envío masivo detectado",
               icon: "⚠️",
               body: `${esc(msg)}<br><br><strong>¿Confirmas que quieres enviar de todas formas?</strong>`,
@@ -1760,7 +1769,7 @@ const refreshAttachList = async () => {
 };
 
 /* ============================================================ */
-/* MODAL: Generar email con IA (replica ARTES-BUHO_HTML)         */
+/* MODAL: Generar email con IA (replica RUBEN-COTON_HTML)         */
 /* ============================================================ */
 const AI_OBJETIVOS = {
   fiestas_patronales: "Que el ayuntamiento te contrate como DJ para sus fiestas patronales. La IA resalta experiencia en plazas, mashups y público amplio.",
@@ -1955,7 +1964,7 @@ const renderPendingAttachments = () => {
       <button type="button" class="mini-btn btn-secondary" style="font-size:11px;padding:2px 8px" data-pending-remove="${i}">Quitar</button>
     </li>
   `).join("");
-  if (totalEl) totalEl.innerHTML = `<strong>${(totalBytes/1024/1024).toFixed(2)} MB</strong> / 10 MB <small style="color:#a81117">(pendientes)</small>`;
+  if (totalEl) totalEl.innerHTML = `<strong>${(totalBytes/1024/1024).toFixed(2)} MB</strong> / 10 MB <small style="color:#E65100">(pendientes)</small>`;
   qsa("[data-pending-remove]").forEach((b) => b.addEventListener("click", () => {
     const idx = Number(b.dataset.pendingRemove);
     window.__pendingAttachments.splice(idx, 1);
@@ -2168,7 +2177,7 @@ quickSendForm?.addEventListener("submit", async (event) => {
 const init = async () => {
   try {
     if (quickSendSubject) {
-      quickSendSubject.value = "Prueba de envío | Artes Búho";
+      quickSendSubject.value = "Prueba de envío | RUBEN COTON";
     }
     if (quickSendText) {
       quickSendText.value =
@@ -2332,7 +2341,7 @@ const populateCampaignListSelector = async () => {
   }
   if (!_folders.length) {
     crmSel.innerHTML = '<option value="">⚠ No hay CRMs — sincroniza primero desde Configuración</option>';
-    if (hint) hint.innerHTML = '<span style="color:#a81117">Los contactos no tienen etiquetas <code>crm-*</code>. Ve a Configuración → "Sincronizar CRMs ahora".</span>';
+    if (hint) hint.innerHTML = '<span style="color:#E65100">Los contactos no tienen etiquetas <code>crm-*</code>. Ve a Configuración → "Sincronizar CRMs ahora".</span>';
     return;
   }
 
@@ -2452,10 +2461,10 @@ const refreshSheetsList = async () => {
     }
     list.innerHTML = all.map((id) => {
       const origin = env.has(id) ? '<span style="background:#e5e7eb;padding:2px 6px;border-radius:4px;font-size:11px">ENV</span>'
-        : builtin.has(id) ? '<span style="background:#ffd84d;padding:2px 6px;border-radius:4px;font-size:11px">FIJO</span>'
-        : '<span style="background:#fff;border:1px solid #a81117;color:#a81117;padding:2px 6px;border-radius:4px;font-size:11px">UI</span>';
+        : builtin.has(id) ? '<span style="background:#FFB74D;padding:2px 6px;border-radius:4px;font-size:11px">FIJO</span>'
+        : '<span style="background:#fff;border:1px solid #E65100;color:#E65100;padding:2px 6px;border-radius:4px;font-size:11px">UI</span>';
       const canDelete = extra.has(id);
-      const delBtn = canDelete ? `<button data-del-sheet="${id}" style="background:none;border:none;cursor:pointer;color:#a81117;font-size:14px" title="Quitar">✕</button>` : "";
+      const delBtn = canDelete ? `<button data-del-sheet="${id}" style="background:none;border:none;cursor:pointer;color:#E65100;font-size:14px" title="Quitar">✕</button>` : "";
       return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><code style="font-size:11px;color:#333">${id}</code> ${origin} ${delBtn}</div>`;
     }).join("");
     list.querySelectorAll("[data-del-sheet]").forEach((b) => {
@@ -2468,7 +2477,7 @@ const refreshSheetsList = async () => {
       });
     });
   } catch (e) {
-    list.innerHTML = `<span style="color:#a81117">Error: ${e.message}</span>`;
+    list.innerHTML = `<span style="color:#E65100">Error: ${e.message}</span>`;
   }
 };
 
@@ -2493,8 +2502,8 @@ refreshSheetsList();
 
 /* BLINDAJE: guard de inicialización única para no duplicar listeners si el
  * script se carga dos veces (hot reload, SPA double init). */
-if (!window.__artesbuhoInitDone) {
-  window.__artesbuhoInitDone = true;
+if (!window.__rubencotonInitDone) {
+  window.__rubencotonInitDone = true;
   init();
   const REFRESH_INTERVAL_MS = 30000;
   setInterval(async () => {
@@ -2581,7 +2590,7 @@ document.querySelectorAll(".html-dropzone").forEach(setupHtmlDropzone);
  * ========================================================= */
 function toast(msg, type) {
   const host = qs("#campaignResult") || document.body;
-  const color = type === "err" ? "#a81117" : type === "ok" ? "#0b7a3b" : "#7a0b10";
+  const color = type === "err" ? "#E65100" : type === "ok" ? "#0b7a3b" : "#BF360C";
   if (host.id === "campaignResult") {
     host.innerHTML = `<span style="color:${color}">${msg}</span>`;
   } else {
@@ -2614,7 +2623,7 @@ document.addEventListener("click", async (e) => {
 
 qs("#btn-sync-drive")?.addEventListener("click", async (e) => {
   const btn = e.currentTarget;
-  if (!confirm("¿Sincronizar TODAS las campañas al Drive de booking@artesbuhomanagement.com?\n\nPuede tardar varios segundos.")) return;
+  if (!confirm("¿Sincronizar TODAS las campañas al Drive de manager@rubencoton.com?\n\nPuede tardar varios segundos.")) return;
   const orig = btn.textContent;
   btn.disabled = true;
   btn.textContent = "☁ Sincronizando…";

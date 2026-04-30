@@ -13,7 +13,7 @@
  *   node scripts/local-agent.js
  *
  * Variables de entorno necesarias (cargar via .env.local-agent):
- *   VPS_BASE_URL=https://emailing.artesbuhomanagement.com
+ *   VPS_BASE_URL=https://emailing.rubencoton.com
  *   LOCAL_AGENT_TOKEN=<el mismo token que tiene el VPS>
  *   OLLAMA_URL=http://localhost:11434       (default)
  *   OLLAMA_MODEL=qwen2.5:14b                (default)
@@ -52,7 +52,7 @@ const os = require("os");
 })();
 
 const VPS_BASE = (process.env.VPS_BASE_URL
-  || "https://emailing.artesbuhomanagement.com").replace(/\/+$/, "");
+  || "https://emailing.rubencoton.com").replace(/\/+$/, "");
 const TOKEN = process.env.LOCAL_AGENT_TOKEN || "";
 const OLLAMA_URL = (process.env.OLLAMA_URL
   || "http://localhost:11434").replace(/\/+$/, "");
@@ -63,7 +63,7 @@ const VERSION = "1.0.0";
 if (!TOKEN) {
   console.error("[FATAL] LOCAL_AGENT_TOKEN no configurado.");
   console.error("Crea archivo .env.local-agent en la raíz del proyecto con:");
-  console.error("  VPS_BASE_URL=https://emailing.artesbuhomanagement.com");
+  console.error("  VPS_BASE_URL=https://emailing.rubencoton.com");
   console.error("  LOCAL_AGENT_TOKEN=<token compartido con VPS>");
   process.exit(1);
 }

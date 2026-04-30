@@ -2,7 +2,7 @@
 # start-local-silent.ps1 — Arranque silencioso (auto-start)
 # Sin ventana visible, ideal para tarea programada.
 # ============================================================
-$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\ARTES-BUHO_EMAILING"
+$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\RUBEN-COTON_EMAILING"
 Set-Location $projDir
 
 # Si ya hay servidor en 3000, no arrancar otro

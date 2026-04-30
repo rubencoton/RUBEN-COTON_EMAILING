@@ -1,7 +1,7 @@
 ﻿{
     "name":  "APP_ARTES-BUHO_EMAILING",
     "uuid":  "rsqknw9bq6jrisiok39jcgfs",
-    "fqdn":  "https://emailing.artesbuhomanagement.com",
+    "fqdn":  "https://emailing.rubencoton.com",
     "git_repository":  "rubencoton/APP_ARTES-BUHO_EMAILING",
     "git_branch":  "main",
     "source_type":  "App\\Models\\GithubApp",

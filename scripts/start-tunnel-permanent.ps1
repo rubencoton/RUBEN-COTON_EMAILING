@@ -5,7 +5,7 @@
 # y la app se reconfigura sola.
 # ============================================================
 $ErrorActionPreference = "Stop"
-$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\ARTES-BUHO_EMAILING"
+$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\RUBEN-COTON_EMAILING"
 $envFile = Join-Path $projDir ".env"
 $logFile = Join-Path $projDir "logs\tunnel.log"
 

@@ -53,7 +53,7 @@ const sheets = google.sheets({ version: "v4", auth: oauth });
                   values: [
                     { userEnteredValue: { stringValue: "rubencoton1993@gmail.com" } },
                     { userEnteredValue: { stringValue: "Rubén Cotón" } },
-                    { userEnteredValue: { stringValue: "Artes Búho TEST" } },
+                    { userEnteredValue: { stringValue: "RUBEN COTON TEST" } },
                     { userEnteredValue: { stringValue: "+34613009336" } },
                     { userEnteredValue: { stringValue: "Madrid" } },
                     { userEnteredValue: { stringValue: "TEST" } },

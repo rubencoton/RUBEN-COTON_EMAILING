@@ -5,7 +5,7 @@
 const http = require("http");
 
 const BASE = "http://localhost:3000";
-const PASSWORD = "+artesbuho26";
+const PASSWORD = "+ruben93";
 
 const req = (method, path, body, cookie) =>
   new Promise((resolve, reject) => {
@@ -66,13 +66,13 @@ const req = (method, path, body, cookie) =>
   console.log("\n[4/5] Creando campaña…");
   const campaign = await req("POST", "/api/campaigns", {
     name: "TEST End-to-End Local",
-    subject: "✅ Test campaña local — Sistema operativo Artes Búho",
-    fromName: "Artes Búho Management",
-    fromEmail: "booking@artesbuhomanagement.com",
-    replyTo: "booking@artesbuhomanagement.com",
+    subject: "✅ Test campaña local — Sistema operativo RUBEN COTON",
+    fromName: "RUBEN COTON",
+    fromEmail: "manager@rubencoton.com",
+    replyTo: "manager@rubencoton.com",
     segmentId: seg.body.segment.id,
     html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-  <h1 style="color:#a81117;margin:0 0 16px">¡Hola Rubén! 👋</h1>
+  <h1 style="color:#E65100;margin:0 0 16px">¡Hola Rubén! 👋</h1>
   <p>Esta campaña ha pasado por <strong>todo el flujo completo</strong>:</p>
   <ol>
     <li>Contacto leído desde Google Sheets (CRM 7 PRUEBAS)</li>
@@ -83,13 +83,13 @@ const req = (method, path, body, cookie) =>
     <li>Tracking pixel + click redirect inyectados</li>
   </ol>
   <p>Sistema 100% operativo en local — listo para migrar a VPS cuando quieras.</p>
-  <p style="margin-top:24px">Saludos,<br><strong>Artes Búho Management</strong></p>
+  <p style="margin-top:24px">Saludos,<br><strong>RUBEN COTON</strong></p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
   <p style="font-size:11px;color:#999">
     Test enviado desde localhost:3000 · Sistema construido por RUBEN COTON
   </p>
 </div>`,
-    plainText: "Hola Rubén, test end-to-end del sistema de emailing local Artes Búho. Sistema 100% operativo. Saludos."
+    plainText: "Hola Rubén, test end-to-end del sistema de emailing local RUBEN COTON. Sistema 100% operativo. Saludos."
   }, cookie);
   console.log("    Campaign:", campaign.body?.campaign?.id);
 

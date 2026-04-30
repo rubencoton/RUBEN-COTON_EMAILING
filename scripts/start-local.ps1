@@ -4,7 +4,7 @@
 # ============================================================
 
 $ErrorActionPreference = "Continue"
-$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\ARTES-BUHO_EMAILING"
+$projDir = "C:\Users\elrub\Desktop\CARPETA CODEX\01_PROYECTOS\RUBEN-COTON_EMAILING"
 Set-Location $projDir
 
 Write-Host ""
@@ -47,7 +47,7 @@ for ($i = 1; $i -le 15; $i++) {
 if ($ok) {
   Write-Host ""
   Write-Host "  ✅ Servidor arriba en http://localhost:3000/login" -ForegroundColor Green
-  Write-Host "  🔐 Password: +artesbuho26" -ForegroundColor Yellow
+  Write-Host "  🔐 Password: +ruben93" -ForegroundColor Yellow
   Write-Host ""
   Write-Host "  Abriendo navegador..." -ForegroundColor Cyan
   Start-Process "http://localhost:3000/login"

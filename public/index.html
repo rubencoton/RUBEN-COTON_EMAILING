@@ -12,7 +12,7 @@
     <main class="app-shell">
       <aside class="side-nav">
         <div class="side-brand">
-          <img class="brand-logo" src="/assets/logo-artes-buho.jpg" alt="Logo de RUBEN COTON" />
+          <img class="brand-logo" src="/assets/logo-ruben-coton-white.png" alt="Logo de RUBEN COTON" />
           <div>
             <p class="badge">APLICACIONES DE RUBEN COTON</p>
             <p class="side-brand-note">Plataforma oficial de gestión de emailing.</p>
@@ -523,22 +523,22 @@
               <p class="muted" style="margin:0">Todas tus campañas creadas. Pulsa "Enviar" para lanzarlas.</p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <a href="/campaigns/report/executive" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#D62828,#a81117);color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+              <a href="/campaigns/report/executive" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
                 📊 Ver informe ejecutivo
               </a>
-              <a href="/campaigns/report/executive?autoprint=1" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#F4B400;color:#a81117;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+              <a href="/campaigns/report/executive?autoprint=1" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#FFB74D;color:#E65100;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
                 🖨 Imprimir / PDF
               </a>
-              <a href="/api/campaigns/download-all" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#7a0b10;color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+              <a href="/api/campaigns/download-all" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#BF360C;color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
                 ⬇ Histórico ZIP
               </a>
-              <button type="button" id="btn-sync-drive" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#a81117;border:2px solid #a81117;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+              <button type="button" id="btn-sync-drive" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#E65100;border:2px solid #E65100;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
                 ☁ Sincronizar al Drive
               </button>
-              <button type="button" id="btn-report-weekly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#7a0b10;border:2px solid #F4B400;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+              <button type="button" id="btn-report-weekly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#BF360C;border:2px solid #FFB74D;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
                 📅 Generar semanal
               </button>
-              <button type="button" id="btn-report-monthly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#7a0b10;border:2px solid #F4B400;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
+              <button type="button" id="btn-report-monthly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#BF360C;border:2px solid #FFB74D;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
                 🗓 Generar mensual
               </button>
             </div>
@@ -665,12 +665,12 @@
           </div>
           <p id="sheetsSyncResult" class="mail-form-result">-</p>
 
-          <div style="margin:18px 0 12px;padding:14px;background:#fff8e1;border:1px solid #ffd84d;border-radius:8px">
-            <h3 style="margin:0 0 8px;color:#a81117;font-size:15px">📋 CRMs configurados</h3>
+          <div style="margin:18px 0 12px;padding:14px;background:#fff8e1;border:1px solid #FFB74D;border-radius:8px">
+            <h3 style="margin:0 0 8px;color:#E65100;font-size:15px">📋 CRMs configurados</h3>
             <div id="sheetsList" style="font-size:13px;line-height:1.8">Cargando…</div>
             <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
               <input id="newSheetUrl" type="text" placeholder="URL o ID del Google Sheet" style="flex:1;min-width:280px;padding:8px;border:1px solid #ccc;border-radius:6px"/>
-              <button id="addSheetBtn" type="button" class="mini-btn" style="background:#a81117;color:#fff">➕ Añadir CRM</button>
+              <button id="addSheetBtn" type="button" class="mini-btn" style="background:#E65100;color:#fff">➕ Añadir CRM</button>
             </div>
           </div>
 
@@ -803,7 +803,7 @@
       <div class="ai-modal-dialog" role="dialog" aria-labelledby="sendReportTitle" style="max-width:640px">
         <div class="ai-modal-header">
           <div>
-            <span class="ai-modal-badge" style="background:#ffd84d;color:#a81117">✉️ Enviar informe</span>
+            <span class="ai-modal-badge" style="background:#FFB74D;color:#E65100">✉️ Enviar informe</span>
             <h2 id="sendReportTitle" class="ai-modal-title">Compartir informe de campaña</h2>
             <p class="ai-modal-sub">Envía el informe ejecutivo a cliente, CEO o equipo. Incluye resumen y enlace al informe completo.</p>
           </div>

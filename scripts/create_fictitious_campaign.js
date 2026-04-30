@@ -86,25 +86,25 @@ const campaign = {
   id: campaignId,
   name: "Campaña FICTICIA — Demo informe 2000 contactos",
   subject: "Promoción de bookings musicales — Temporada otoño 2026",
-  fromName: "Artes Búho Management",
-  fromEmail: "booking@artesbuhomanagement.com",
-  replyTo: "booking@artesbuhomanagement.com",
+  fromName: "RUBEN COTON",
+  fromEmail: "manager@rubencoton.com",
+  replyTo: "manager@rubencoton.com",
   segmentId: null,
   listFilter: { tag: "demo-ficticio" },
   html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px">
-<h1 style="color:#a81117">Promoción otoño 2026 — Artes Búho</h1>
+<h1 style="color:#E65100">Promoción otoño 2026 — RUBEN COTON</h1>
 <p>Hola {{firstName}},</p>
-<p>Te escribimos desde <strong>Artes Búho Management</strong>. Tenemos disponibilidad para conciertos y actuaciones durante el otoño 2026:</p>
+<p>Te escribimos desde <strong>RUBEN COTON</strong>. Tenemos disponibilidad para conciertos y actuaciones durante el otoño 2026:</p>
 <ul>
   <li>🎵 Bandas tributo a artistas internacionales</li>
   <li>🎶 DJ sets para eventos privados</li>
   <li>🎭 Espectáculos teatrales y comedia</li>
   <li>🎤 Cantantes solistas</li>
 </ul>
-<p><a href="https://artesbuhomanagement.com" style="background:#a81117;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px">Ver catálogo completo</a></p>
-<p>Saludos cordiales,<br><strong>Booking — Artes Búho</strong></p>
+<p><a href="https://rubencoton.com" style="background:#E65100;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px">Ver catálogo completo</a></p>
+<p>Saludos cordiales,<br><strong>RUBEN COTON</strong></p>
 </div>`,
-  plainText: "Promoción otoño 2026 - Artes Búho Management. Disponibilidad para conciertos.",
+  plainText: "Promoción otoño 2026 - RUBEN COTON. Disponibilidad para conciertos.",
   status: "sent",
   sentAt,
   startedAt: sentAt,

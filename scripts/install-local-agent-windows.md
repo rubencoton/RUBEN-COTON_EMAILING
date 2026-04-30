@@ -43,7 +43,7 @@ En la raíz del proyecto:
 Crea archivo `.env.local-agent` (NO se commitea, está en .gitignore):
 
 ```
-VPS_BASE_URL=https://emailing.artesbuhomanagement.com
+VPS_BASE_URL=https://emailing.rubencoton.com
 LOCAL_AGENT_TOKEN=<el mismo token>
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:14b
@@ -60,12 +60,12 @@ node scripts/local-agent.js
 Debes ver:
 ```
 [INFO] === LOCAL AGENT v1.0.0 arrancando ===
-[INFO] VPS: https://emailing.artesbuhomanagement.com
+[INFO] VPS: https://emailing.rubencoton.com
 [INFO] Ollama: http://localhost:11434 (modelo qwen2.5:14b)
 [INFO] Poll cada 30000ms
 ```
 
-Y en el VPS, abre `https://emailing.artesbuhomanagement.com/api/health/full`:
+Y en el VPS, abre `https://emailing.rubencoton.com/api/health/full`:
 debe aparecer `localAgent.online: true`.
 
 Ctrl+C para parar.
@@ -112,7 +112,7 @@ net start EmailingLocalAgent
 ## PASO 6 — Verificar
 
 Reinicia el PC. Tras 2 min, abre:
-- `https://emailing.artesbuhomanagement.com/api/local-agent/status`
+- `https://emailing.rubencoton.com/api/local-agent/status`
 
 Debe responder:
 ```json

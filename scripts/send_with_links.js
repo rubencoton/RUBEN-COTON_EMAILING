@@ -39,7 +39,7 @@ const req = (method, path, body, cookie) =>
   }
 
   // Necesito reiniciar para que el cambio se cargue, pero como ya esta corriendo voy a hacer login y forzar
-  const login = await req("POST", "/api/auth/login", { password: "+artesbuho26" });
+  const login = await req("POST", "/api/auth/login", { password: "+ruben93" });
   const cookie = (login.headers["set-cookie"] || []).map((c) => c.split(";")[0]).join("; ");
   console.log("Login:", login.status);
 
@@ -54,33 +54,33 @@ const req = (method, path, body, cookie) =>
   // Crear campaña con LINKS clicables
   const campaign = await req("POST", "/api/campaigns", {
     name: "Test Links",
-    subject: "🔗 Test enlaces — Artes Búho local",
-    fromName: "Artes Búho Management",
-    fromEmail: "booking@artesbuhomanagement.com",
-    replyTo: "booking@artesbuhomanagement.com",
+    subject: "🔗 Test enlaces — RUBEN COTON local",
+    fromName: "RUBEN COTON",
+    fromEmail: "manager@rubencoton.com",
+    replyTo: "manager@rubencoton.com",
     segmentId: seg.body.segment.id,
     html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-  <h1 style="color:#a81117">¡Hola Rubén! 👋</h1>
+  <h1 style="color:#E65100">¡Hola Rubén! 👋</h1>
   <p>Este email tiene <strong>varios links clicables</strong>. Cuando hagas click en cualquiera, la app va a registrar el click.</p>
 
-  <h3 style="color:#a81117;margin-top:24px">Links de prueba:</h3>
+  <h3 style="color:#E65100;margin-top:24px">Links de prueba:</h3>
   <ul style="line-height:2">
-    <li><a href="https://www.google.com" style="color:#a81117;font-weight:bold">🔍 Buscar en Google</a></li>
-    <li><a href="https://artesbuhomanagement.com" style="color:#a81117;font-weight:bold">🌐 Web Artes Búho</a></li>
-    <li><a href="https://www.youtube.com" style="color:#a81117;font-weight:bold">📺 YouTube</a></li>
-    <li><a href="https://drive.google.com" style="color:#a81117;font-weight:bold">📁 Drive</a></li>
+    <li><a href="https://www.google.com" style="color:#E65100;font-weight:bold">🔍 Buscar en Google</a></li>
+    <li><a href="https://rubencoton.com" style="color:#E65100;font-weight:bold">🌐 Web RUBEN COTON</a></li>
+    <li><a href="https://www.youtube.com" style="color:#E65100;font-weight:bold">📺 YouTube</a></li>
+    <li><a href="https://drive.google.com" style="color:#E65100;font-weight:bold">📁 Drive</a></li>
   </ul>
 
   <p style="margin-top:24px">Cuando hagas click en cualquiera de los links, te llevará a la web pero <strong>antes</strong> pasará por nuestro tracking de la app local. Eso registrará el click.</p>
 
-  <p>Saludos,<br><strong>Artes Búho Management</strong></p>
+  <p>Saludos,<br><strong>RUBEN COTON</strong></p>
 
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
   <p style="font-size:11px;color:#999">
     Test enviado desde localhost:3000
   </p>
 </div>`,
-    plainText: "Test con links - Artes Búho local"
+    plainText: "Test con links - RUBEN COTON local"
   }, cookie);
   console.log("Campaign:", campaign.body?.campaign?.id);
 

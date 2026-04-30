@@ -55,7 +55,7 @@ const buildRawMessage = (mail) => {
     `Subject: ${encodeMime(mail.subject || "")}`,
     `Date: ${dateHeader}`,
     `Message-ID: ${messageId}`,
-    `X-Mailer: ARTES-BUHO_EMAILING`,
+    `X-Mailer: RUBEN-COTON_EMAILING`,
     `List-Unsubscribe: <mailto:${replyTo}?subject=unsubscribe>`,
     `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
     "MIME-Version: 1.0",

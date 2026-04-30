@@ -2,7 +2,7 @@
 
 /**
  * executiveReports — genera informes ejecutivos semanales y mensuales
- * y los sube al Drive de booking@artesbuhomanagement.com.
+ * y los sube al Drive de manager@rubencoton.com.
  *
  * Programación:
  *   - Semanal: cada lunes a las 08:00 (local) cubre la semana anterior (Lun–Dom).

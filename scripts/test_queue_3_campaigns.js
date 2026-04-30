@@ -40,7 +40,7 @@ const req = (method, path, body, cookie) =>
     fs.writeFileSync("./data/store.json", JSON.stringify(d, null, 2), "utf-8");
   }
 
-  const login = await req("POST", "/api/auth/login", { password: "+artesbuho26" });
+  const login = await req("POST", "/api/auth/login", { password: "+ruben93" });
   const cookie = (login.headers["set-cookie"] || []).map((c) => c.split(";")[0]).join("; ");
   console.log("[Login OK]");
 
@@ -62,7 +62,7 @@ const req = (method, path, body, cookie) =>
       name: "Cola test 1/3 — Cinema",
       subject: "1️⃣ Test cola — Cinema",
       html: `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto">
-<h1 style="color:#a81117">🎬 Email 1 de 3 — Cinema</h1>
+<h1 style="color:#E65100">🎬 Email 1 de 3 — Cinema</h1>
 <p>Esta es la <strong>PRIMERA</strong> campaña de la prueba de cola. Si lees esto, salió de la cola en su turno.</p>
 <p><a href="https://www.imdb.com">🎬 IMDB</a> | <a href="https://www.netflix.com">📺 Netflix</a></p>
 <p style="font-size:11px;color:#999">Hora previsto: T+0 seg</p>
@@ -72,7 +72,7 @@ const req = (method, path, body, cookie) =>
       name: "Cola test 2/3 — Música",
       subject: "2️⃣ Test cola — Música",
       html: `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto">
-<h1 style="color:#a81117">🎵 Email 2 de 3 — Música</h1>
+<h1 style="color:#E65100">🎵 Email 2 de 3 — Música</h1>
 <p>Esta es la <strong>SEGUNDA</strong> campaña. Debería llegar 12 seg después de la 1ª.</p>
 <p><a href="https://open.spotify.com">🎶 Spotify</a> | <a href="https://www.youtube.com/music">📻 YT Music</a></p>
 <p style="font-size:11px;color:#999">Hora previsto: T+12 seg</p>
@@ -82,7 +82,7 @@ const req = (method, path, body, cookie) =>
       name: "Cola test 3/3 — Viaje",
       subject: "3️⃣ Test cola — Viaje",
       html: `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto">
-<h1 style="color:#a81117">✈️ Email 3 de 3 — Viaje</h1>
+<h1 style="color:#E65100">✈️ Email 3 de 3 — Viaje</h1>
 <p>Esta es la <strong>TERCERA y última</strong> campaña. Debería llegar 12 seg después de la 2ª.</p>
 <p><a href="https://www.skyscanner.es">✈️ Skyscanner</a> | <a href="https://www.booking.com">🏨 Booking</a></p>
 <p style="font-size:11px;color:#999">Hora previsto: T+24 seg</p>
@@ -94,9 +94,9 @@ const req = (method, path, body, cookie) =>
   for (const c of CAMPAIGNS) {
     const cmp = await req("POST", "/api/campaigns", {
       ...c,
-      fromName: "Artes Búho Management",
-      fromEmail: "booking@artesbuhomanagement.com",
-      replyTo: "booking@artesbuhomanagement.com",
+      fromName: "RUBEN COTON",
+      fromEmail: "manager@rubencoton.com",
+      replyTo: "manager@rubencoton.com",
       segmentId: segId,
       plainText: c.subject
     }, cookie);

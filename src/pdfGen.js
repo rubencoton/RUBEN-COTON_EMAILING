@@ -11,7 +11,7 @@
  * Ventajas vs Puppeteer:
  *  - No requiere chromium (200MB menos de disk).
  *  - No requiere procesos headless extra (sin OOM/restart risk).
- *  - Usa la cuenta booking@ que ya tenemos conectada.
+ *  - Usa la cuenta manager@ que ya tenemos conectada.
  *
  * Limitaciones:
  *  - Google Docs no respeta @media print ni page-breaks custom con 100%

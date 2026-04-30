@@ -1,5 +1,5 @@
 /**
- * emailBuilder.js — Integracion del proyecto ARTES-BUHO_HTML.
+ * emailBuilder.js — Integracion del proyecto RUBEN-COTON_HTML.
  *
  * Genera emails HTML profesionales usando la cascada de IA (aiRouter)
  * en vez de Ollama directo. Eficiente en tokens: usa tier "alta".
@@ -49,9 +49,9 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
       <tr><td style="background:#1a1a1a;padding:24px 40px 18px;text-align:center">
         <img src="${LOGO_COMPLETO_URL}" width="90" alt="RUBEN COTON" style="display:block;margin:0 auto 8px;border:0">
         <h1 style="margin:4px 0 2px;color:#fff;font-size:22px;font-weight:bold;letter-spacing:4px">RUBEN COTON</h1>
-        <p style="margin:0;color:#F4B400;font-size:11px;letter-spacing:5px;text-transform:uppercase;font-weight:700">Management</p>
+        <p style="margin:0;color:#FFB74D;font-size:11px;letter-spacing:5px;text-transform:uppercase;font-weight:700">Management</p>
       </td></tr>
-      <tr><td style="height:3px;background:#D62828"></td></tr>
+      <tr><td style="height:3px;background:#FF6B00"></td></tr>
       ${photoBlock}
       <tr><td style="padding:40px">
         <p style="margin:0 0 16px;color:#333;font-size:16px">${esc(saludo || "Hola")},</p>
@@ -65,7 +65,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
               <a href="${esc(whatsapp)}" target="_blank" style="display:inline-block;padding:12px 22px;color:#fff;text-decoration:none;font-weight:bold;font-size:14px">💬 WhatsApp</a>
             </td>
             <td style="width:10px"></td>
-            <td style="background:#D62828;border-radius:6px;padding:0">
+            <td style="background:#FF6B00;border-radius:6px;padding:0">
               <a href="${esc(replyMailto)}" style="display:inline-block;padding:12px 22px;color:#fff;text-decoration:none;font-weight:bold;font-size:14px">✉ Responder</a>
             </td>
           </tr>
@@ -75,7 +75,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
       <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center">
         <p style="margin:0 0 6px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px">RUBEN COTON</p>
         <p style="margin:0 0 8px;color:#aaa;font-size:11px">Booking &amp; Management de Artistas</p>
-        <p style="margin:0 0 6px;font-size:11px"><a href="mailto:manager@rubencoton.com" style="color:#F4B400;text-decoration:none">manager@rubencoton.com</a></p>
+        <p style="margin:0 0 6px;font-size:11px"><a href="mailto:manager@rubencoton.com" style="color:#FFB74D;text-decoration:none">manager@rubencoton.com</a></p>
         ${unsubUrl ? `<p style="margin:0;font-size:10px"><a href="${esc(unsubUrl)}" style="color:#777;text-decoration:underline">Darse de baja</a></p>` : ""}
       </td></tr>
     </table>
