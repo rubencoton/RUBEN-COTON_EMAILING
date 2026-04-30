@@ -98,7 +98,7 @@ const massMailEngine = createMassMailEngine({
   ratePerMinute: process.env.MAIL_RATE_LIMIT_PER_MIN || 5,
   /* Cap diario de envíos (rolling 24h). Default 1500 (debajo del 2000/día
    * de Workspace para tener margen y no agotar la cuota). */
-  dailyCap: process.env.MAIL_DAILY_CAP || 1500,
+  dailyCap: process.env.MAIL_DAILY_CAP || 1950,
   /* Warmup gradual (anti-spam): día 1=100, día 2=250, día 3=500, día 4=1000, día 5+=cap. */
   warmupEnabled: process.env.MAIL_WARMUP_ENABLED || "false",
   maxRetries: process.env.MAIL_MAX_RETRIES || 1,

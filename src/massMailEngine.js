@@ -253,10 +253,87 @@ const createMassMailEngine = (config) => {
    * Activable con MAIL_WARMUP_ENABLED=true en .env.
    * Estado persiste en data/mail-state.json (no se pierde con restart).
    * ──────────────────────────────────────────────────────────── */
-  const dailyCap = Number(config.dailyCap || 1500);
+  const dailyCap = Number(config.dailyCap || 1950);
   const warmupEnabled = String(config.warmupEnabled || "").toLowerCase() === "true";
   const warmupSchedule = [100, 250, 500, 1000, dailyCap]; /* día 1, 2, 3, 4, 5+ */
   const sendTimestamps = []; /* timestamps ms de cada envio en últimas 24h */
+
+  /* ─── VENTANA HORARIA DE ENVIO ─────────────────────────────
+   * Solo enviamos dentro de este rango. Fuera, el motor pausa
+   * automaticamente (no consume cuota, no parece bot 24/7).
+   *
+   * Default: 8-20h Madrid, todos los dias (peticion usuario 2026-04-30).
+   * ──────────────────────────────────────────────────────────── */
+  const sendWindowStart = Number(process.env.MAIL_SEND_WINDOW_START || 8);
+  const sendWindowEnd = Number(process.env.MAIL_SEND_WINDOW_END || 20);
+  const sendWindowDaysRaw = String(process.env.MAIL_SEND_WINDOW_DAYS || "0,1,2,3,4,5,6").trim();
+  const sendWindowDays = new Set(
+    sendWindowDaysRaw.split(",").map((s) => Number(s.trim())).filter((n) => n >= 0 && n <= 6)
+  );
+  const sendTz = String(process.env.MAIL_SEND_TZ || "Europe/Madrid");
+
+  const isWithinSendingWindow = () => {
+    try {
+      const now = new Date();
+      const local = new Date(now.toLocaleString("en-US", { timeZone: sendTz }));
+      const day = local.getDay();
+      const hour = local.getHours();
+      if (!sendWindowDays.has(day)) return false;
+      return hour >= sendWindowStart && hour < sendWindowEnd;
+    } catch (_e) {
+      return true; /* fail-open: si la TZ falla, no bloqueamos. */
+    }
+  };
+
+  /* Minutos restantes hasta el cierre de la ventana (para ratio adaptativo) */
+  const minutesUntilWindowClose = () => {
+    try {
+      const now = new Date();
+      const local = new Date(now.toLocaleString("en-US", { timeZone: sendTz }));
+      const closeAt = new Date(local);
+      closeAt.setHours(sendWindowEnd, 0, 0, 0);
+      const diffMs = closeAt.getTime() - local.getTime();
+      return Math.max(0, Math.round(diffMs / 60000));
+    } catch (_e) { return 60; }
+  };
+
+  /* ─── DOMINIOS DESECHABLES (suprimidos) ─────────────────────
+   * Direcciones tipo @tempmail.com o @10minutemail.com no son usuarios
+   * reales. Enviarles dispara bounce o queja de spam.
+   * Lista propia + se completa con la externa de Spamhaus/disposable-email-domains
+   * si la subimos como archivo data/disposable-domains.txt.
+   * ──────────────────────────────────────────────────────────── */
+  const DISPOSABLE_DOMAINS = new Set([
+    "tempmail.com", "10minutemail.com", "guerrillamail.com",
+    "mailinator.com", "throwawaymail.com", "yopmail.com",
+    "sharklasers.com", "trbvm.com", "dispostable.com",
+    "fakeinbox.com", "maildrop.cc", "mintemail.com",
+    "tempinbox.com", "spambox.us", "binkmail.com",
+    "emailondeck.com", "fakemailgenerator.com", "mvrht.net",
+    "trashmail.com", "throwam.com", "dropmail.me", "tempmailo.com"
+  ]);
+  const isDisposableDomain = (email) => {
+    const d = extractDomainFromEmail(email);
+    return DISPOSABLE_DOMAINS.has(d);
+  };
+
+  /* ─── PER-DOMAIN THROTTLING ─────────────────────────────────
+   * Limita envios al MISMO dominio (e.g. @gmail.com) a max 1/min para
+   * evitar disparar greylisting/spam-trap en el receptor. Si se supera,
+   * el item vuelve al final de la cola y reintenta luego.
+   * ──────────────────────────────────────────────────────────── */
+  const PER_DOMAIN_DELAY_MS = Number(process.env.MAIL_PER_DOMAIN_DELAY_MS || 60000);
+  const lastSentByDomain = new Map();
+  const tooSoonForDomain = (email) => {
+    const d = extractDomainFromEmail(email);
+    if (!d) return false;
+    const last = lastSentByDomain.get(d) || 0;
+    return Date.now() - last < PER_DOMAIN_DELAY_MS;
+  };
+  const markSentForDomain = (email) => {
+    const d = extractDomainFromEmail(email);
+    if (d) lastSentByDomain.set(d, Date.now());
+  };
   /* Persistencia */
   const fsLib = require("fs");
   const pathLib = require("path");
@@ -441,6 +518,13 @@ const createMassMailEngine = (config) => {
       return;
     }
 
+    /* VENTANA HORARIA: fuera de la franja, no procesa. La cola se mantiene
+     * y se reanuda al entrar en horario. Esto evita ráfagas a las 03:00
+     * que son la huella mas clara de un bot. */
+    if (!isWithinSendingWindow()) {
+      return;
+    }
+
     /* CAP DIARIO: si se alcanzó, NO procesar nuevos envios hasta que
      * pase el bucket de 24h. Volvemos a colocar el item en la cola. */
     if (isDailyCapReached()) {
@@ -462,6 +546,30 @@ const createMassMailEngine = (config) => {
 
     const recipient = job.recipients[item.recipientIndex];
     if (!recipient) {
+      return;
+    }
+
+    /* Dominio desechable -> marcar bounced sin gastar Gmail API. */
+    if (isDisposableDomain(recipient.email)) {
+      recipient.status = "bounced";
+      recipient.bouncedAt = new Date().toISOString();
+      recipient.error = "disposable_domain";
+      job.failed += 1;
+      job.queued -= 1;
+      addHistory({ type: "bounce", jobId: job.id, email: recipient.email, error: "disposable_domain" });
+      try {
+        if (config.dataStoreRef) {
+          config.dataStoreRef.createOrUpdateContact({ email: recipient.email, status: "bounced" }, "update");
+        }
+      } catch (_e) {}
+      recalcJobStatus(job);
+      return;
+    }
+
+    /* Per-domain throttle: si el mismo @host recibio email hace <60s,
+     * volvemos a encolar al final y procesamos otro. */
+    if (tooSoonForDomain(recipient.email)) {
+      queue.push({ jobId: job.id, recipientIndex: item.recipientIndex });
       return;
     }
 
@@ -710,6 +818,7 @@ const createMassMailEngine = (config) => {
       recipient.sentAt = new Date().toISOString();
       /* Registramos en el cap diario solo en envios EXITOSOS. */
       recordSend();
+      markSentForDomain(recipient.email);
       recipient.providerMessageId = result.messageId || null;
       recipient.error = null;
 
@@ -795,20 +904,60 @@ const createMassMailEngine = (config) => {
       recalcJobStatus(job);
       processing = false;
     }
+    return recipient.status === "sent";
   };
+
+  /* Contador para pausas humanas: cada 30-60 envios, hacemos break 3-8 min. */
+  let sentSinceLastBreak = 0;
+  let nextBreakAt = 30 + Math.floor(Math.random() * 31); /* 30-60 */
 
   const start = () => {
     if (ticker) {
       return;
     }
-    /* JITTER ANTI-SPAM: en vez de ritmo robot perfecto, añadimos
-     * variabilidad ±30% en cada tick. Eso hace que los envíos parezcan
-     * más humanos y reduce flag de "automated bulk sender" en filtros
-     * Gmail/Outlook. */
+    /* DISTRIBUCION ORGANICA (2026-04-30):
+     *   - Ratio adaptativo: queda N emails y M minutos hasta cierre ventana.
+     *     Calculamos delay = M*60000 / N para repartir sin agolpar al final.
+     *   - Limite minimo: rateDelayMs (config rate-per-minute)
+     *   - Jitter: ±40% para que ningun par de envios este al mismo intervalo.
+     *   - Pausa humana: cada 30-60 envios, break 3-8 min (estilo "tomar cafe").
+     *   - Fuera de ventana: tick cada 5 min (esperando reapertura).
+     */
     const tickWithJitter = () => {
-      const jitter = 0.7 + Math.random() * 0.6; /* 70%-130% */
-      const nextDelay = Math.round(rateDelayMs * jitter);
-      processNext().catch((error) => {
+      let nextDelay;
+      try {
+        if (!isWithinSendingWindow()) {
+          /* Fuera de horario: poll cada 5 min para detectar reapertura sin
+           * gastar CPU. */
+          nextDelay = 5 * 60 * 1000;
+        } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
+          /* Pausa humana ~3-8 min */
+          const breakMs = (3 * 60 * 1000) + Math.floor(Math.random() * 5 * 60 * 1000);
+          console.log(`[massMail] pausa humana ${Math.round(breakMs / 60000)}min tras ${sentSinceLastBreak} envios`);
+          sentSinceLastBreak = 0;
+          nextBreakAt = 30 + Math.floor(Math.random() * 31);
+          nextDelay = breakMs;
+        } else {
+          /* Distribucion adaptativa */
+          const remaining = queue.length;
+          const minsLeft = Math.max(1, minutesUntilWindowClose());
+          const adaptive = remaining > 0
+            ? (minsLeft * 60 * 1000) / remaining
+            : rateDelayMs;
+          /* Nunca por debajo del rate config (cap superior) */
+          let baseDelay = Math.max(rateDelayMs, adaptive);
+          /* Jitter +-40% */
+          const jitter = 0.6 + Math.random() * 0.8;
+          nextDelay = Math.round(baseDelay * jitter);
+          /* Maximo 90s entre envios (no aburrirse si hay poca cola) */
+          nextDelay = Math.min(nextDelay, 90 * 1000);
+        }
+      } catch (_e) {
+        nextDelay = rateDelayMs;
+      }
+      processNext().then((wasSent) => {
+        if (wasSent) sentSinceLastBreak += 1;
+      }).catch((error) => {
         addHistory({
           type: "engine_error",
           error: error.message || "unknown_engine_error"
@@ -1012,6 +1161,19 @@ const createMassMailEngine = (config) => {
     queueOrder,
     jobs: jobsList,
     jobsTotal: jobs.size,
+    sendingWindow: {
+      tz: sendTz,
+      startHour: sendWindowStart,
+      endHour: sendWindowEnd,
+      days: Array.from(sendWindowDays).sort(),
+      isOpen: isWithinSendingWindow(),
+      minutesUntilClose: minutesUntilWindowClose()
+    },
+    pacing: {
+      perDomainDelayMs: PER_DOMAIN_DELAY_MS,
+      sentSinceLastBreak,
+      nextBreakAt
+    },
     dailyCap: {
       limit: dailyCap,
       effectiveLimit: getEffectiveCap(),
