@@ -9,7 +9,7 @@ const state = {
 
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => Array.from(document.querySelectorAll(selector));
-const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
 /* =========================================================
  * Modal de confirmación bonito (reemplaza window.confirm)
@@ -966,7 +966,11 @@ const refreshSetupChecklist = async () => {
 };
 
 const parseDelimitedText = (text) => {
-  const lines = text
+  /* P0 audit 2026-05-01: Excel CSV exporta con BOM ﻿. Sin strip,
+   * el primer header ('email') queda como '﻿email' → mapping no
+   * encuentra columna email → import silenciosamente sin contactos. */
+  const cleanText = String(text || "").replace(/^﻿/, "");
+  const lines = cleanText
     .split(/\r?\n/g)
     .map((line) => line.trim())
     .filter(Boolean);

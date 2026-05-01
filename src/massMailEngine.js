@@ -589,6 +589,26 @@ const createMassMailEngine = (config) => {
       return;
     }
 
+    /* P0 audit 2026-05-01: re-check del status del contacto JUSTO antes
+     * del send. Evita el bug "envío a contactos unsubscribed mid-job":
+     * usuario marca unsubscribed mientras un job de 100 está en cola →
+     * sin re-check, los recipients posteriores en el job se enviaban
+     * igualmente. */
+    if (config.dataStoreRef) {
+      try {
+        const allCs = config.dataStoreRef.listContacts({ search: recipient.email });
+        const live = (allCs || []).find((c) => String(c.email || "").toLowerCase() === String(recipient.email || "").toLowerCase());
+        if (live && (live.status === "unsubscribed" || live.status === "bounced" || live.status === "complained")) {
+          recipient.status = "skipped";
+          recipient.skippedReason = `contact_${live.status}_at_send_time`;
+          job.skipped = (job.skipped || 0) + 1;
+          job.queued = Math.max(0, (job.queued || 0) - 1);
+          recalcJobStatus(job);
+          return;
+        }
+      } catch (_e) { /* nunca fallar el send por re-check */ }
+    }
+
     /* Per-domain throttle: si el mismo @host recibio email hace <60s,
      * volvemos a encolar al final y procesamos otro. */
     if (tooSoonForDomain(recipient.email)) {
@@ -719,9 +739,11 @@ const createMassMailEngine = (config) => {
         /* Bloquea auto-respuestas de servidores Exchange/Outlook (out-of-office,
          * vacation), que generan ruido y disparan ratios bounce/spam. */
         perRecipientHeaders["X-Auto-Response-Suppress"] = "All";
-        /* Sender-Policy hint: declara que el envio es legitimo y que el dominio
-         * tiene autenticacion configurada via Workspace. */
-        perRecipientHeaders["Authentication-Results-Hint"] = "rubencoton.com; spf=pass; dkim=pass; dmarc=pass";
+        /* P0 audit 2026-05-01: ELIMINADO `Authentication-Results-Hint`.
+         * Era SELF-ASSERTED — un sender afirmando que él mismo pasa SPF/DKIM/
+         * DMARC. Gmail/Microsoft trataban esto como header forgery → email
+         * clasificado como phishing. `Authentication-Results` solo lo escribe
+         * el receptor MTA, NUNCA el sender. */
         /* X-Unsubscribe-Web: enlace web visible para providers que no soportan
          * one-click, refuerza el canal de baja. */
         if (unsubBase) {

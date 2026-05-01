@@ -182,7 +182,22 @@ app.set("trust proxy", true);
  * y handlers onclick="..." de la paginación. Desactivamos CSP y mantenemos el resto
  * de cabeceras de seguridad (X-Frame-Options, etc). */
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+/* P0 audit 2026-05-01: cors() sin opciones permite CUALQUIER origen con
+ * cookie credentials (eco origin). Restringir a origin propio. */
+const ALLOWED_ORIGINS = [
+  process.env.PUBLIC_BASE_URL,
+  process.env.APP_BASE_URL,
+  process.env.COOLIFY_FQDN ? `https://${process.env.COOLIFY_FQDN}` : null,
+  "https://emailing.rubencoton.com"
+].filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);  /* curl, server-side, mismo origen */
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS not allowed"));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -3524,12 +3539,15 @@ const processUnsubscribe = (email, source = "post") => {
   try {
     const allContacts = dataStore.listContacts({});
     const contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
+    /* P0 audit 2026-05-01: enmascarar email en logs (Coolify retiene logs).
+     * Pseudonimización GDPR Art. 32. */
+    const masked = decoded.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
     if (contact) {
       dataStore.createOrUpdateContact({ email: decoded, status: "unsubscribed" }, "update");
-      console.log(`[unsubscribe][${source}] Baja procesada: ${decoded}`);
+      console.log(`[unsubscribe][${source}] Baja procesada: ${masked}`);
       return { ok: true, found: true, email: decoded };
     }
-    console.log(`[unsubscribe][${source}] Email no encontrado: ${decoded}`);
+    console.log(`[unsubscribe][${source}] Email no encontrado: ${masked}`);
     return { ok: true, found: false, email: decoded };
   } catch (err) {
     console.warn(`[unsubscribe][${source}] error: ${err.message}`);
@@ -3574,11 +3592,13 @@ app.get("/unsubscribe", (req, res) => {
     }
     const allContacts = dataStore.listContacts({});
     const contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
+    /* P0 audit 2026-05-01: enmascarar email (GDPR Art. 32). */
+    const maskedG = decoded.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
     if (contact) {
       dataStore.createOrUpdateContact({ email: decoded, status: "unsubscribed" }, "update");
-      console.log(`[unsubscribe] Baja procesada: ${decoded}`);
+      console.log(`[unsubscribe] Baja procesada: ${maskedG}`);
     } else {
-      console.log(`[unsubscribe] Email no encontrado: ${decoded}`);
+      console.log(`[unsubscribe] Email no encontrado: ${maskedG}`);
     }
     return res.send(`
       <html><body style="font-family:sans-serif;text-align:center;padding:60px">
