@@ -94,6 +94,38 @@ const dbRequired = false;
 const dataStore = new DataStore();
 sheetsSync.setDataStoreRef(dataStore);
 
+/* P0-EMERGENCY 2026-05-01: cleanup one-shot al boot si BOOT_PRUNE_STRESS=1.
+ * Elimina TODAS las campañas que comienzan con "STRESS TEST" y todos los
+ * contactos cuyo email hace match con manager+test*@rubencoton.com.
+ * UN solo mutate batch para no clonar el store N veces.
+ * Tras la limpieza el operador debe quitar la env var manualmente. */
+if (String(process.env.BOOT_PRUNE_STRESS || "").trim() === "1") {
+  try {
+    const before = { campaigns: 0, contacts: 0 };
+    const after = { campaigns: 0, contacts: 0 };
+    dataStore.mutate((store) => {
+      before.campaigns = (store.campaigns || []).length;
+      before.contacts = (store.contacts || []).length;
+      store.campaigns = (store.campaigns || []).filter((c) => {
+        const name = String(c.name || "");
+        return !name.startsWith("STRESS TEST") && !name.startsWith("STRESS TEST 500");
+      });
+      const TEST_RX = /^manager\+test\d+[ab]?@rubencoton\.com$/i;
+      store.contacts = (store.contacts || []).filter((c) => !TEST_RX.test(String(c.email || "")));
+      after.campaigns = store.campaigns.length;
+      after.contacts = store.contacts.length;
+    });
+    console.warn(
+      `[boot-prune] OK | campaigns ${before.campaigns}→${after.campaigns} ` +
+      `(borradas ${before.campaigns - after.campaigns}) | ` +
+      `contacts ${before.contacts}→${after.contacts} ` +
+      `(borrados ${before.contacts - after.contacts})`
+    );
+  } catch (err) {
+    console.error("[boot-prune] FAIL:", err.message);
+  }
+}
+
 const massMailEngine = createMassMailEngine({
   transportMode: process.env.MAIL_TRANSPORT_MODE || "smtp",
   smtpHost: process.env.SMTP_HOST,
