@@ -984,26 +984,18 @@ const createMassMailEngine = (config) => {
           nextBreakAt = 30 + Math.floor(Math.random() * 31);
           nextDelay = breakMs;
         } else {
-          /* Distribución adaptativa: solo aplica cuando hay POCO en cola y
-           * MUCHO tiempo de ventana. Si hay >=20 emails, vamos al ritmo
-           * rate config (no espaciamos). FIX 2026-05-01: antes con 74 emails
-           * y 530 min de ventana, daba 7min/email. */
-          const remaining = queue.length;
-          const minsLeft = Math.max(1, minutesUntilWindowClose());
-          let baseDelay;
-          if (remaining >= 20) {
-            /* Burst: respeta solo rateDelayMs (config rate-per-minute). */
-            baseDelay = rateDelayMs;
-          } else {
-            const adaptive = (minsLeft * 60 * 1000) / remaining;
-            /* Cap superior 60s — nunca esperamos >1min entre envíos. */
-            baseDelay = Math.max(rateDelayMs, Math.min(adaptive, 60 * 1000));
-          }
-          /* Jitter +-40% */
-          const jitter = 0.6 + Math.random() * 0.8;
+          /* P0-FIX 2026-05-01: ELIMINAR distribución adaptativa que causaba
+           * 1 email/2min cuando había pocos en cola. Ahora respetamos
+           * EXCLUSIVAMENTE las dos configs del usuario:
+           *   - rateDelayMs: 60_000 / ratePerMinute (config global)
+           *   - PER_DOMAIN_DELAY_MS: throttle por dominio
+           * El usuario las configura para SU pacing. La "distribución
+           * orgánica" anterior las ignoraba y espaciaba más, dando 30x
+           * más lento de lo configurado. */
+          const baseDelay = rateDelayMs;
+          /* Jitter ±25% (suficiente para no parecer bot, sin grandes desvíos). */
+          const jitter = 0.75 + Math.random() * 0.5;
           nextDelay = Math.round(baseDelay * jitter);
-          /* Maximo 90s entre envios (no aburrirse si hay poca cola) */
-          nextDelay = Math.min(nextDelay, 90 * 1000);
         }
       } catch (_e) {
         nextDelay = rateDelayMs;
