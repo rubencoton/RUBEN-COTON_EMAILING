@@ -106,12 +106,16 @@ if (String(process.env.BOOT_PRUNE_STRESS || "").trim() === "1") {
     dataStore.mutate((store) => {
       before.campaigns = (store.campaigns || []).length;
       before.contacts = (store.contacts || []).length;
+      /* Borra TODAS las campañas que sean test/stress (cualquier nombre que
+       * empiece con un patrón conocido de test). */
+      const CAMP_TEST_RX = /^(STRESS TEST|FINAL TEST|E2E TEST|BATTERY T|TEST [1-6])/i;
       store.campaigns = (store.campaigns || []).filter((c) => {
-        const name = String(c.name || "");
-        return !name.startsWith("STRESS TEST") && !name.startsWith("STRESS TEST 500");
+        return !CAMP_TEST_RX.test(String(c.name || ""));
       });
-      const TEST_RX = /^manager\+test\d+[ab]?@rubencoton\.com$/i;
-      store.contacts = (store.contacts || []).filter((c) => !TEST_RX.test(String(c.email || "")));
+      /* Borra TODOS los contactos test (cualquier alias `manager+<algo>` que
+       * matche un patrón conocido de test). */
+      const CONTACT_TEST_RX = /^manager\+(test|e2e|final|t\dvol|t\dbig|t\dc|t1vol|t5big|t6c)\d+[a-z]?@rubencoton\.com$/i;
+      store.contacts = (store.contacts || []).filter((c) => !CONTACT_TEST_RX.test(String(c.email || "")));
       after.campaigns = store.campaigns.length;
       after.contacts = store.contacts.length;
     });
