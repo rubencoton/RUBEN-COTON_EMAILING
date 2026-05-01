@@ -21,6 +21,6 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV TZ=Europe/Madrid
-ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 CMD ["node", "src/server.js"]
