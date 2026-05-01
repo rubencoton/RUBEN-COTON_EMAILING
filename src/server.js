@@ -289,47 +289,48 @@ const syncCampaignsWithEngine = () => {
   const queueOrder = Array.isArray(engineStatus.queueOrder) ? engineStatus.queueOrder : [];
   const posByJob = new Map();
   queueOrder.forEach((jid, idx) => posByJob.set(jid, idx));
+
+  /* P0-EMERGENCY 2026-05-01: si hay 500 campañas huérfanas tras stress
+   * test, hacer 500 mutates secuenciales clona el store (55MB) 500
+   * veces → 27.5GB de RAM en la pila → OOM. Acumular las huérfanas y
+   * hacer UN solo mutate batch al final. */
+  const orphans = [];
   campaigns.forEach((campaign) => {
     if (!campaign.jobId) {
-      /* BLINDAJE: campaña en sending/queued pero SIN jobId (huérfana tras
-       * restart del contenedor). La marcamos como failed con mensaje claro
-       * para que el usuario pueda reenviar con un click. */
       if (["sending", "queued"].includes(campaign.status)) {
-        dataStore.mutate((store) => {
-          const t = store.campaigns.find((c) => c.id === campaign.id);
-          if (t) {
-            t.status = "failed";
-            t.stats = t.stats || {};
-            t.stats.failReason = "Job perdido tras reinicio del contenedor (recuperación automática). Reenvía cuando quieras.";
-            t.updatedAt = new Date().toISOString();
-          }
-        });
-        console.warn(`[sync] Campaña ${campaign.id} huérfana (sin jobId) marcada como failed.`);
+        orphans.push({ id: campaign.id, jobId: null });
       }
       return;
     }
     const job = massMailEngine.getJob(campaign.jobId);
     if (!job) {
-      /* BLINDAJE: campaña tiene jobId pero el job ya no existe en memoria
-       * (engine reiniciado). Si la campaña está en sending/queued, la
-       * marcamos failed para que no quede colgada. */
       if (["sending", "queued"].includes(campaign.status)) {
-        dataStore.mutate((store) => {
-          const t = store.campaigns.find((c) => c.id === campaign.id);
-          if (t) {
-            t.status = "failed";
-            t.stats = t.stats || {};
-            t.stats.failReason = `Job ${campaign.jobId} no encontrado en el motor (probable reinicio). Reenvía si es necesario.`;
-            t.updatedAt = new Date().toISOString();
-          }
-        });
-        console.warn(`[sync] Campaña ${campaign.id} con jobId huérfano (${campaign.jobId}) marcada como failed.`);
+        orphans.push({ id: campaign.id, jobId: campaign.jobId });
       }
       return;
     }
     const pos = posByJob.has(campaign.jobId) ? posByJob.get(campaign.jobId) : null;
     dataStore.syncCampaignByJob(campaign.id, { ...job, queuePosition: pos });
   });
+
+  if (orphans.length > 0) {
+    /* Batch mutate: 1 clone del store en lugar de N. */
+    dataStore.mutate((store) => {
+      const now = new Date().toISOString();
+      const orphansById = new Map(orphans.map((o) => [o.id, o]));
+      store.campaigns.forEach((c) => {
+        const o = orphansById.get(c.id);
+        if (!o) return;
+        c.status = "failed";
+        c.stats = c.stats || {};
+        c.stats.failReason = o.jobId
+          ? `Job ${o.jobId} no encontrado en el motor (probable reinicio). Reenvía si es necesario.`
+          : "Job perdido tras reinicio del contenedor (recuperación automática). Reenvía cuando quieras.";
+        c.updatedAt = now;
+      });
+    });
+    console.warn(`[sync] ${orphans.length} campañas huérfanas marcadas como failed (batch single mutate).`);
+  }
 };
 
 const buildRuntimeStatus = async () => {
