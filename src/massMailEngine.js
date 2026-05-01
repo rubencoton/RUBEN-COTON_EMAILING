@@ -531,6 +531,11 @@ const createMassMailEngine = (config) => {
     };
   };
 
+  /* P0-FIX 2026-05-01: flag para señalizar que el último tick fue rebotado
+   * por throttle perdomain. Si está set, el siguiente tick será corto
+   * (PER_DOMAIN_DELAY_MS) en vez de 90s+adaptive. */
+  let __throttleHit = false;
+
   const processNext = async () => {
     if (!enabled || paused || processing || queue.length === 0) {
       return;
@@ -588,6 +593,14 @@ const createMassMailEngine = (config) => {
      * volvemos a encolar al final y procesamos otro. */
     if (tooSoonForDomain(recipient.email)) {
       queue.push({ jobId: job.id, recipientIndex: item.recipientIndex });
+      /* P0-FIX 2026-05-01: cuando TODOS los recipients comparten dominio
+       * (típico stress: manager+test*@rubencoton.com), el throttle pega
+       * cada vez. Sin re-tick rápido, el motor espera el próximo
+       * "tickWithJitter" (que puede ser 90s) en lugar de los PER_DOMAIN_DELAY_MS
+       * reales (5s). FIX: signaling al ticker via flag para acortar nextDelay.
+       * (No tocamos `ticker` aquí porque la closure del setTimeout aún no se
+       * ha disparado; el flag se evalúa en el siguiente tick). */
+      __throttleHit = true;
       return;
     }
 
@@ -956,6 +969,13 @@ const createMassMailEngine = (config) => {
           /* Fuera de horario: poll cada 5 min para detectar reapertura sin
            * gastar CPU. */
           nextDelay = 5 * 60 * 1000;
+        } else if (__throttleHit && queue.length > 0) {
+          /* P0-FIX 2026-05-01: el último tick rebotó por per-domain throttle.
+           * Re-tick rápido (delay perdomain + 200ms) en vez de 90s adaptive.
+           * Esto evita que envíos a dominio único (caso test) sean 30x más
+           * lentos de lo que la config dice. */
+          nextDelay = PER_DOMAIN_DELAY_MS + 200;
+          __throttleHit = false;
         } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
           /* Pausa humana ~3-8 min */
           const breakMs = (3 * 60 * 1000) + Math.floor(Math.random() * 5 * 60 * 1000);
@@ -964,14 +984,21 @@ const createMassMailEngine = (config) => {
           nextBreakAt = 30 + Math.floor(Math.random() * 31);
           nextDelay = breakMs;
         } else {
-          /* Distribucion adaptativa */
+          /* Distribución adaptativa: solo aplica cuando hay POCO en cola y
+           * MUCHO tiempo de ventana. Si hay >=20 emails, vamos al ritmo
+           * rate config (no espaciamos). FIX 2026-05-01: antes con 74 emails
+           * y 530 min de ventana, daba 7min/email. */
           const remaining = queue.length;
           const minsLeft = Math.max(1, minutesUntilWindowClose());
-          const adaptive = remaining > 0
-            ? (minsLeft * 60 * 1000) / remaining
-            : rateDelayMs;
-          /* Nunca por debajo del rate config (cap superior) */
-          let baseDelay = Math.max(rateDelayMs, adaptive);
+          let baseDelay;
+          if (remaining >= 20) {
+            /* Burst: respeta solo rateDelayMs (config rate-per-minute). */
+            baseDelay = rateDelayMs;
+          } else {
+            const adaptive = (minsLeft * 60 * 1000) / remaining;
+            /* Cap superior 60s — nunca esperamos >1min entre envíos. */
+            baseDelay = Math.max(rateDelayMs, Math.min(adaptive, 60 * 1000));
+          }
           /* Jitter +-40% */
           const jitter = 0.6 + Math.random() * 0.8;
           nextDelay = Math.round(baseDelay * jitter);
