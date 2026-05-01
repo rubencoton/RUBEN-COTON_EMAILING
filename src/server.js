@@ -3592,6 +3592,17 @@ app.get("/unsubscribe", (req, res) => {
   }
 });
 
+/* ── 404 explícito para /api/* sin handler ── (FIX 2026-05-01 audit)
+ * Antes los endpoints /api/* inexistentes caían al catch-all SPA y devolvían
+ * el HTML de la app (HTTP 200), rompiendo clientes que esperan JSON. */
+app.all("/api/*", (req, res) => {
+  return res.status(404).json({
+    status: "error",
+    error: "not_found",
+    message: `Endpoint ${req.method} ${req.path} no existe`
+  });
+});
+
 /* ── Catch-all: SIEMPRE al final ── */
 app.get("*", (_req, res) => {
   res.sendFile(appHtmlPath);
