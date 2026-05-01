@@ -660,10 +660,23 @@ class DataStore {
     this.store = this.read();
   }
 
+  /* P0-B audit 2026-05-01: read() devuelve referencia directa al store
+   * en memoria, NO un clone de 55MB. Bajo stress (500 jobs, tracking
+   * heavy) hacíamos cientos de read()/segundo → cientos de clones de
+   * 55MB → OOM y event loop bloqueado.
+   *
+   * CONTRATO: el caller NO debe mutar el resultado. Para mutaciones
+   * usar `mutate(fn)` que sí garantiza atomicidad y persistencia.
+   * Los métodos públicos del store (listContacts, getCampaign, etc.)
+   * ya clonan elementos individuales antes de devolverlos al exterior,
+   * así que el riesgo de mutación accidental queda contenido.
+   *
+   * Bench: 55MB clone ~50ms cada call → 0.1ms (referencia directa).
+   * Memoria: -55MB por call. */
   read() {
     ensureDataFile();
     if (this.store) {
-      return clone(this.store);
+      return this.store;
     }
 
     /* BLINDAJE: si el JSON está corrupto (crash a mitad de write, disco lleno),
@@ -694,7 +707,7 @@ class DataStore {
     parsed.auditLogs = ensureArray(parsed.auditLogs);
 
     this.store = parsed;
-    return clone(parsed);
+    return parsed;
   }
 
   write(store) {

@@ -107,6 +107,27 @@ function requireClient() {
   return oauth;
 }
 
+/* P0-I audit 2026-05-01: timeout default 30s en TODAS las requests
+ * Google APIs. Sin esto, una request bloqueada (network glitch, OAuth
+ * token revocado, Google rate-limit) cuelga al worker indefinidamente.
+ * Bajo stress test 500, vimos "socket hang up" persistente que
+ * bloqueaba replyTracker, sheetsSync y backup hasta restart.
+ *
+ * Mecanismo: googleapis usa gaxios internamente. Seteamos el timeout
+ * en gaxios.instance.defaults — afecta a Drive, Sheets, Gmail, Calendar
+ * y al refresh de OAuth tokens. */
+try {
+  const gaxios = require("gaxios");
+  const TIMEOUT_MS = Number(process.env.GOOGLE_API_TIMEOUT_MS) || 30000;
+  if (gaxios && gaxios.instance) {
+    gaxios.instance.defaults = gaxios.instance.defaults || {};
+    gaxios.instance.defaults.timeout = TIMEOUT_MS;
+    console.log(`[googleHub] gaxios timeout default = ${TIMEOUT_MS}ms`);
+  }
+} catch (e) {
+  console.warn("[googleHub] no se pudo configurar timeout gaxios:", e.message);
+}
+
 /* Clientes Google */
 const clients = {
   drive: () => google.drive({ version: "v3", auth: requireClient() }),
