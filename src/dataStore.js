@@ -1823,7 +1823,7 @@ class DataStore {
     store.events.unshift(payload);
     /* Retención basada en tiempo: mínimo 7 días de historial.
      * Solo purgamos eventos > 7 días si superamos 25000 entradas. */
-    const EVENT_MAX = 25000;
+    const EVENT_MAX = Number(process.env.EVENT_MAX) || 100000; /* P0 audit 2026-05-01: 25k → 100k para 56k contactos */
     const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
     if (store.events.length > EVENT_MAX) {
       const cutoff = new Date(Date.now() - RETENTION_MS).toISOString();
@@ -1862,7 +1862,11 @@ class DataStore {
           (item) => item.email === payload.email
         );
         if (recipient) {
-          if (safeType === "open" && !recipient.openedAt) {
+          /* P0 audit 2026-05-01: NO marcar openedAt si el evento es de
+           * GoogleImageProxy/Apple MPP/Outlook preview (machine open).
+           * Antes inflábamos openRate del informe a directiva con cargas
+           * automáticas de proxies que NO equivalen a un humano abriendo. */
+          if (safeType === "open" && !recipient.openedAt && !payload.isMachineOpen) {
             recipient.openedAt = occurredAt;
           }
           if (safeType === "click" && !recipient.clickedAt) {

@@ -57,13 +57,25 @@ async function scanReplies() {
           userId: "me",
           id: m.id,
           format: "metadata",
-          metadataHeaders: ["From", "Subject", "In-Reply-To", "References", "Message-Id", "Date"]
+          metadataHeaders: ["From", "Subject", "In-Reply-To", "References", "Message-Id", "Date", "Auto-Submitted", "X-Autorespond", "X-Autoreply", "Precedence"]
         });
         const headers = Object.fromEntries((get.data.payload?.headers || []).map((h) => [h.name.toLowerCase(), h.value]));
         const from = String(headers["from"] || "");
         const fromEmail = (from.match(/<([^>]+)>/) || from.match(/([^\s<>]+@[^\s<>]+)/) || [])[1];
         const senderEmail = String(fromEmail || "").toLowerCase().trim();
         if (!senderEmail) continue;
+
+        /* P0 audit 2026-05-01: filtrar AUTORESPONDERS (out-of-office,
+         * vacation, autoreply). RFC 3834 + heurística de Subject. Antes
+         * estos contaban como "reply" inflando stats de conversión. */
+        const autoSubmitted = String(headers["auto-submitted"] || "").toLowerCase();
+        const xAutoreply = headers["x-autorespond"] || headers["x-autoreply"];
+        const precedence = String(headers["precedence"] || "").toLowerCase();
+        const subjectLower = String(headers["subject"] || "").toLowerCase();
+        const subjectAutoresponder = /^(re:?\s*)?(automatic reply|out of office|out-of-office|vacation|automatically generated|auto-?response|fuera de la oficina|fuera de oficina|vacaciones|respuesta autom[aá]tica)/i.test(subjectLower);
+        if (autoSubmitted && autoSubmitted !== "no" || xAutoreply || precedence === "bulk" || precedence === "auto_reply" || subjectAutoresponder) {
+          continue;
+        }
 
         const inReplyTo = String(headers["in-reply-to"] || "");
         const references = String(headers["references"] || "");

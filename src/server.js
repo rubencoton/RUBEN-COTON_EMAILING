@@ -273,19 +273,37 @@ const authRequired = (req, res, next) => {
     "/unsubscribe",
     "/manual"
   ];
-  /* Rutas publicas con prefijo (informe publico para cliente/CEO, sin PII) */
-  if (/^\/campaigns\/[^/]+\/report$/.test(req.path || "")) {
-    return next();
+  /* P0 audit 2026-05-01: rutas de informe ANTES eran públicas. Threat
+   * model detectó que con campaignId predecible (CMP-YYYYMMDD-NNNN), un
+   * externo enumeraba PII (empresa+municipio+provincia+categoría) de
+   * todos los recipients. Ahora exigimos token HMAC firmado en query
+   * `?t=<sig>` que el admin genera al compartir. Sin token → auth normal.
+   *
+   * Helper: token = HMAC(campaignId|reportTokenSecret) primeros 16 chars.
+   * Generado con `crypto.createHmac("sha256", REPORT_TOKEN_SECRET)`. */
+  const checkReportToken = (campaignId, providedToken) => {
+    if (!providedToken || typeof providedToken !== "string" || providedToken.length !== 16) return false;
+    const secret = process.env.REPORT_TOKEN_SECRET || authSecret;
+    const expected = crypto.createHmac("sha256", secret)
+      .update(`${String(campaignId).toLowerCase()}|report`)
+      .digest("hex").slice(0, 16);
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(providedToken, "hex"));
+    } catch (_e) { return false; }
+  };
+  const reportMatch = (req.path || "").match(/^\/(?:api\/)?campaigns\/([^/]+)\/report$/);
+  if (reportMatch) {
+    if (checkReportToken(reportMatch[1], req.query?.t)) {
+      return next();
+    }
+    /* Sin token → cae a auth normal (admin logueado puede ver). */
   }
-  if (/^\/api\/campaigns\/[^/]+\/report$/.test(req.path || "")) {
-    return next();
-  }
-  /* Informe ejecutivo global (histórico agregado, para directiva) */
-  if (req.path === "/campaigns/report/executive") {
-    return next();
-  }
-  if (req.path === "/api/campaigns/report/executive") {
-    return next();
+  /* Informe ejecutivo global: requerir token o auth (NO público). */
+  if (req.path === "/campaigns/report/executive" || req.path === "/api/campaigns/report/executive") {
+    if (checkReportToken("executive", req.query?.t)) {
+      return next();
+    }
+    /* Sin token → cae a auth normal. */
   }
   /* Tracking pixels y click-redirects: públicos por naturaleza (los emails
    * van a contactos externos que no tienen sesión en la app). */
@@ -1068,6 +1086,13 @@ app.post("/api/contacts/import", (req, res) => {
     const { rows, mapping } = req.body;
     if (!Array.isArray(rows) || rows.length === 0) {
       return apiError(res, 400, "No hay filas para importar");
+    }
+    /* P0 audit 2026-05-01: cap duro de filas para evitar DoS por OOM.
+     * Antes acepta 100k+ filas → mutate síncrono clona store → bloquea
+     * event loop minutos. */
+    const IMPORT_MAX_ROWS = Number(process.env.IMPORT_MAX_ROWS) || 10000;
+    if (rows.length > IMPORT_MAX_ROWS) {
+      return apiError(res, 413, `Maximo ${IMPORT_MAX_ROWS} filas por import. Recibido: ${rows.length}. Fragmenta en lotes.`);
     }
     if (!mapping || !Object.values(mapping).some(Boolean)) {
       return apiError(res, 400, "Mapping vacio — configura al menos la columna de email");
