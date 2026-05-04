@@ -1845,13 +1845,56 @@ const parseDrivePhotoUrl = (url) => {
 /* Abrir modal al pulsar el boton */
 qs("#aiBuildBtn")?.addEventListener("click", () => openAiModal());
 
-/* P0 audit 2026-05-04: integración RUBEN-COTON_HTML como Email Builder. */
-qs("#aiBuilderLocalBtn")?.addEventListener("click", () => {
-  /* Abre el server local del proyecto HTML (RUBEN-COTON_EmailBuilder.bat
-   * arrancado en el PC del usuario, escucha en 127.0.0.1:8090). Si está
-   * apagado, el browser mostrará "no se puede conectar". */
-  window.open("http://localhost:8090/", "_blank", "noopener,noreferrer");
+/* P0 audit 2026-05-04: integración RUBEN-COTON_HTML como Email Builder.
+ * Detección automática del server local antes de abrir. Si el PC tiene el
+ * server.js corriendo (puerto 8090), abre allá. Si no, muestra modal con
+ * instrucciones claras de cómo arrancarlo. */
+const detectLocalServer = async (timeoutMs = 1500) => {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const resp = await fetch("http://localhost:8090/", {
+      method: "HEAD",
+      mode: "no-cors",
+      cache: "no-store",
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    /* mode:no-cors devuelve `opaque` pero la conexión TCP/HTTP fue exitosa */
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+qs("#aiBuilderLocalBtn")?.addEventListener("click", async () => {
+  const btn = qs("#aiBuilderLocalBtn");
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Detectando local...";
+  const isUp = await detectLocalServer(1500);
+  btn.innerHTML = original;
+  btn.disabled = false;
+  if (isUp) {
+    window.open("http://localhost:8090/", "_blank", "noopener,noreferrer");
+    return;
+  }
+  const ok = await rubenCotonConfirm({
+    title: "Email Builder local NO está corriendo",
+    icon: "🖥",
+    body: `Para usar el Email Builder con Qwen 2.5 14B local necesitas:<br><br>
+      <strong>1.</strong> Doble-clic en <code>RUBEN-COTON_HTML\\Iniciar-Server.bat</code><br>
+      <strong>2.</strong> Verifica que aparece "Server escuchando en localhost:8090"<br>
+      <strong>3.</strong> Vuelve aquí y pulsa de nuevo el botón<br><br>
+      Si quieres usar la versión web (sin Ollama, limitada) pulsa "Ver web".`,
+    confirmText: "Ver web limitada",
+    cancelText: "Cancelar"
+  });
+  if (ok) {
+    window.open("/ai-builder/index.html", "_blank", "noopener,noreferrer");
+  }
 });
+
 qs("#aiBuilderWebBtn")?.addEventListener("click", () => {
   /* Versión web del proyecto HTML servida estáticamente desde
    * /ai-builder/. SIN Ollama local (mixed content), pero conserva el
