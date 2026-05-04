@@ -58,6 +58,10 @@ const kpiCampaignsEl = qs("#kpiCampaigns");
 const engineStatusEl = qs("#engineStatus");
 const engineQueueEl = qs("#engineQueue");
 const dashboardJsonEl = qs("#dashboardJson");
+/* P0 audit 2026-05-04: KPIs agregados eliminados — el dashboard ahora muestra
+ * la tabla de campañas activas con stats individuales. Mantengo los `qs`
+ * como const con null fallback para compat (si el HTML antiguo se sirve
+ * desde cache antes del deploy nuevo). */
 const dashSegments = qs("#dashSegments");
 const dashSent = qs("#dashSent");
 const dashOpenRate = qs("#dashOpenRate");
@@ -879,24 +883,10 @@ const refreshPanel = async () => {
   /* Dashboard visual */
   const dash = data.dashboard || {};
   const camps = dash.campaigns || {};
-  const tags = (dash.contacts?.tags || []).filter(t => t.startsWith("seg"));
-
-  if (dashSent) dashSent.textContent = String(camps.sent || 0).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  if (dashBounces) dashBounces.textContent = String(camps.bounced || 0);
-  if (dashOpenRate) {
-    const rate = camps.sent > 0 ? Math.round((camps.opened / camps.sent) * 100) : 0;
-    dashOpenRate.textContent = camps.sent > 0 ? rate + "%" : "--";
-  }
-  if (dashClickRate) {
-    const rate = camps.sent > 0 ? Math.round((camps.clicked / camps.sent) * 100) : 0;
-    dashClickRate.textContent = camps.sent > 0 ? rate + "%" : "--";
-  }
-  if (dashSegments && tags.length) {
-    dashSegments.innerHTML = tags.map(t => {
-      const name = t.replace("seg", "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      return `<span class="seg-chip">${name}</span>`;
-    }).join("");
-  }
+  /* P0 fix 2026-05-04 (bug usuario captura inicio): eliminados los KPIs
+   * agregados (sent total, tasa apertura, tasa clics, rebotes totales)
+   * porque el usuario los encontraba confusos. Ahora solo mostramos la
+   * tabla de campañas activas con sus stats individuales. */
 
   /* P0 fix 2026-05-04 (bug usuario): mostrar lista de campañas activas
    * con sus stats reales en el dashboard inicio. Antes mostraba historial

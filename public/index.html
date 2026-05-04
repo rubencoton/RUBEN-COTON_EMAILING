@@ -101,29 +101,10 @@
 
         <section class="tab-panel is-active" data-panel="dashboard">
           <div class="dash-grid">
-            <div class="dash-card">
-              <h3>Campañas enviadas</h3>
-              <div class="dash-big-number" id="dashSent">0</div>
-              <p class="muted">emails enviados en total</p>
-            </div>
-            <div class="dash-card">
-              <h3>Tasa de apertura</h3>
-              <div class="dash-big-number" id="dashOpenRate">--%</div>
-              <p class="muted">de los emails abiertos</p>
-            </div>
-            <div class="dash-card">
-              <h3>Tasa de clics</h3>
-              <div class="dash-big-number" id="dashClickRate">--%</div>
-              <p class="muted">de los emails con clic</p>
-            </div>
-            <div class="dash-card">
-              <h3>Rebotes</h3>
-              <div class="dash-big-number" id="dashBounces">0</div>
-              <p class="muted">emails rebotados</p>
-            </div>
-            <div class="dash-card dash-card-wide">
-              <h3>Actividad reciente</h3>
-              <div id="dashActivity" class="dash-activity">Sin actividad reciente.</div>
+            <div class="dash-card dash-card-wide" style="grid-column:1 / -1">
+              <h3>Estado de campañas activas</h3>
+              <p class="muted" style="margin-bottom:14px;font-size:13px">Tus campañas en ejecución (no eliminadas). Cada fila muestra los datos individuales de envío, aperturas, clics, rebotes y respuestas.</p>
+              <div id="dashActivity" class="dash-activity">Cargando…</div>
             </div>
           </div>
         </section>
