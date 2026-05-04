@@ -1888,8 +1888,10 @@ class DataStore {
     /* P0 perf 2026-05-04: dedupe lookup era O(N) sobre 100k events ~50ms
      * por addEvent. Construir Map index lazy (cached en `store._eventDedupeIdx`)
      * y reutilizar entre calls del mismo store ref. Bajamos a O(1).
-     * El index se invalida cuando store.events se reemplaza (purge/restore). */
-    if (!store._eventDedupeIdx || store._eventDedupeIdx._size !== store.events.length) {
+     *
+     * P0 FIX 2026-05-04: tras persist/reload, el Map se serializa como
+     * objeto vacío `{}`. Verificar `instanceof Map` antes de usarlo. */
+    if (!(store._eventDedupeIdx instanceof Map) || store._eventDedupeIdx._size !== store.events.length) {
       const idx = new Map();
       for (const e of store.events) {
         if (e && e.dedupeKey) idx.set(e.dedupeKey, e);
@@ -1922,8 +1924,9 @@ class DataStore {
     };
 
     store.events.unshift(payload);
-    /* P0 perf 2026-05-04: actualizar el index dedupe sin rebuild completo. */
-    if (store._eventDedupeIdx) {
+    /* P0 perf 2026-05-04: actualizar el index dedupe sin rebuild completo.
+     * Verificar instanceof Map (tras restore desde JSON puede ser {}). */
+    if (store._eventDedupeIdx instanceof Map) {
       store._eventDedupeIdx.set(dedupeKey, payload);
       store._eventDedupeIdx._size = store.events.length;
     }
