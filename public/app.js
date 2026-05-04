@@ -855,12 +855,14 @@ const refreshPanel = async () => {
   kpiCampaignsEl.textContent = data.dashboard?.campaigns?.total ?? "--";
 
   const mode = String(data.massMail?.mode || "smtp").toLowerCase();
+  /* P0 audit 2026-05-01: mapeo de mode incluía "gmail-api" en el ELSE → mostraba
+   * "SMTP" aunque estuviera en modo Gmail API (caso producción). Bug visual
+   * confundía al admin. Ahora se mapean los 4 modos reales. */
   const modeLabel =
-    mode === "direct"
-      ? "PROPIO"
-      : mode === "botavia"
-        ? "BOTAVIA"
-        : "SMTP";
+    mode === "direct" ? "PROPIO"
+      : mode === "botavia" ? "BOTAVIA"
+      : mode === "gmail-api" || mode === "gmail" ? "GMAIL API"
+      : "SMTP";
 
   if (data.massMail?.enabled) {
     engineStatusEl.textContent = `${data.massMail.paused ? "PAUSADO" : "ACTIVO"} (${modeLabel})`;
@@ -1842,6 +1844,20 @@ const parseDrivePhotoUrl = (url) => {
 
 /* Abrir modal al pulsar el boton */
 qs("#aiBuildBtn")?.addEventListener("click", () => openAiModal());
+
+/* P0 audit 2026-05-04: integración RUBEN-COTON_HTML como Email Builder. */
+qs("#aiBuilderLocalBtn")?.addEventListener("click", () => {
+  /* Abre el server local del proyecto HTML (RUBEN-COTON_EmailBuilder.bat
+   * arrancado en el PC del usuario, escucha en 127.0.0.1:8090). Si está
+   * apagado, el browser mostrará "no se puede conectar". */
+  window.open("http://localhost:8090/", "_blank", "noopener,noreferrer");
+});
+qs("#aiBuilderWebBtn")?.addEventListener("click", () => {
+  /* Versión web del proyecto HTML servida estáticamente desde
+   * /ai-builder/. SIN Ollama local (mixed content), pero conserva el
+   * diseño y plantillas para vista previa. */
+  window.open("/ai-builder/index.html", "_blank", "noopener,noreferrer");
+});
 
 /* Generar email desde el modal */
 qs("#aiGenerarBtn")?.addEventListener("click", async () => {

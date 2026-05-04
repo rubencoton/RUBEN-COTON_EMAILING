@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUBEN COTON — Email Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+  <style>
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --negro: #000000;
+      --blanco: #ffffff;
+      --naranja: #ff6600;
+      --naranja-hover: #e55a00;
+      --gris-fondo: #f0f0f0;
+      --gris-texto: #666666;
+      --gris-borde: #e0e0e0;
+      --gris-oscuro: #1a1a1a;
+    }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: var(--gris-fondo);
+      min-height: 100vh;
+      color: var(--negro);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--negro);
+      color: var(--blanco);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      padding: 28px 24px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+
+    .sidebar-logo h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-logo .subtitle {
+      font-size: 11px;
+      color: var(--naranja);
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 20px 0;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      color: #aaa;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      color: var(--blanco);
+      background: rgba(255,255,255,0.05);
+      border-left-color: var(--naranja);
+    }
+
+    .sidebar-nav a .icon {
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .sidebar-footer {
+      padding: 20px 24px;
+      border-top: 1px solid #333;
+      font-size: 11px;
+      color: #555;
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      margin-left: 260px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--blanco);
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--gris-borde);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .topbar .badge {
+      background: var(--naranja);
+      color: var(--blanco);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .content {
+      padding: 32px;
+      display: flex;
+      gap: 32px;
+    }
+
+    /* FORMULARIO */
+    .form-panel {
+      flex: 1;
+      max-width: 520px;
+    }
+
+    .card {
+      background: var(--blanco);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--gris-borde);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--naranja);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .step {
+      background: var(--naranja);
+      color: var(--blanco);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--negro);
+      margin-bottom: 6px;
+    }
+
+    .form-group .hint {
+      font-size: 11px;
+      color: var(--gris-texto);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--gris-borde);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s;
+      background: #fafafa;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--naranja);
+      background: var(--blanco);
+      box-shadow: 0 0 0 3px rgba(255,102,0,0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .btn-generate {
+      width: 100%;
+      padding: 14px;
+      background: var(--naranja);
+      color: var(--blanco);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-generate:hover {
+      background: var(--naranja-hover);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* PREVIEW PANEL */
+    .preview-panel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .preview-container {
+      background: var(--blanco);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--gris-borde);
+    }
+
+    .preview-toolbar {
+      background: var(--gris-oscuro);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .preview-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #444;
+    }
+
+    .preview-dots span:nth-child(1) { background: #ff5f57; }
+    .preview-dots span:nth-child(2) { background: #ffbd2e; }
+    .preview-dots span:nth-child(3) { background: #28ca42; }
+
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 6px 12px;
+      background: #333;
+      color: #ccc;
+      border: none;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: var(--naranja);
+      color: var(--blanco);
+    }
+
+    .preview-frame {
+      min-height: 600px;
+      background: #e8e8e8;
+    }
+
+    .preview-frame iframe {
+      width: 100%;
+      height: 700px;
+      border: none;
+    }
+
+    .preview-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 500px;
+      color: #999;
+    }
+
+    .preview-empty .icon-big {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .preview-empty p {
+      font-size: 14px;
+    }
+
+    /* STATUS */
+    .status-bar {
+      padding: 12px 16px;
+      background: #f9f9f9;
+      border-top: 1px solid var(--gris-borde);
+      font-size: 12px;
+      color: var(--gris-texto);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-bar .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .status-bar .status-dot.active {
+      background: #28ca42;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>RUBEN COTON</h1>
+      <div class="subtitle">Email Builder AI</div>
+    </div>
+    <div class="sidebar-nav">
+      <a href="#" class="active"><span class="icon">+</span> Nueva campaña</a>
+      <a href="#" onclick="showHistory()"><span class="icon">&#9776;</span> Campañas guardadas</a>
+      <a href="templates/base.html" target="_blank"><span class="icon">&#9998;</span> Plantilla base</a>
+    </div>
+    <div class="sidebar-footer">
+      RUBEN COTON &copy; 2026<br>
+      Email Marketing Tool v1.0
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <h2>Nueva campaña de email</h2>
+      <span class="badge">AI BUILDER</span>
+    </div>
+
+    <div class="content">
+      <!-- FORMULARIO -->
+      <div class="form-panel">
+
+        <!-- SOLO 2 PREGUNTAS — LA IA HACE EL RESTO -->
+        <div class="card">
+          <div class="card-title">
+            <span class="step">1</span>
+            ¿A quién va dirigido?
+          </div>
+          <div class="form-group">
+            <div class="hint">Perfil del destinatario. La IA adapta el tono, el saludo y el contenido.</div>
+            <input type="text" id="audiencia" placeholder="Ej: Concejales de festejos de Castilla y León" style="font-size:16px; padding:14px;">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span class="step">2</span>
+            ¿Qué quieres conseguir con este email?
+          </div>
+          <div class="form-group">
+            <div class="hint">Elige qué quieres que pase cuando lean tu correo. La IA adapta todo automáticamente: foto, vídeo, asunto, textos y diseño.</div>
+            <select id="objetivo" style="font-size:15px; padding:14px;">
+              <option value="">Elige tu objetivo…</option>
+              <optgroup label="QUIERO QUE ME CONTRATEN PARA…">
+                <option value="fiestas_patronales">Fiestas patronales (pueblo, ciudad o municipio)</option>
+                <option value="festival">Un festival de música</option>
+                <option value="boda">Una boda o fiesta privada</option>
+                <option value="corporativo">Un evento de empresa (cena, convención, gala…)</option>
+                <option value="discoteca">Ser DJ residente en una sala o discoteca</option>
+                <option value="deportivo">Un evento deportivo (club, liga, partido…)</option>
+              </optgroup>
+              <optgroup label="QUIERO QUEDAR EN PERSONA PARA…">
+                <option value="entrevista">Una reunión o entrevista presencial</option>
+                <option value="presentacion">Presentar mi propuesta cara a cara</option>
+                <option value="colaboracion">Proponer una colaboración profesional</option>
+              </optgroup>
+              <optgroup label="QUIERO SALIR EN…">
+                <option value="radio">La radio (entrevista o sesión en directo)</option>
+                <option value="prensa">Prensa escrita o un medio digital</option>
+                <option value="tv">La televisión (entrevista o actuación)</option>
+                <option value="podcast">Un podcast como invitado</option>
+                <option value="rrss_media">Redes sociales de un medio o influencer</option>
+              </optgroup>
+              <optgroup label="QUIERO INFORMAR SOBRE…">
+                <option value="presentar_marca">Quién soy y qué hago (presentación general)</option>
+                <option value="nuevo_proyecto">Un proyecto nuevo que estoy lanzando</option>
+                <option value="booking">Mis servicios de booking y management de artistas</option>
+              </optgroup>
+              <option value="otro">Otro objetivo (lo escribo yo abajo)</option>
+            </select>
+          </div>
+          <div id="objetivoDescripcion" style="display:none; margin-top:-10px; margin-bottom:14px; padding:10px 14px; background:#fff8f0; border:1px solid #ffe0c0; border-radius:8px; font-size:13px; color:#333; line-height:1.5;"></div>
+          <div class="form-group" id="objetivoPersonalizado" style="display:none;">
+            <textarea id="objetivoTexto" placeholder="Describe aquí qué quieres conseguir con este email…" style="font-size:15px;"></textarea>
+          </div>
+        </div>
+
+        <!-- PASO 3 — QUÉ VAMOS A VENDER -->
+        <div class="card">
+          <div class="card-title">
+            <span class="step">3</span>
+            ¿Qué vamos a vender?
+          </div>
+          <div class="form-group">
+            <div class="hint">Describe el producto, artista o servicio concreto. La IA lo usará como eje del email.</div>
+            <textarea id="producto" placeholder="Ej: DJ RUBEN COTON para fiestas patronales 2026, con repertorio de mashups y experiencia en plazas de más de 5.000 personas…" style="font-size:15px; min-height:90px;"></textarea>
+          </div>
+        </div>
+
+        <!-- PASO 4 — VIDEO YOUTUBE (opcional) -->
+        <div class="card">
+          <div class="card-title">
+            <span class="step">4</span>
+            Vídeo de YouTube <span style="font-size:12px; color:#888; font-weight:400;">(opcional)</span>
+          </div>
+          <div class="form-group">
+            <div class="hint">Pega el enlace de YouTube. Si lo dejas vacío, la IA elige automáticamente uno acorde al objetivo.</div>
+            <input type="text" id="videoYoutube" placeholder="https://www.youtube.com/watch?v=…" style="font-size:14px; padding:12px;">
+          </div>
+        </div>
+
+        <!-- PASO 5 — FOTO GOOGLE DRIVE (opcional) -->
+        <div class="card">
+          <div class="card-title">
+            <span class="step">5</span>
+            Foto desde Google Drive <span style="font-size:12px; color:#888; font-weight:400;">(opcional)</span>
+          </div>
+          <div class="form-group">
+            <div class="hint">Pega el enlace del archivo de Google Drive (debe estar compartido). Si vacío, la IA elige del catálogo de 543 fotos.</div>
+            <input type="text" id="fotoDrive" placeholder="https://drive.google.com/file/d/…/view" style="font-size:14px; padding:12px;">
+          </div>
+        </div>
+
+        <!-- PASO 6 — TONO DEL MENSAJE (opcional) -->
+        <div class="card">
+          <div class="card-title">
+            <span class="step">6</span>
+            Tono del mensaje <span style="font-size:12px; color:#888; font-weight:400;">(opcional)</span>
+          </div>
+          <div class="form-group">
+            <div class="hint">Cómo quieres que suene el email.</div>
+            <select id="tono" style="font-size:15px; padding:14px;">
+              <option value="profesional_cercano">Profesional cercano (por defecto)</option>
+              <option value="formal_institucional">Formal institucional (administraciones públicas)</option>
+              <option value="cercano_directo">Cercano y directo (tuteo, sin rodeos)</option>
+              <option value="vendedor_emocional">Vendedor emocional (impacto + urgencia)</option>
+              <option value="creativo_atrevido">Creativo y atrevido (llamada de atención)</option>
+              <option value="experto_autoridad">Experto con autoridad (credenciales primero)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- GENERAR -->
+        <div class="card" style="background:#000; border-color:#333;">
+          <button class="btn-generate" id="btnGenerar" onclick="generarEmail()" style="font-size:16px; padding:16px;">
+            GENERAR EMAIL CON IA
+          </button>
+          <p style="margin:10px 0 0; text-align:center; font-size:11px; color:#666;">Qwen 2.5 14B — IA local en tu RTX 4070</p>
+
+          <div id="aiStatus" style="display:none; margin-top:12px; padding:12px; background:#1a1a1a; border-radius:8px; text-align:center;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <span style="color:#ff6600; font-size:13px; font-weight:600;" id="aiStatusText">Generando con IA local...</span>
+              <span style="color:#ff6600; font-size:13px; font-weight:700;" id="aiPercent">0%</span>
+            </div>
+            <div style="height:6px; background:#333; border-radius:3px; overflow:hidden;">
+              <div id="aiProgressBar" style="height:100%; background:#ff6600; width:0%; transition:width 0.4s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="preview-panel">
+        <div class="preview-container">
+          <div class="preview-toolbar">
+            <div class="preview-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="preview-actions">
+              <button class="btn-action" id="btnToggleView" onclick="toggleVista()" style="display:none;">Ver código</button>
+              <button class="btn-action" id="btnCopiarAsunto" onclick="copiarAsunto()" style="display:none;">Copiar asunto</button>
+              <button class="btn-action" id="btnCopiarHTML" onclick="copiarHTML()" style="display:none;">Copiar HTML</button>
+              <button class="btn-action" id="btnDescargarHTML" onclick="descargarHTML()" style="display:none;">Descargar HTML</button>
+              <button class="btn-action" id="btnDescargarTXT" onclick="descargarTXT()" style="display:none;">Exportar TXT</button>
+              <button class="btn-action" id="btnRegenerar" onclick="generarEmail()" style="display:none; background:#ff6600; color:#fff;">Generar otro</button>
+            </div>
+          </div>
+
+          <div class="preview-frame" id="previewFrame">
+            <div class="preview-empty">
+              <div class="icon-big">&#9993;</div>
+              <p>Rellena el formulario y pulsa <strong>Generar</strong></p>
+            </div>
+          </div>
+
+          <!-- ASUNTO COPIABLE -->
+          <div id="asuntoBar" style="display:none; padding:12px 16px; background:#000; border-top:1px solid #333;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <span style="color:#ff6600; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Asunto del correo:</span>
+                <p id="asuntoTexto" style="margin:4px 0 0; color:#fff; font-size:14px; font-weight:600;"></p>
+              </div>
+              <button onclick="copiarAsunto()" style="background:#ff6600; color:#fff; border:none; padding:6px 14px; border-radius:4px; font-size:11px; font-weight:700; cursor:pointer;">COPIAR</button>
+            </div>
+          </div>
+
+          <!-- VALIDAR Y ENVIAR A GMAIL -->
+          <div id="validarBar" style="display:none; padding:16px; background:#0a1a0a; border-top:1px solid #1a3a1a;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="flex:1;">
+                <span style="color:#28ca42; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">¿Te gusta este email?</span>
+                <p style="margin:4px 0 0; color:#aaa; font-size:12px;">Al validar se creará un borrador en tu Gmail (manager@rubencoton.com) con el asunto y el HTML listos para enviar.</p>
+              </div>
+              <button id="btnValidar" onclick="validarEmail()" style="background:#28ca42; color:#fff; border:none; padding:10px 24px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; letter-spacing:0.5px;">VALIDAR Y ENVIAR A GMAIL</button>
+            </div>
+            <div id="validarStatus" style="display:none; margin-top:10px; padding:10px; border-radius:6px; text-align:center; font-size:13px; font-weight:600;"></div>
+          </div>
+
+          <div class="status-bar">
+            <span><span class="status-dot" id="statusDot"></span> <span id="statusText">Esperando datos…</span></span>
+            <span id="statusCount"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ============================================================
+    // RUBEN COTON EMAIL BUILDER — IA: Qwen 2.5 14B via Ollama
+    // UNA SOLA IA. Sin duplicaciones.
+    // ============================================================
+
+    var OLLAMA_URL = 'http://localhost:11434/api/generate';
+    var OLLAMA_MODEL = 'qwen2.5:14b';
+
+    // === DATOS FIJOS (no son IA, son datos indexados) ===
+
+    var VIDEOS_PLAYLIST = [
+      { id: 'gDPo7Btb4Lk', titulo: 'RUBEN COTON en festival con Churrymember', tipo: 'festival' },
+      { id: 'CuZJKWXBGxU', titulo: 'RUBEN COTON en SOTO DEL REAL 2024', tipo: 'fiestas' },
+      { id: 'xzTTo81NAXU', titulo: 'RUBEN COTON en Chinchon 2024', tipo: 'fiestas' },
+      { id: 'MBkGV4Qe8YI', titulo: 'RUBEN COTON en VILLACONEJOS', tipo: 'fiestas' },
+      { id: 'qLjqZgPsg9E', titulo: 'RUBEN COTON @ Villablino Leon 2023 1/2', tipo: 'fiestas' },
+      { id: 'lG-f1GIQh5Q', titulo: 'RUBEN COTON @ Soto del Real Madrid 2023', tipo: 'fiestas' },
+      { id: 's_E3yTFHDEs', titulo: 'RUBEN COTON @ Villablino Leon 2023 2/2', tipo: 'fiestas' },
+      { id: 'FNHUiJ3XLCQ', titulo: 'RUBEN COTON @ Palacio de Aldovea Torrejon 2023', tipo: 'bodas' },
+      { id: 'mXnddDiGzQg', titulo: 'RUBEN COTON en boda/fiesta privada', tipo: 'bodas' },
+      { id: 'ZNQydzUr3pg', titulo: 'RUBEN COTON @ Soto del Real II Madrid 2023', tipo: 'fiestas' }
+    ];
+
+    // Regex globales precompiladas (performance)
+    var RE_JSON = /\{[\s\S]*\}/;
+    var RE_CTRL = /[\x00-\x1F\x7F]/g;
+    var RE_EMOJI = /[\u{1F600}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1FFFF}]/gu;
+
+    // CATALOGO DE FOTOS — se carga desde Drive via /api/photos-catalog (543 fotos)
+    var _catalogoFotos = null; // Se carga al generar
+    var _ultimasFotosUsadas = { directo: [], estudio: [] }; // Ultimas 5 para no repetir
+
+    // Cargar catalogo de fotos desde el servidor (sync con Google Drive)
+    // Cachea en memoria: solo hace fetch la primera vez por sesion
+    async function cargarCatalogoFotos() {
+      if (_catalogoFotos && _catalogoFotos.stats) return _catalogoFotos; // cache hit
+      try {
+        var resp = await fetch('/api/photos-catalog');
+        if (!resp.ok) throw new Error('Catalog not available');
+        _catalogoFotos = await resp.json();
+        if (!_catalogoFotos || !_catalogoFotos.stats) throw new Error('Catalog invalid structure');
+        console.log('[FOTOS] Catalogo cargado: ' + _catalogoFotos.stats.total + ' fotos (' +
+          _catalogoFotos.stats.total_directo + ' directo + ' + _catalogoFotos.stats.total_estudio + ' estudio)');
+        return _catalogoFotos;
+      } catch (e) {
+        console.warn('[FOTOS] No se pudo cargar catalogo, usando fallback');
+        return null;
+      }
+    }
+
+    // FOTOS PREMIUM — 40 fotos seleccionadas personalmente por RUBEN COTON
+    var FOTOS_PREMIUM = {
+      directo: [
+        // FIESTAS PATRONALES — plazas, multitudes, guirnaldas
+        {id:'1y5ZuRqCsKcCtogVgNxTC6XW2hKELkPs4',score:10,tags:'todo,fiestas,festival',desc:'Brazo levantado multitud banderines',crop:'center 40%'},
+        {id:'1WZYTUqTHd-5ejUZb5eOXjq-7WZyFPLef',score:10,tags:'todo,fiestas,festival,club',desc:'Espaldas multitud moviles humo',crop:'center 45%'},
+        {id:'1PW1jv8TBkfauoSNcCENUApDYfDd4lOB_',score:9,tags:'festival,fiestas,medios',desc:'Escenario amplio luces blancas dramaticas',crop:'center 50%'},
+        {id:'1OdnWhgO0NOaIOge6DKIQMBVoJ24wh-_q',score:9,tags:'fiestas,festival,club',desc:'Espaldas humo setup portatil',crop:'center 45%'},
+        {id:'1PtOWtIypQYjKBcJ4dz65wMw9JK-uizAW',score:10,tags:'todo,fiestas,festival',desc:'Banderines DJ iluminado multitud',crop:'center 50%'},
+        {id:'1gGX-9DhW2Va5Kfe58WHfogh12-G755jp',score:10,tags:'todo,fiestas,festival',desc:'Espaldas plaza luces naranjas multitud',crop:'center 45%'},
+        {id:'1Jwn_cJHs_ha97uYulLStfg7NdO8zF8nC',score:10,tags:'todo,fiestas,festival',desc:'Espaldas auriculares multitud naranja',crop:'center 45%'},
+        {id:'1VQJK4DHScw3KLAfz4pI-V-5tOZDTgA-r',score:10,tags:'todo,fiestas,festival',desc:'Cenital escenario guirnaldas multitud',crop:'center 50%'},
+        {id:'1vorgkpJ8an-mdnHnSm0gLJ1s5DyEQ4Om',score:10,tags:'todo,fiestas,festival',desc:'Brazos abiertos multitud guirnaldas',crop:'center 40%'},
+        {id:'12UXk0EQoGgqdnO1FPgeYrBfEV4JBfVN8',score:9,tags:'fiestas,festival',desc:'Espaldas guirnaldas luminosas multitud',crop:'center 55%'},
+        {id:'1fIIByvQjzdd6UX-WrYNMe_4RbsLMTXwa',score:9,tags:'fiestas,festival',desc:'Espaldas guirnaldas luces naranjas',crop:'center 55%'},
+        {id:'1OAd7r2uTjRFnxi0IUVQAyeMQsNyFp1JJ',score:10,tags:'todo,fiestas,festival',desc:'Brazos abiertos horizontal iconica',crop:'center 40%'},
+        // CARA VISIBLE — retratos en acción
+        {id:'11hCPQFhosfR4yLiG9t3w3aF-q00URCVA',score:10,tags:'todo,fiestas,club,medios',desc:'Cara mano levantada tirantes humo azul',crop:'center 40%'},
+        {id:'1x3V886WuDG6umLM9QK11yyqlqVj7hMGK',score:10,tags:'todo,fiestas,festival,presentacion',desc:'Brazos abiertos cara morado',crop:'center 40%'},
+        {id:'1EBTh5cAQvDeq95G99nAELXO4GD0LGLwA',score:10,tags:'todo,fiestas,club,festival',desc:'Cara gritando tirantes humo morado',crop:'center 40%'},
+        {id:'1kIRGqJxrBExt5ncsDdeFRtH0tdZNGf6I',score:10,tags:'todo,fiestas,club,festival',desc:'Cara gritando luz azul Pioneer',crop:'center 40%'},
+        {id:'1tmdFKtHrSqnZJ0AnYjgiE0F00BrydFKp',score:10,tags:'todo,fiestas,club,bodas,presentacion',desc:'Riendo rayos azules Pioneer',crop:'center 35%'},
+        {id:'1PhqzRxTnIz3GOyrk2-xMCEM3N9jjna_D',score:10,tags:'todo,fiestas,club,medios,presentacion',desc:'Plano medio luz purpura dramatica',crop:'center 35%'},
+        {id:'1ZOAD2sATCaDey-2JsIDXt562QQG4-dhF',score:10,tags:'todo,fiestas,club,medios',desc:'Puno cerrado en alto Pioneer',crop:'center center'},
+        {id:'1-Nzlj2MTXbpHP1yrvvC8j3jd-1Mes5YU',score:9,tags:'fiestas,club,medios,presentacion',desc:'Cara concentrada luz calida',crop:'center 45%'},
+        {id:'1GE1BAFByrLJYOetEjDxPag60pS5z2RJQ',score:9,tags:'fiestas,festival,club',desc:'Cinta cabeza luz verde festival',crop:'center 40%'},
+        {id:'1Na80ZIuXUnECvPMxx4ScuZh3H1dxPsi2',score:9,tags:'fiestas,club,medios',desc:'Plano medio perfil humo azul',crop:'center 40%'},
+        {id:'1bzuy8ZaOeQZrL-df1IbF0VRs191hwVrp',score:9,tags:'fiestas,festival,club',desc:'Espaldas humo silueta mano arriba',crop:'center 45%'},
+        {id:'1K6Z3uWDE4wubB7Kaq3dI44W4XCA8KKkB',score:9,tags:'fiestas,club',desc:'Cabina pantalla LED dots',crop:'center 45%'},
+        // EDITORIAL BLANCO Y NEGRO — prensa, medios, presentación
+        {id:'16eBQmK5dlKMlssRcAV2zBkkS1_OJX34r',score:10,tags:'medios,prensa,presentacion,corporativo',desc:'BN editorial mano levantada',crop:'center 35%'},
+        {id:'1NkKy5FLXBac3AsFtEabEcOdS_whPtrh3',score:10,tags:'medios,prensa,presentacion,corporativo',desc:'BN editorial perfil concentrado',crop:'center 35%'},
+        {id:'1NqMR7DsNn8PNMU_AM_-fWVDsre6l2Dmj',score:10,tags:'medios,prensa,presentacion,corporativo',desc:'BN perfil mano gesticulando',crop:'center 35%'},
+        {id:'1e-VLgalOuOKyQUqe2P_RGpa4nyGQ3ZmV',score:10,tags:'medios,prensa,presentacion,corporativo',desc:'Lateral cabina perfil fondo azul',crop:'center center'},
+        // BODAS / EVENTOS ELEGANTES — camisa, pajarita, estética premium
+        {id:'1hqczFEIHxATjL8aa8MwnE_kRLmkbBNLQ',score:10,tags:'todo,bodas,fiestas,corporativo,presentacion',desc:'Sonrisa pajarita burdeos gesto rockstar',crop:'center 40%'},
+        {id:'1A2gvJlNSNs551K2pIX6OQejkn8Uq8fzu',score:10,tags:'bodas,corporativo,presentacion',desc:'Cabina boda camisa pajarita luz rosa',crop:'center 40%'},
+        {id:'1ual26SgrDdvbMj9YFB5sBipoae3OaZfq',score:8,tags:'bodas,club,presentacion',desc:'Cabina elegante luz rosa azul',crop:'center 30%'},
+        {id:'1bxf6oTWdt-4Spm2EpSme0cABIy1n4idY',score:9,tags:'corporativo,bodas,presentacion,medios',desc:'Camisa tirantes rojos pajarita roja',crop:'center 40%'},
+        // CLUB / DISCOTECA — After You, Palau Alameda
+        {id:'1u_slAzHPm-Ah2qAC5-JFFl2EUMbEChTc',score:9,tags:'club,discoteca',desc:'After You cabina luces abanico logo',crop:'center 45%'},
+        {id:'1bMno3ngql8nqadnE76A0JJzoEh3JadV_',score:9,tags:'club,discoteca',desc:'After You luces abanico variante',crop:'center 45%'},
+        {id:'1BlzXMq__8Sl94ltDNIBqhMnrFFEZfpSS',score:10,tags:'todo,club,discoteca,fiestas',desc:'Espaldas brazo arriba azules After You',crop:'center 45%'},
+        {id:'1MDkm92jPGcsxrhFFAgf-3BiBoV0Up4lv',score:10,tags:'todo,club,discoteca,fiestas',desc:'Brazos abiertos After You naranjas',crop:'center 45%'},
+        {id:'1PIIYd6mYEtMCuxM5W7dgLJL8bRqPWKzN',score:10,tags:'todo,club,discoteca,fiestas',desc:'Brazo arriba After You azul',crop:'center 45%'},
+        {id:'1V7XNZ2ALnMsmF71a21GxT-2tLkc3bBA6',score:10,tags:'todo,club,discoteca,fiestas',desc:'After You luces verdes brazo',crop:'center 45%'},
+        {id:'1HWEafL7nTnmvuFptLRbEidy6w0V6C3Hr',score:10,tags:'todo,club,discoteca,fiestas',desc:'Pirotecnia After You cara visible',crop:'center 45%'},
+        {id:'1x9wzpNHCZTaqzy6GxyfIZudfMI6tHNGu',score:10,tags:'todo,club,discoteca,bodas,corporativo,presentacion',desc:'After You tirantes rojos elegante',crop:'center 45%'}
+      ],
+      estudio: [
+        // SCORE 10 (3 fotos top de 128)
+        {id:'1JDWSuOLPnxyhu0Nay7bekj_0MT3pjMGo',score:10,tags:'todo,corporativo,medios',desc:'Retrato frontal impecable, serio'},
+        {id:'1JISBCkUj36woYaHGIUXGj83yB58AfHMo',score:10,tags:'todo,corporativo,bodas,medios',desc:'Traje, brazos cruzados, TOP'},
+        {id:'1JS5wcMegbt831GFCDXsGEr88gTAr7ltR',score:10,tags:'todo,bodas,corporativo',desc:'Traje perfecto, mano bolsillo'},
+        // SCORE 9 (12 mejores con cara visible)
+        {id:'1D6Ek8V_VsLkfKJDzqkOCE_g4K0KLF8_r',score:9,tags:'bodas,corporativo,presentacion',desc:'Traje elegante, pajarita burdeos'},
+        {id:'1IwXLm9gIK0aTxAspnaX5JyfwvxqLMDwO',score:9,tags:'bodas,presentacion,fiestas',desc:'Sonrisa natural, calido'},
+        {id:'1J9Gs3QF-TUSTLUXhROudr6s0FmE5wOlF',score:9,tags:'corporativo,bodas,medios',desc:'Traje brazos abiertos'},
+        {id:'1JoEwLxbPbEktG0fr-fePFgI6OmAB76os',score:9,tags:'bodas,corporativo,medios,presentacion',desc:'Camisa tirantes, premium'},
+        {id:'1J_9HrmPrA7LzjcN1VwI7VIq3d8bY7Rpi',score:9,tags:'bodas,corporativo',desc:'Ajustando pajarita, cinematico'},
+        {id:'1J9ijR72ENc6f1kc-fWmf-JKaG6NG8azr',score:9,tags:'bodas,corporativo,presentacion',desc:'Traje, manos entrelazadas'},
+        {id:'1JUuJnOUiYkB2u_NodlPJbJ6H8yJaOeIJ',score:9,tags:'bodas,fiestas,presentacion',desc:'Pulgar arriba, sonrisa calida'},
+        {id:'1JNDVCCFFwqySMsGST7lqJ5TCu-1lJcJ2',score:9,tags:'bodas,corporativo,medios',desc:'Traje, sonrisa brazos cruzados'},
+        {id:'1JRRYOBb9a0wEFX_Ah0-hkZ8SkI-3ymDt',score:9,tags:'bodas,fiestas,presentacion',desc:'Traje, pulgar lateral, natural'},
+        {id:'1JgBGr7dqd4rLjr3izazlRWzF5-UGzrJ8',score:9,tags:'corporativo,bodas,presentacion',desc:'Mano cabeza, casual-elegante'},
+        {id:'1D1qathC72zfqgkRY6mbUjJue6oveHtn8',score:9,tags:'bodas,corporativo,medios',desc:'Traje, pose lateral elegante'},
+        {id:'1EjERgzf5bS6E3OmT6nhwMuA924SU0xQq',score:9,tags:'bodas,fiestas',desc:'Traje, corbatin divertido'}
+      ]
+    };
+
+    // Mapeo de objetivos a tags de fotos (los objetivos no coinciden 1:1 con los tags)
+    var OBJETIVO_A_TAGS = {
+      'fiestas_patronales': ['fiestas','festival'], 'festival': ['festival','fiestas'],
+      'boda': ['bodas'], 'corporativo': ['corporativo','medios'],
+      'discoteca': ['club','discoteca'], 'deportivo': ['fiestas','todo'],
+      'entrevista': ['medios','corporativo'], 'presentacion': ['presentacion','corporativo'],
+      'colaboracion': ['medios','presentacion'], 'radio': ['medios'],
+      'prensa': ['medios','prensa'], 'tv': ['medios'],
+      'podcast': ['medios'], 'rrss_media': ['fiestas','club'],
+      'presentar_marca': ['presentacion','corporativo'], 'nuevo_proyecto': ['medios','presentacion'],
+      'booking': ['corporativo','medios'], 'otro': ['todo']
+    };
+
+    // Seleccionar foto: PRIMERO premium (cara visible), LUEGO catalogo
+    function elegirFotoCatalogo(tipo, objetivo, audiencia) {
+      var premium = FOTOS_PREMIUM[tipo] || [];
+
+      // PASO 1: Traducir objetivo a tags y buscar match
+      var tagsObjetivo = OBJETIVO_A_TAGS[objetivo] || ['todo'];
+      var premiumMatch = premium.filter(function(f) {
+        var fTags = f.tags.split(','); // evita false-positives con substrings
+        if (fTags.indexOf('todo') >= 0) return true;
+        return tagsObjetivo.some(function(tag) { return fTags.indexOf(tag) >= 0; });
+      });
+      if (premiumMatch.length === 0) premiumMatch = premium;
+
+      // Filtrar las ultimas 5 usadas para no repetir
+      var recientes = _ultimasFotosUsadas[tipo] || [];
+      var noRepetidas = premiumMatch.filter(function(f) { return recientes.indexOf(f.id) < 0; });
+      if (noRepetidas.length === 0) {
+        // Todas usadas, resetear historial y usar todas
+        _ultimasFotosUsadas[tipo] = [];
+        noRepetidas = premiumMatch;
+      }
+
+      // Seleccion aleatoria entre las no repetidas
+      var idx = Math.floor(Math.random() * noRepetidas.length);
+      var elegida = noRepetidas[idx];
+
+      // Guardar en historial (max 5)
+      _ultimasFotosUsadas[tipo].push(elegida.id);
+      if (_ultimasFotosUsadas[tipo].length > 5) _ultimasFotosUsadas[tipo].shift();
+
+      // Enriquecer con info del catalogo si esta disponible
+      if (_catalogoFotos) {
+        var pool = tipo === 'directo' ? _catalogoFotos.directo : _catalogoFotos.estudio;
+        var match = pool.find(function(f) { return f.id === elegida.id; });
+        if (match) {
+          elegida.name = match.name;
+          elegida.evento = match.evento;
+          elegida.lugar = match.lugar;
+        }
+      }
+
+      console.log('[FOTOS] ' + tipo + ' PREMIUM: "' + (elegida.desc || elegida.id) + '" (score ' + elegida.score + ')');
+      return elegida;
+    }
+
+    // driveToDirectUrl eliminada y FOTOS_IA legacy eliminado — todo usa elegirFotoCatalogo()
+
+    var FOTO_POR_OBJETIVO = {
+      'fiestas_patronales':'directo', 'festival':'directo', 'boda':'estudio', 'corporativo':'estudio',
+      'discoteca':'directo', 'deportivo':'directo',
+      'entrevista':'estudio', 'presentacion':'estudio', 'colaboracion':'estudio',
+      'radio':'estudio', 'prensa':'estudio', 'tv':'estudio', 'podcast':'estudio', 'rrss_media':'directo',
+      'presentar_marca':'estudio', 'nuevo_proyecto':'estudio', 'booking':'estudio',
+      'otro':'estudio'
+    };
+    var VIDEO_POR_OBJETIVO = {
+      'fiestas_patronales':'fiestas', 'festival':'festival', 'boda':'bodas', 'corporativo':'bodas',
+      'discoteca':'fiestas', 'deportivo':'festival',
+      'entrevista':'festival', 'presentacion':'festival', 'colaboracion':'festival',
+      'radio':'fiestas', 'prensa':'festival', 'tv':'festival', 'podcast':'festival', 'rrss_media':'fiestas',
+      'presentar_marca':'festival', 'nuevo_proyecto':'festival', 'booking':'bodas',
+      'otro':'festival'
+    };
+
+    // === FUNCIONES DE SELECCION (datos, no IA) ===
+
+    // Anti-repeticion de videos (ultimos 3)
+    var _ultimosVideos = [];
+
+    function elegirVideoIA(objetivo, audiencia) {
+      var tipoPref = VIDEO_POR_OBJETIVO[objetivo] || 'fiestas';
+      var candidatos = VIDEOS_PLAYLIST.filter(function(v) { return v.tipo === tipoPref; });
+      // Fallback en cascada si no hay del tipo preferido
+      if (candidatos.length === 0) candidatos = VIDEOS_PLAYLIST.filter(function(v) { return v.tipo === 'fiestas'; });
+      if (candidatos.length === 0) candidatos = VIDEOS_PLAYLIST;
+      // Filtrar los que no se han usado recientemente
+      var noRepetidos = candidatos.filter(function(v) { return _ultimosVideos.indexOf(v.id) < 0; });
+      if (noRepetidos.length > 0) candidatos = noRepetidos;
+      var aud = (audiencia || '').toLowerCase();
+      // Match geografico (priority override)
+      var geoMatch = null;
+      for (var i = 0; i < candidatos.length; i++) {
+        var t = candidatos[i].titulo.toLowerCase();
+        if (aud.includes('leon') && t.includes('villablino')) { geoMatch = candidatos[i]; break; }
+        if (aud.includes('madrid') && t.includes('soto')) { geoMatch = candidatos[i]; break; }
+        if ((aud.includes('chinchon') || aud.includes('chinch')) && t.includes('chinchon')) { geoMatch = candidatos[i]; break; }
+        if (aud.includes('toledo') && t.includes('chinchon')) { geoMatch = candidatos[i]; break; }
+        if (aud.includes('boda') && t.includes('palacio')) { geoMatch = candidatos[i]; break; }
+      }
+      var elegido;
+      if (geoMatch) {
+        elegido = geoMatch;
+      } else {
+        // Preferir recientes (2024), sino aleatorio
+        var recientes = candidatos.filter(function(v) { return v.titulo.includes('2024'); });
+        var pool = recientes.length > 0 ? recientes : candidatos;
+        elegido = pool[Math.floor(Math.random() * pool.length)];
+      }
+      // Registrar en historial (max 3)
+      _ultimosVideos.push(elegido.id);
+      if (_ultimosVideos.length > 3) _ultimosVideos.shift();
+      return elegido;
+    }
+
+
+    // === UI EVENTS ===
+
+    // Descripciones claras de cada objetivo — aparecen al seleccionar
+    var OBJETIVO_DESCRIPCIONES = {
+      'fiestas_patronales': 'La IA usará tu foto en directo con público y un vídeo de fiestas reales. El email irá enfocado a convencer a concejales, comisiones de festejos o ayuntamientos.',
+      'festival': 'Se usará tu foto en directo y un vídeo de actuación. El tono será profesional, orientado a programadores de festivales y promotores.',
+      'boda': 'Se usará tu foto de estudio (más elegante) y un vídeo de evento privado. Tono cercano y sofisticado para novios o wedding planners.',
+      'corporativo': 'Foto de estudio profesional y vídeo promocional. Tono formal para directores de eventos, RRHH o agencias de comunicación.',
+      'discoteca': 'Foto en directo pinchando y vídeo de fiesta. Orientado a dueños de salas, directores artísticos o promotores de noche.',
+      'deportivo': 'Foto de estudio y vídeo promo. Se destacará tu experiencia de 6 años como DJ oficial del Real Madrid.',
+      'entrevista': 'Foto de estudio profesional. Email breve y directo pidiendo una reunión presencial para presentar tu trabajo.',
+      'presentacion': 'Foto de estudio. El email se centra en despertar interés para que acepten una reunión donde presentas tu propuesta.',
+      'colaboracion': 'Foto de estudio. Tono de igual a igual, proponiendo una colaboración que beneficie a ambas partes.',
+      'radio': 'Foto de estudio y vídeo de actuación en directo. Orientado a directores de programa o responsables de emisoras.',
+      'prensa': 'Foto de estudio profesional y vídeo promo. Para periodistas, redactores jefe o responsables de contenido digital.',
+      'tv': 'Foto de estudio y vídeo promocional. Orientado a productores, bookers de programas o directores de contenido.',
+      'podcast': 'Foto de estudio y vídeo promo. Tono cercano para hosts de podcasts, proponiendo una conversación interesante.',
+      'rrss_media': 'Foto en directo con público y vídeo de fiesta. Para community managers, influencers o medios digitales con presencia en redes.',
+      'presentar_marca': 'Foto de estudio y vídeo promocional. Email de presentación general: quién eres, qué haces, por qué contactas.',
+      'nuevo_proyecto': 'Foto de estudio y vídeo promo. Ideal para anunciar algo nuevo: residencia, evento, sello, colaboración…',
+      'booking': 'Foto de estudio profesional. Orientado a presentar tus servicios de booking, management y representación de artistas.',
+      'otro': 'Escribe tu objetivo en el campo de abajo. La IA generará el email adaptándose a lo que describas.'
+    };
+
+    document.getElementById('objetivo').addEventListener('change', function() {
+      var val = this.value;
+      document.getElementById('objetivoPersonalizado').style.display = val === 'otro' ? 'block' : 'none';
+      var descBox = document.getElementById('objetivoDescripcion');
+      if (val && OBJETIVO_DESCRIPCIONES[val]) {
+        descBox.innerHTML = '<strong style="color:#ff6600;">Lo que hará la IA:</strong> ' + OBJETIVO_DESCRIPCIONES[val];
+        descBox.style.display = 'block';
+      } else {
+        descBox.style.display = 'none';
+      }
+    });
+
+    // === UNICA IA: QWEN 2.5 14B VIA OLLAMA ===
+
+    async function llamarOllama(prompt) {
+      var controller = new AbortController();
+      var timeout = setTimeout(function() { controller.abort(); }, 90000); // 90s timeout
+
+      try {
+        var resp = await fetch(OLLAMA_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ model: OLLAMA_MODEL, prompt: prompt, stream: false, options: { temperature: 0.85, num_predict: 600, seed: Math.floor(Math.random() * 999999) } })
+        });
+        clearTimeout(timeout);
+        if (!resp.ok) {
+          throw new Error('Ollama respondió con error HTTP ' + resp.status + ' (¿modelo qwen2.5:14b descargado?)');
+        }
+        var data = await resp.json();
+        if (!data || typeof data.response !== 'string') {
+          throw new Error('Ollama devolvió una respuesta sin texto. Verifica que el modelo está cargado.');
+        }
+        return data.response;
+      } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('Ollama tardó más de 90 segundos en responder. Reinicia Ollama y prueba de nuevo.');
+        if (err.message === 'Failed to fetch') throw new Error('No se pudo conectar con Ollama. Asegúrate de que Ollama está abierto y ejecutándose en tu ordenador.');
+        throw err;
+      }
+    }
+
+    // Sanitizar texto para evitar inyeccion HTML
+    function sanitizar(texto) {
+      if (!texto) return '';
+      return texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Parsear JSON robusto con reintento
+    async function parsearRespuestaIA(respuesta, prompt) {
+      var jsonStr = respuesta;
+      var jsonMatch = respuesta.match(RE_JSON);
+      if (jsonMatch) jsonStr = jsonMatch[0];
+
+      // Limpiar caracteres problematicos
+      jsonStr = jsonStr.replace(RE_CTRL, ' ');
+
+      try {
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        // Reintento: pedir a Qwen que corrija su propio JSON
+        console.warn('JSON invalido, reintentando...', e.message);
+        var retryPrompt = 'El siguiente texto deberia ser JSON valido pero tiene errores. Corrigelo y devuelve SOLO el JSON corregido, nada mas:\n\n' + jsonStr;
+        var retry = await llamarOllama(retryPrompt);
+        var retryMatch = retry.match(RE_JSON);
+        if (retryMatch) {
+          try {
+            return JSON.parse(retryMatch[0]);
+          } catch (e2) {
+            throw new Error('La IA no devolvió JSON válido tras 2 intentos');
+          }
+        }
+        throw new Error('La IA no devolvió JSON válido tras 2 intentos');
+      }
+    }
+
+    // === GENERACION DEL EMAIL (UNICO FLUJO) ===
+
+    // Helper para actualizar progreso con animacion fluida
+    var _progresoInterval = null;
+    function progreso(pct, texto) {
+      var bar = document.getElementById('aiProgressBar');
+      if (!bar) return;
+      bar.style.transition = 'width 0.4s ease';
+      bar.style.width = pct + '%';
+      document.getElementById('aiPercent').textContent = pct + '%';
+      document.getElementById('aiStatusText').textContent = texto;
+    }
+    // Progreso gradual automatico: sube poco a poco de start a end durante los segundos indicados
+    function progresoGradual(start, end, duracionSeg, textoBase) {
+      if (_progresoInterval) clearInterval(_progresoInterval);
+      var actual = start;
+      var paso = (end - start) / (duracionSeg * 2); // actualiza 2 veces por segundo (menos DOM abuse)
+      _progresoInterval = setInterval(function() {
+        actual = Math.min(actual + paso, end);
+        progreso(Math.round(actual), textoBase);
+        if (actual >= end) clearInterval(_progresoInterval);
+      }, 500);
+    }
+    function pararProgresoGradual() {
+      if (_progresoInterval) { clearInterval(_progresoInterval); _progresoInterval = null; }
+    }
+
+    // Cargar HTML en iframe usando Blob URL (evita ERR_BLOCKED_BY_ORB con srcdoc)
+    var _lastBlobUrl = null;
+    function cargarPreview(contenedorId, htmlContent) {
+      // Revocar blob anterior ANTES de crear nueva (evita leak)
+      if (_lastBlobUrl) { try { URL.revokeObjectURL(_lastBlobUrl); } catch(e){} _lastBlobUrl = null; }
+      var container = document.getElementById(contenedorId);
+      container.innerHTML = '<iframe id="previewIframe" style="width:100%;height:700px;border:none;"></iframe>';
+      var iframe = document.getElementById('previewIframe');
+      var blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      _lastBlobUrl = url;
+      iframe.src = url;
+    }
+
+    var _generando = false;
+    async function generarEmail() {
+      if (_generando) return; // Proteccion doble click
+      var audiencia = document.getElementById('audiencia').value.trim();
+      var objetivoVal = document.getElementById('objetivo').value;
+      // PASOS 3-6 (opcionales)
+      var producto = (document.getElementById('producto') || {}).value || '';
+      producto = producto.trim();
+      var videoYoutubeManual = (document.getElementById('videoYoutube') || {}).value || '';
+      videoYoutubeManual = videoYoutubeManual.trim();
+      var fotoDriveManual = (document.getElementById('fotoDrive') || {}).value || '';
+      fotoDriveManual = fotoDriveManual.trim();
+      var tonoVal = (document.getElementById('tono') || {}).value || 'profesional_cercano';
+
+      if (!audiencia) { alert('Indica a quién va dirigido el correo'); return; }
+      if (!objetivoVal) { alert('Selecciona un objetivo'); return; }
+      if (objetivoVal === 'otro' && !document.getElementById('objetivoTexto').value.trim()) { alert('Has elegido «Otro objetivo» pero no has escrito nada. Describe tu objetivo en el campo de texto.'); return; }
+
+      // Mostrar loading
+      _generando = true;
+      pararProgresoGradual(); // Limpiar cualquier progreso anterior
+      var btn = document.getElementById('btnGenerar');
+      btn.disabled = true;
+      document.getElementById('aiProgressBar').style.background = '#ff6600';
+      document.getElementById('aiPercent').style.color = '#ff6600';
+      document.getElementById('aiStatus').style.display = 'block';
+      // Ocultar barras de validacion anteriores
+      var vStatus = document.getElementById('validarStatus');
+      if (vStatus) vStatus.style.display = 'none';
+      var btnV = document.getElementById('btnValidar');
+      if (btnV) { btnV.disabled = false; btnV.textContent = 'VALIDAR Y ENVIAR A GMAIL'; btnV.style.background = '#28ca42'; }
+      window.emailValidado = false;
+
+      try {
+      progreso(0, 'Iniciando…');
+      await new Promise(function(r) { setTimeout(r, 200); });
+      progreso(2, 'Conectando con Google Drive…');
+
+      // CARGAR CATALOGO DE 543 FOTOS DESDE DRIVE (se refresca cada vez)
+      await cargarCatalogoFotos();
+      progreso(5, 'Catálogo cargado: ' + (_catalogoFotos ? _catalogoFotos.stats.total : 0) + ' fotos');
+      await new Promise(function(r) { setTimeout(r, 300); });
+
+      // FOTO — manual del usuario si la dio, sino seleccion inteligente
+      progreso(7, 'Seleccionando foto…');
+      var fotoDirecta;
+      if (fotoDriveManual) {
+        var driveIdMatch = fotoDriveManual.match(/[-\w]{25,}/);
+        if (driveIdMatch) {
+          fotoDirecta = 'https://lh3.googleusercontent.com/d/' + driveIdMatch[0] + '=w600';
+          progreso(10, 'Foto manual: ' + driveIdMatch[0].substring(0, 12) + '…');
+        } else {
+          alert('La URL de Google Drive no parece valida. Usa formato https://drive.google.com/file/d/ID/view');
+          _generando = false;
+          document.getElementById('btnGenerar').disabled = false;
+          document.getElementById('aiStatus').style.display = 'none';
+          return;
+        }
+      } else {
+        var tipoFoto = FOTO_POR_OBJETIVO[objetivoVal] || 'estudio';
+        var fotoObj = elegirFotoCatalogo(tipoFoto, objetivoVal, audiencia);
+        fotoDirecta = 'https://lh3.googleusercontent.com/d/' + fotoObj.id + '=w600';
+        progreso(10, 'Foto auto: ' + (fotoObj.desc || fotoObj.id).substring(0, 40));
+      }
+      await new Promise(function(r) { setTimeout(r, 300); });
+
+      // VIDEO — manual del usuario si lo dio, sino auto segun objetivo
+      var videoThumb, videoLink;
+      if (videoYoutubeManual) {
+        var ytIdMatch = videoYoutubeManual.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+        if (ytIdMatch) {
+          var ytId = ytIdMatch[1];
+          videoLink = 'https://www.youtube.com/watch?v=' + ytId;
+          videoThumb = 'https://img.youtube.com/vi/' + ytId + '/maxresdefault.jpg';
+          progreso(11, 'Video manual: ' + ytId);
+        } else {
+          alert('La URL de YouTube no parece valida.');
+          _generando = false;
+          document.getElementById('btnGenerar').disabled = false;
+          document.getElementById('aiStatus').style.display = 'none';
+          return;
+        }
+      } else {
+        var videoObj = elegirVideoIA(objetivoVal, audiencia);
+        videoThumb = 'https://img.youtube.com/vi/' + videoObj.id + '/maxresdefault.jpg';
+        videoLink = 'https://www.youtube.com/watch?v=' + videoObj.id;
+      }
+
+      // === LLAMADA A QWEN 2.5 14B ===
+      progreso(12, 'Preparando vídeo…');
+      await new Promise(function(r) { setTimeout(r, 300); });
+      progreso(15, 'Construyendo prompt…');
+
+      var OBJETIVO_TEXTOS = {
+        'fiestas_patronales': 'que me contraten como DJ para sus fiestas patronales municipales',
+        'festival': 'que me contraten como DJ para un festival de música',
+        'boda': 'que me contraten como DJ para una boda o evento privado exclusivo',
+        'corporativo': 'que me contraten como DJ para un evento corporativo o de empresa',
+        'discoteca': 'que me contraten como DJ residente en su sala o discoteca',
+        'deportivo': 'que me contraten como DJ para un evento deportivo (experiencia de 6 años como DJ oficial del Real Madrid)',
+        'entrevista': 'conseguir una entrevista o reunión presencial para presentar mi trabajo',
+        'presentacion': 'presentar mi propuesta profesional en persona',
+        'colaboracion': 'proponer una colaboración profesional entre ambas partes',
+        'radio': 'conseguir una entrevista o sesión en directo en su emisora de radio',
+        'prensa': 'conseguir cobertura o un artículo en su medio de prensa escrita o digital',
+        'tv': 'conseguir una aparición o entrevista en su programa de televisión',
+        'podcast': 'participar como invitado en su podcast',
+        'rrss_media': 'proponer una colaboración de contenido para redes sociales con su medio',
+        'presentar_marca': 'presentar quién soy, mi trayectoria y qué puedo aportar',
+        'nuevo_proyecto': 'informar sobre un nuevo proyecto profesional que estoy lanzando',
+        'booking': 'ofrecer mis servicios de booking, management y representación de artistas'
+      };
+      var objetivoTexto = OBJETIVO_TEXTOS[objetivoVal] || '';
+      if (objetivoVal === 'otro') objetivoTexto = document.getElementById('objetivoTexto').value;
+      if (!objetivoTexto) objetivoTexto = 'presentar mi propuesta profesional';
+
+      var prompt = 'ROLE: Eres un equipo de 4 expertos SENIOR trabajando juntos en este email:\n' +
+        '1. DIRECTOR COMERCIAL SENIOR — 20 anos cerrando contratos de 6 cifras. Sabes que vende y que no.\n' +
+        '2. COPYWRITER DE EMAIL MARKETING SENIOR — tus emails tienen un 40% de open rate. Dominas asuntos irresistibles.\n' +
+        '3. EXPERTO EN VENTAS CONSULTIVAS — no vendes, haces que el cliente quiera comprarte. Usas psicologia de la persuasion.\n' +
+        '4. ESTRATEGA DE MARCA PERSONAL — posicionas artistas como referentes. Sabes convertir logros en deseo.\n\n' +
+        'JUNTOS escribis UN email que genera reuniones, llamadas y contratos. Vuestra arma: la emocion, los datos concretos y la urgencia sutil. Vendeis experiencias, no servicios.\n\n' +
+        '=== QUIEN SOY ===\n' +
+        'RUBEN COTON (Madrid, 1993). No soy un DJ mas. Soy un arquitecto sonoro que transforma eventos en experiencias que la gente recuerda anos despues.\n\n' +
+        'MIS CREDENCIALES (usa las que MAS impacten a este destinatario concreto):\n' +
+        '• DJ oficial del Real Madrid durante 6 temporadas consecutivas — animando partidos de baloncesto del club mas grande del mundo\n' +
+        '• DJ residente de Palau Alameda (Valencia) — fiesta After You, cada mes lleno completo\n' +
+        '• Festival Mad Cool — miles de personas vibrando con mis sesiones\n' +
+        '• Escenario compartido con Abel Ramos, DJ Neil, Sofia Cristo, Dani BPM\n' +
+        '• Cadena Dial me reconocio publicamente por mis mashups (La Oreja de Van Gogh + Arde Bogota) — debate en tertulias de radio nacional\n' +
+        '• 43.000 seguidores en Instagram — figuras del deporte y espectaculo entre mis fans\n' +
+        '• Fiestas patronales en: Coslada, Chinchon, Soto del Real, Villablino (Leon), Colmenar de Oreja, Roa de Duero, Villaconejos, Pelahustan — en una de ellas un fan salto la seguridad y la Guardia Civil para abrazarme\n' +
+        '• Bodas de alto nivel: Palacio de Aldovea y venues premium\n' +
+        '• Formacion: Arquitecto tecnico + ADE — gestiono mi carrera con vision empresarial\n' +
+        '• Booking y management de artistas de renombre — no solo pincho, tambien represento talento\n\n' +
+        'MI ESTILO: Fusiono los clasicos que marcaron tu infancia (Cadena Dial, Los 40, Cadena 100) con los sonidos que hoy revientan en TikTok e Instagram, todo sobre una base de techno, EDM y hardstyle con melodias indie. El publico viaja en el tiempo mientras baila.\n' +
+        'EQUIPO: Pioneer XDJ-RX3, DJM-900NXS2, Ableton Live, Rekordbox. Uso IA para crear mashups en tiempo real que nadie mas puede hacer.\n' +
+        'RRSS: 43K Instagram, YouTube, TikTok, Facebook, X, SoundCloud. Web: rubencoton.com\n' +
+        'SESIONES DJ COMPLETAS EN YOUTUBE (puedes mencionarlo como recurso para que el destinatario vea mi trabajo completo): https://youtube.com/playlist?list=PLD__IvI0ALgzV7vgQNb546qEsjLzQMtz5\n\n' +
+        '=== MISION DE ESTE EMAIL ===\n' +
+        'DESTINATARIO: ' + audiencia + '\n' +
+        'OBJETIVO: ' + objetivoTexto + '\n\n' +
+        '=== TECNICAS DE COPYWRITING QUE DEBES APLICAR ===\n' +
+        '1. ASUNTO: Genera curiosidad con una pregunta o dato impactante. Que el destinatario NECESITE abrir el email. Max 70 chars, sin emojis.\n' +
+        '2. APERTURA (intro): Las primeras 2 lineas deciden si sigue leyendo o cierra. Abre con el dato MAS impresionante para ESTE destinatario. Usa **negrita** en las cifras/nombres clave.\n' +
+        '3. CUERPO: Selecciona SOLO 3-4 credenciales que sean RELEVANTES para este destinatario. Un concejal de fiestas quiere saber de multitudes. Un wedding planner quiere saber de elegancia. Un director de sala quiere saber de llenos. ADAPTA el mensaje. Usa **negrita** en datos clave. Tono: seguro, cercano, como si ya fueras alguien a quien vale la pena conocer.\n' +
+        '4. CTA: Invitacion directa a contactar por WhatsApp (+34 613 009 336), videollamada, o respondiendo este email a manager@rubencoton.com. Tono: \"hablemos\" no \"comprame\".\n\n' +
+        'RESPONDE UNICAMENTE con este JSON (sin markdown, sin texto extra, SOLO el JSON):\n' +
+        '{"asunto":"..max 70 chars..","saludo":"..personalizado al cargo..","intro":"..2 lineas impactantes con **negrita**..","cuerpo":"..4-6 lineas, 3-4 hitos adaptados a este destinatario, **negrita** en datos clave..","cta":"..1-2 lineas, tono directo, menciona WhatsApp/videollamada/email.."}\n\n' +
+        'REGLAS INQUEBRANTABLES:\n' +
+        '- ORTOGRAFIA: Escribe en espanol PERFECTO con todas las tildes (á, é, í, ó, ú), signos de apertura (¿, ¡) y puntuacion correcta. El texto final lo lee un cliente real.\n' +
+        '- Nombre: SIEMPRE RUBEN COTON (mayusculas, sin tildes, una T). NUNCA Rubén, Cotón, Cotton.\n' +
+        '- Email: SOLO manager@rubencoton.com. Telefono: SOLO +34 613 009 336.\n' +
+        '- NO inventar datos, cifras o lugares que no esten arriba.\n' +
+        '- NO usar palabras spam: gratis, oferta, urgente, descuento, promocion, dinero, garantizado.\n' +
+        '- NO exclamaciones excesivas. NO mayusculas innecesarias excepto RUBEN COTON.\n' +
+        '- Maximo 150 palabras en total entre todos los campos.\n' +
+        '- Escribe como si este email pudiera cerrar un contrato de 5.000 euros.';
+
+      progreso(18, 'Enviando a Qwen 2.5 14B…');
+      progresoGradual(18, 60, 30, 'Generando texto con IA…');
+      var respuesta = await llamarOllama(prompt);
+
+      // Parseo robusto con reintento automatico
+      pararProgresoGradual();
+      progreso(65, 'Respuesta recibida. Procesando JSON…');
+        var textos = await parsearRespuestaIA(respuesta, prompt);
+
+        // Sanitizar todos los campos contra inyeccion HTML
+        textos.asunto = sanitizar(textos.asunto || '');
+        textos.saludo = sanitizar(textos.saludo || 'Estimado/a responsable');
+        textos.intro = sanitizar(textos.intro || '');
+        textos.cuerpo = sanitizar(textos.cuerpo || '');
+        textos.cta = sanitizar(textos.cta || '');
+
+        // Validar campos vacios
+        if (!textos.asunto || textos.asunto.length < 5) textos.asunto = 'RUBEN COTON — Propuesta profesional para ' + sanitizar(audiencia);
+        if (!textos.intro || textos.intro.length < 10) textos.intro = 'Soy RUBEN COTON, DJ oficial del Real Madrid durante 6 temporadas y residente en Palau Alameda, Valencia.';
+        if (!textos.cuerpo || textos.cuerpo.length < 20) textos.cuerpo = 'He animado fiestas patronales en municipios como Soto del Real, Coslada, Chinchón y Villablino, compartiendo escenario con artistas como Abel Ramos y Sofía Cristo. Mi versatilidad musical y mis mashups virales me han convertido en una referencia del sector.';
+        if (!textos.cta || textos.cta.length < 5) textos.cta = 'Me encantaría hablar con usted sobre cómo puedo hacer de sus fiestas una experiencia inolvidable. Puede escribirme por WhatsApp, agendar una videollamada o responder directamente a este correo.';
+
+        // Truncar asunto a 70 chars max
+        if (textos.asunto.length > 70) textos.asunto = textos.asunto.substring(0, 67) + '...';
+
+        // Quitar emojis del asunto
+        textos.asunto = textos.asunto.replace(RE_EMOJI, '').trim();
+
+        // FORZAR nombre correcto: RUBEN COTON (sin tildes, mayusculas, una T)
+        var camposTexto = ['asunto', 'saludo', 'intro', 'cuerpo', 'cta'];
+        for (var c = 0; c < camposTexto.length; c++) {
+          var campo = camposTexto[c];
+          if (textos[campo]) {
+            textos[campo] = textos[campo]
+              .replace(/Rub[eé]n\s+Cott?[oó]n/gi, 'RUBEN COTON')
+              .replace(/RUBÉN\s+COTÓN/g, 'RUBEN COTON')
+              .replace(/RUBÉN\s+COTON/g, 'RUBEN COTON')
+              .replace(/RUBEN\s+COTÓN/g, 'RUBEN COTON')
+              .replace(/RUBEN\s+COTTON/g, 'RUBEN COTON');
+          }
+        }
+
+        // Convertir **negrita** a <b> en intro, cuerpo y cta
+        ['intro', 'cuerpo', 'cta'].forEach(function(campo) {
+          if (textos[campo]) {
+            textos[campo] = textos[campo].replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+          }
+        });
+
+        // Corregir emails inventados por la IA
+        for (var c = 0; c < camposTexto.length; c++) {
+          if (textos[camposTexto[c]]) {
+            textos[camposTexto[c]] = textos[camposTexto[c]]
+              .replace(/contacto@rubencoton\.com/gi, 'manager@rubencoton.com')
+              .replace(/info@rubencoton\.com/gi, 'manager@rubencoton.com')
+              .replace(/rubencoton@gmail\.com/gi, 'manager@rubencoton.com')
+              .replace(/\+34\s*600\s*123\s*456/g, '+34 613 009 336')
+              .replace(/\+34\s*600\d{6}/g, '+34 613 009 336');
+          }
+        }
+
+        // Limpiar saludo: quitar puntuacion final (el template ya pone coma)
+        textos.saludo = textos.saludo.replace(/[.,;:!?]+$/g, '').trim();
+
+        // Limpiar doble puntuacion en todos los campos
+        for (var c = 0; c < camposTexto.length; c++) {
+          if (textos[camposTexto[c]]) {
+            textos[camposTexto[c]] = textos[camposTexto[c]]
+              .replace(/\.\,/g, '.')
+              .replace(/\,\./g, '.')
+              .replace(/\.\./g, '.')
+              .replace(/\,\,/g, ',');
+          }
+        }
+
+        var asunto = textos.asunto;
+
+        progresoGradual(65, 80, 3, 'Construyendo HTML anti-spam…');
+
+      // === CONSTRUIR HTML ANTI-SPAM ===
+      var html = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">\n<head>\n';
+      html += '  <meta charset="UTF-8">\n  <meta http-equiv="X-UA-Compatible" content="IE=edge">\n';
+      html += '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
+      html += '  <meta name="x-apple-disable-message-reformatting">\n';
+      html += '  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">\n';
+      html += '  <title>' + asunto + '</title>\n';
+      html += '  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->\n';
+      html += '</head>\n';
+      html += '<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, Helvetica, sans-serif; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; width:100%;">\n\n';
+      html += '  <div style="display:none; visibility:hidden; mso-hide:all; max-height:0; overflow:hidden; font-size:1px; line-height:1px; color:#f4f4f4; font-family:Arial,Helvetica,sans-serif;">' + (textos.intro || '').substring(0, 120) + '</div>\n\n';
+      html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">\n';
+      html += '  <tr><td align="center" style="padding:20px 0;">\n';
+      html += '    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">\n\n';
+
+      // Header — logo PNG transparente (blanco sobre negro) + DJ Profesional
+      var LOGO_BLANCO_PNG = 'https://lh3.googleusercontent.com/d/1N-udXvcS3QhbIS31vF5tWqnVPFJRL7C2=w340';
+      html += '      <tr>\n        <td align="center" style="background-color:#000000; padding:8px 40px 6px;">\n';
+      html += '          <img src="' + LOGO_BLANCO_PNG + '" alt="RUBEN COTON" width="170" style="display:block; margin:0 auto; width:170px; border:0;" border="0">\n';
+      html += '          <p style="margin:2px 0 4px; color:#ff6600; font-size:15px; letter-spacing:7px; text-transform:uppercase; font-weight:800; font-family:Arial,Helvetica,sans-serif;">DJ Profesional</p>\n';
+      html += '        </td>\n      </tr>\n\n';
+
+      // Foto principal — img con crop server-side de Drive (compatible con Outlook)
+      // =w1200-h640-p-k-no-nu = crop centrado 1200x640 (2x para retina), p=padding, k=keep aspect, no=no upscale
+      if (fotoObj && fotoObj.id) {
+        var fotoCropUrl = 'https://lh3.googleusercontent.com/d/' + fotoObj.id + '=w1200-h640-p-k-no-nu';
+        html += '      <tr>\n        <td style="padding:0; line-height:0; font-size:0; background-color:#111;">\n';
+        html += '          <img src="' + fotoCropUrl + '" alt="RUBEN COTON - DJ Profesional" width="600" height="320" style="display:block; width:600px; height:320px; max-width:600px; border:0; object-fit:cover;" border="0">\n';
+        html += '        </td>\n      </tr>\n\n';
+      }
+
+      // Cuerpo (generado por Qwen 2.5 14B)
+      html += '      <tr><td style="padding:40px 44px;">\n';
+      html += '        <p style="margin:0 0 20px; color:#222; font-size:20px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">' + (textos.saludo || 'Estimado/a responsable') + ',</p>\n';
+      html += '        <p style="margin:0 0 18px; color:#444; font-size:16px; line-height:1.7; font-family:Arial,Helvetica,sans-serif;">' + (textos.intro || '') + '</p>\n';
+      html += '        <p style="margin:0 0 18px; color:#444; font-size:16px; line-height:1.7; font-family:Arial,Helvetica,sans-serif;">' + (textos.cuerpo || '') + '</p>\n';
+
+      // Video con boton Play circular centrado sobre la miniatura
+      if (videoLink) {
+        html += '\n        <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;">\n';
+        html += '          <tr>\n            <td align="center" valign="middle" height="292" style="background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.3)),url(' + videoThumb + ') center center / cover no-repeat; background-color:#000000; border-radius:8px;">\n';
+        // VML para Outlook (no soporta background-image en CSS)
+        html += '              <!--[if gte mso 9]>\n';
+        html += '              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:520px;height:292px;">\n';
+        html += '              <v:fill type="frame" src="' + videoThumb + '" />\n';
+        html += '              <v:textbox inset="0,0,0,0"><center>\n';
+        html += '              <![endif]-->\n';
+        // Play: triangulo centrado exacto (table-cell para centrado vertical + horizontal)
+        html += '              <table role="presentation" width="520" height="292" cellpadding="0" cellspacing="0" border="0"><tr>\n';
+        html += '                <td align="center" valign="middle" width="520" height="292">\n';
+        html += '                  <a href="' + videoLink + '" target="_blank" style="text-decoration:none;">\n';
+        html += '                    <span style="display:inline-block; width:0; height:0; border-style:solid; border-width:22px 0 22px 40px; border-color:transparent transparent transparent #ffffff;"></span>\n';
+        html += '                  </a>\n';
+        html += '                </td>\n';
+        html += '              </tr></table>\n';
+        // Cierre VML
+        html += '              <!--[if gte mso 9]>\n';
+        html += '              </center></v:textbox></v:rect>\n';
+        html += '              <![endif]-->\n';
+        html += '            </td>\n          </tr>\n';
+        html += '        </table>\n\n';
+      }
+
+      html += '        <p style="margin:24px 0 28px; color:#444; font-size:16px; line-height:1.7; font-family:Arial,Helvetica,sans-serif;">' + (textos.cta || '') + '</p>\n\n';
+
+      // 3 ACCIONES DE CONTACTO: WhatsApp, Videollamada, Responder correo
+      html += '\n        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 0;">\n';
+      html += '          <tr>\n            <td align="center">\n';
+      // Mensaje pre-rellenado para WhatsApp (contextual segun objetivo)
+      var waMsg = 'Hola RUBEN COTON, he recibido tu email y me gustaría hablar contigo sobre una posible colaboración.';
+      if (objetivoVal === 'boda') waMsg = 'Hola RUBEN COTON, estoy interesado en contratarte como DJ para una boda. Me gustaría saber más.';
+      else if (objetivoVal === 'fiestas_patronales') waMsg = 'Hola RUBEN COTON, te contacto desde el ayuntamiento. Nos gustaría hablar sobre nuestras fiestas patronales.';
+      else if (objetivoVal === 'corporativo') waMsg = 'Hola RUBEN COTON, me interesa contratarte como DJ para un evento corporativo.';
+      else if (objetivoVal === 'discoteca') waMsg = 'Hola RUBEN COTON, te escribo desde nuestra sala. Nos gustaría hablar sobre una posible residencia.';
+      else if (objetivoVal === 'festival') waMsg = 'Hola RUBEN COTON, te contacto como programador de festival. Me interesa tu propuesta.';
+      var waUrl = 'https://wa.me/34613009336?text=' + encodeURIComponent(waMsg);
+
+      html += '              <p style="margin:0 0 18px; color:#222; font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:2px; font-family:Arial,sans-serif;">¿Hablamos?</p>\n';
+      html += '            </td>\n          </tr>\n';
+      // WhatsApp — boton principal con VML fallback para Outlook
+      html += '          <tr>\n            <td align="center" style="padding:0 0 10px;">\n';
+      html += '              <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="' + waUrl + '" style="height:50px;v-text-anchor:middle;width:320px;" arcsize="16%" strokecolor="#25D366" fillcolor="#25D366"><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;letter-spacing:1px;">ESCRÍBEME POR WHATSAPP</center></v:roundrect><![endif]-->\n';
+      html += '              <!--[if !mso]><!-->\n';
+      html += '              <a href="' + waUrl + '" target="_blank" style="display:inline-block; padding:16px 40px; background-color:#25D366; color:#ffffff; text-decoration:none; font-size:16px; font-weight:700; letter-spacing:1px; border-radius:8px; font-family:Arial,sans-serif;">ESCRÍBEME POR WHATSAPP</a>\n';
+      html += '              <!--<![endif]-->\n';
+      html += '            </td>\n          </tr>\n';
+      // Telefono visible
+      html += '          <tr>\n            <td align="center" style="padding:4px 0 14px;">\n';
+      html += '              <p style="margin:0; color:#666; font-size:14px; font-family:Arial,sans-serif;">o llámame: <a href="tel:+34613009336" style="color:#222; font-weight:700; text-decoration:none; font-family:Arial,sans-serif;">+34 613 009 336</a></p>\n';
+      html += '            </td>\n          </tr>\n';
+      // Videollamada + Responder correo — con VML fallback
+      html += '          <tr>\n            <td align="center">\n';
+      html += '              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">\n                <tr>\n';
+      html += '                  <td align="center" style="padding:4px 6px;">\n';
+      html += '                    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://calendar.app.google/YmCv8YUWQXt7omEs6" style="height:44px;v-text-anchor:middle;width:240px;" arcsize="14%" strokecolor="#000000" fillcolor="#000000"><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;">AGENDAR VIDEOLLAMADA</center></v:roundrect><![endif]-->\n';
+      html += '                    <!--[if !mso]><!-->\n';
+      html += '                    <a href="https://calendar.app.google/YmCv8YUWQXt7omEs6" target="_blank" style="display:inline-block; padding:14px 24px; background-color:#000000; color:#ffffff; text-decoration:none; font-size:13px; font-weight:700; border-radius:6px; font-family:Arial,sans-serif; letter-spacing:0.5px;">AGENDAR VIDEOLLAMADA</a>\n';
+      html += '                    <!--<![endif]-->\n';
+      html += '                  </td>\n';
+      html += '                  <td align="center" style="padding:4px 6px;">\n';
+      html += '                    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="mailto:manager@rubencoton.com?subject=' + encodeURIComponent('Re: ' + asunto) + '" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="#ff6600" fillcolor="#ff6600"><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;">RESPONDER ESTE EMAIL</center></v:roundrect><![endif]-->\n';
+      html += '                    <!--[if !mso]><!-->\n';
+      html += '                    <a href="mailto:manager@rubencoton.com?subject=' + encodeURIComponent('Re: ' + asunto) + '" style="display:inline-block; padding:14px 24px; background-color:#ff6600; color:#ffffff; text-decoration:none; font-size:13px; font-weight:700; border-radius:6px; font-family:Arial,sans-serif; letter-spacing:0.5px;">RESPONDER ESTE EMAIL</a>\n';
+      html += '                    <!--<![endif]-->\n';
+      html += '                  </td>\n';
+      html += '                </tr>\n              </table>\n';
+      html += '            </td>\n          </tr>\n        </table>\n';
+
+      html += '      </td></tr>\n\n';
+
+      // Documentos adjuntos — Biografía y Press Kit
+      html += '      <tr><td style="background-color:#f8f8f8; padding:14px 40px; text-align:center; border-top:1px solid #eee;">\n';
+      html += '        <p style="margin:0 0 8px; color:#666; font-size:11px; text-transform:uppercase; letter-spacing:2px; font-weight:600; font-family:Arial,sans-serif;">Documentos adjuntos</p>\n';
+      html += '        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr>\n';
+      html += '          <td style="padding:3px 8px;"><a href="https://drive.google.com/file/d/1bCfaJyqbX-Ofv0ur2cla2vKVaxActu97/view" target="_blank" style="display:inline-block; padding:8px 16px; background-color:#ffffff; color:#222; text-decoration:none; font-size:12px; font-weight:600; border:1px solid #ddd; border-radius:4px; font-family:Arial,sans-serif;">📄 Biografía 2026</a></td>\n';
+      html += '          <td style="padding:3px 8px;"><a href="https://drive.google.com/file/d/1tuM7AYVZgN3vEB3X8TpwkzitoscLqtZt/view" target="_blank" style="display:inline-block; padding:8px 16px; background-color:#ffffff; color:#222; text-decoration:none; font-size:12px; font-weight:600; border:1px solid #ddd; border-radius:4px; font-family:Arial,sans-serif;">📋 Press Kit 2026</a></td>\n';
+      html += '        </tr></table>\n';
+      html += '      </td></tr>\n\n';
+
+      // Linea
+      html += '      <tr><td style="height:3px; background-color:#ff6600;"></td></tr>\n\n';
+
+      // FOOTER UNIFICADO — RRSS + logo + legal, todo en un solo bloque negro compacto
+      html += '      <tr><td style="background-color:#000000; padding:14px 30px 10px; text-align:center;">\n';
+      // RRSS — una fila compacta
+      var rrLink = 'color:#999; text-decoration:none; font-size:11px; font-family:Arial,sans-serif; padding:0 8px;';
+      html += '        <p style="margin:0 0 8px; font-size:0; line-height:0;">\n';
+      html += '          <a href="https://www.instagram.com/rubencoton/" target="_blank" style="' + rrLink + '">Instagram</a>\n';
+      html += '          <span style="color:#333; font-size:11px; font-family:Arial,sans-serif;">|</span>\n';
+      html += '          <a href="https://www.youtube.com/@rubencoton" target="_blank" style="' + rrLink + '">YouTube</a>\n';
+      html += '          <span style="color:#333; font-size:11px; font-family:Arial,sans-serif;">|</span>\n';
+      html += '          <a href="https://www.tiktok.com/@rubencoton" target="_blank" style="' + rrLink + '">TikTok</a>\n';
+      html += '          <span style="color:#333; font-size:11px; font-family:Arial,sans-serif;">|</span>\n';
+      html += '          <a href="https://www.facebook.com/rubencotonOficial/" target="_blank" style="' + rrLink + '">Facebook</a>\n';
+      html += '          <span style="color:#333; font-size:11px; font-family:Arial,sans-serif;">|</span>\n';
+      html += '          <a href="https://x.com/rubencoton" target="_blank" style="' + rrLink + '">X</a>\n';
+      html += '        </p>\n';
+      // Logo + info
+      var LOGO_FOOTER_1L = 'https://lh3.googleusercontent.com/d/1egxlQIQHqVRTNsZPsfjAtIuItfgOn9Ai=w300';
+      html += '        <img src="' + LOGO_FOOTER_1L + '" alt="RUBEN COTON" width="150" style="display:block; margin:8px auto 6px; width:150px; border:0;" border="0">\n';
+      html += '        <p style="margin:0 0 4px; color:#777; font-size:10px; font-family:Arial,Helvetica,sans-serif;">DJ Profesional | Booking &amp; Management</p>\n';
+      html += '        <p style="margin:0 0 8px; font-size:10px;"><a href="https://rubencoton.com" target="_blank" style="color:#ff6600; text-decoration:none; font-family:Arial,Helvetica,sans-serif;">rubencoton.com</a></p>\n';
+      // Legal — minimo
+      html += '        <p style="margin:0 0 3px; color:#555; font-size:9px; font-family:Arial,sans-serif;">Madrid, España · <a href="mailto:manager@rubencoton.com?subject=Baja" style="color:#666; text-decoration:underline;">Darse de baja</a></p>\n';
+      html += '        <p style="margin:0; color:#444; font-size:9px; font-family:Arial,sans-serif;">RUBEN COTON &copy; ' + new Date().getFullYear() + '</p>\n';
+      html += '      </td></tr>\n\n';
+
+      html += '    </table>\n  </td></tr>\n</table>\n</body>\n</html>';
+
+      // Guardar resultado
+      window.emailHTML = html;
+      window.emailAsunto = asunto;
+      window.emailAdjuntos = [
+        { nombre: 'RUBEN COTON - BIOGRAFIA (2026).pdf', driveId: '1bCfaJyqbX-Ofv0ur2cla2vKVaxActu97' },
+        { nombre: 'RUBEN COTON - PRESS KIT (2026).pdf', driveId: '1tuM7AYVZgN3vEB3X8TpwkzitoscLqtZt' }
+      ];
+      window.vistaActual = 'preview';
+
+      // Mostrar preview (Blob URL para que carguen imagenes externas)
+      cargarPreview('previewFrame', html);
+
+      // Mostrar asunto
+      document.getElementById('asuntoTexto').textContent = asunto;
+      document.getElementById('asuntoBar').style.display = 'block';
+
+      // Mostrar botones
+      document.getElementById('btnRegenerar').style.display = 'inline-block';
+      document.getElementById('btnToggleView').style.display = 'inline-block';
+      document.getElementById('btnCopiarAsunto').style.display = 'inline-block';
+      document.getElementById('btnCopiarHTML').style.display = 'inline-block';
+      document.getElementById('btnDescargarHTML').style.display = 'inline-block';
+      document.getElementById('btnDescargarTXT').style.display = 'inline-block';
+
+      // Mostrar barra de validacion
+      document.getElementById('validarBar').style.display = 'block';
+      document.getElementById('validarStatus').style.display = 'none';
+      document.getElementById('btnValidar').disabled = false;
+      document.getElementById('btnValidar').textContent = 'VALIDAR Y ENVIAR A GMAIL';
+      document.getElementById('btnValidar').style.background = '#28ca42';
+      window.emailValidado = false;
+
+      // Status
+      pararProgresoGradual();
+      progreso(95, 'Montando previsualización…');
+      await new Promise(function(r) { setTimeout(r, 400); });
+      progreso(100, 'Completado — Qwen 2.5 14B');
+      document.getElementById('statusDot').classList.add('active');
+      document.getElementById('statusText').textContent = 'Email generado con IA local (Qwen 2.5 14B)';
+      document.getElementById('statusCount').textContent = new Date().toLocaleTimeString();
+
+      } catch (err) {
+        console.error('[GENERAR] Error:', err);
+        pararProgresoGradual();
+        progreso(0, 'Error: ' + (err.message || 'desconocido'));
+        document.getElementById('aiProgressBar').style.background = '#ff3333';
+        document.getElementById('aiPercent').style.color = '#ff3333';
+      } finally {
+        btn.disabled = false;
+        _generando = false;
+      }
+    }
+
+    // === ACCIONES ===
+
+    // Toggle entre vista preview y codigo fuente
+    function toggleVista() {
+      if (!window.emailHTML) return;
+      var frame = document.getElementById('previewFrame');
+      var btn = document.getElementById('btnToggleView');
+
+      if (window.vistaActual === 'preview') {
+        // Mostrar codigo
+        var escaped = window.emailHTML.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        frame.innerHTML = '<pre style="margin:0; padding:20px; background:#1a1a1a; color:#e0e0e0; font-family:Consolas,monospace; font-size:12px; line-height:1.5; overflow:auto; height:700px; white-space:pre-wrap; word-wrap:break-word;">' + escaped + '</pre>';
+        btn.textContent = 'Ver previa';
+        btn.style.background = '#ff6600';
+        btn.style.color = '#fff';
+        window.vistaActual = 'codigo';
+      } else {
+        // Volver a preview (Blob URL para que carguen imagenes externas)
+        cargarPreview('previewFrame', window.emailHTML);
+        btn.textContent = 'Ver código';
+        btn.style.background = '#333';
+        btn.style.color = '#ccc';
+        window.vistaActual = 'preview';
+      }
+    }
+
+    // Copiar asunto al portapapeles
+    function copiarAsunto() {
+      if (!window.emailAsunto) { alert('Genera un email primero.'); return; }
+      navigator.clipboard.writeText(window.emailAsunto).then(function() {
+        alert('Asunto copiado: ' + window.emailAsunto);
+      });
+    }
+
+    // Copiar HTML al portapapeles
+
+    function copiarHTML() {
+      if (!window.emailHTML) { alert('Genera un email primero.'); return; }
+      navigator.clipboard.writeText(window.emailHTML).then(function() { alert('HTML copiado al portapapeles'); });
+    }
+
+    // Descargar como archivo HTML
+    function descargarArchivo(contenido, tipo, extension) {
+      var blob = new Blob([contenido], { type: tipo });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'RUBEN-COTON_email_' + new Date().toISOString().slice(0,10) + '.' + extension;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
+
+    function descargarHTML() {
+      if (!window.emailHTML) { alert('Genera un email primero.'); return; }
+      descargarArchivo(window.emailHTML, 'text/html', 'html');
+    }
+
+    function descargarTXT() {
+      if (!window.emailHTML) { alert('Genera un email primero.'); return; }
+      var contenido = '=== ASUNTO DEL CORREO ===\n' + (window.emailAsunto || '') + '\n\n=== CÓDIGO HTML ===\n' + window.emailHTML;
+      descargarArchivo(contenido, 'text/plain', 'txt');
+    }
+
+    // === VALIDAR Y ENVIAR A GMAIL ===
+
+    async function validarEmail() {
+      if (!window.emailHTML || !window.emailAsunto) { alert('Genera un email primero.'); return; }
+      if (window.emailValidado) return;
+
+      var btnV = document.getElementById('btnValidar');
+      var statusV = document.getElementById('validarStatus');
+
+      // Detectar si la app se abrio como archivo (file://) — no funcionara el fetch
+      if (location.protocol === 'file:') {
+        statusV.style.display = 'block';
+        statusV.style.background = '#3a0a0a';
+        statusV.style.color = '#ff6666';
+        statusV.style.border = '1px solid #6a1a1a';
+        statusV.innerHTML = '✗ Has abierto la app como archivo local. Debes abrirla desde <a href="http://localhost:8090" style="color:#ff6600; font-weight:700;">http://localhost:8090</a> para crear borradores en Gmail.';
+        return;
+      }
+
+      btnV.disabled = true;
+      btnV.textContent = 'CREANDO BORRADOR…';
+      btnV.style.background = '#1a6b2a';
+      statusV.style.display = 'block';
+      statusV.style.background = '#1a2a3a';
+      statusV.style.color = '#4a9eff';
+      statusV.style.border = '1px solid #2a4a6a';
+      statusV.innerHTML = 'Creando borrador en Gmail con adjuntos… Puede tardar 20-30 segundos (descarga los PDFs de Drive).';
+
+      var datos = {
+        asunto: window.emailAsunto,
+        html: window.emailHTML,
+        adjuntos: window.emailAdjuntos || []
+      };
+
+      try {
+        var gmailCtrl = new AbortController();
+        var gmailTimeout = setTimeout(function() { gmailCtrl.abort(); }, 120000); // 2 min timeout
+        var resp = await fetch('/api/create-gmail-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(datos),
+          signal: gmailCtrl.signal
+        });
+        clearTimeout(gmailTimeout);
+        if (!resp.ok) {
+          var errText = await resp.text().catch(function() { return 'HTTP ' + resp.status; });
+          throw new Error('Servidor respondió ' + resp.status + ': ' + errText.substring(0, 200));
+        }
+        var result = await resp.json();
+
+        if (result.ok) {
+          window.emailValidado = true;
+          btnV.textContent = 'BORRADOR CREADO';
+          btnV.style.background = '#28ca42';
+          statusV.style.background = '#0a2a0a';
+          statusV.style.color = '#28ca42';
+          statusV.style.border = '1px solid #1a3a1a';
+          statusV.innerHTML = '✓ Borrador creado en <strong>manager@rubencoton.com</strong> con ' + result.adjuntos + ' adjuntos.<br><a href="' + result.link + '" target="_blank" style="color:#28ca42; font-weight:700;">Abrir borrador en Gmail →</a>';
+        } else {
+          btnV.disabled = false;
+          btnV.textContent = 'REINTENTAR';
+          btnV.style.background = '#ff6600';
+          statusV.style.background = '#3a0a0a';
+          statusV.style.color = '#ff6666';
+          statusV.style.border = '1px solid #6a1a1a';
+          statusV.innerHTML = '✗ Error creando borrador: ' + (result.error || 'desconocido');
+        }
+      } catch (e) {
+        btnV.disabled = false;
+        btnV.textContent = 'REINTENTAR';
+        btnV.style.background = '#ff6600';
+        statusV.style.background = '#3a0a0a';
+        statusV.style.color = '#ff6666';
+        statusV.style.border = '1px solid #6a1a1a';
+        statusV.innerHTML = '✗ Error de conexión: ' + e.message;
+      }
+    }
+
+    function showHistory() { alert('Próximamente: historial de campañas guardadas'); }
+  </script>
+
+</body>
+</html>

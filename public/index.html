@@ -407,16 +407,30 @@
                   </div>
                 </div>
 
-                <!-- MODO 2: IA Formulario (reusa el modal aiBuildBtn) -->
+                <!-- MODO 2: IA Formulario — INTEGRADO con RUBEN-COTON_HTML (Email Builder local) -->
                 <div id="modeAiForm" class="camp-mode">
                   <div class="mode-empty">
                     <div class="mode-empty-ico">🤖</div>
-                    <h3>Generar email con IA — Formulario</h3>
-                    <p>Rellena un formulario guiado con audiencia, objetivo, oferta, vídeo y foto. La IA genera el HTML completo automáticamente usando la cascada de 9 cerebros.</p>
-                    <button type="button" id="aiBuildBtn" class="mode-cta">
-                      ⚡ Abrir formulario IA
-                    </button>
-                    <p class="mode-hint">El resultado se guardará automáticamente en este editor y podrás verlo en Vista previa.</p>
+                    <h3>Generar email con IA — Formulario (RUBEN-COTON_HTML)</h3>
+                    <p><strong>Email Builder de RUBEN COTON con Qwen 2.5 14B local + cascada IA.</strong></p>
+                    <p style="font-size:13px;color:#666;margin-top:12px">
+                      Funciona con tu PC encendido (Ollama RTX 4070).
+                      Si el PC está apagado, abre la versión web (cascada cloud 8 cerebros).
+                    </p>
+                    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+                      <button type="button" id="aiBuilderLocalBtn" class="mode-cta" style="background:#1a1a1a;color:#FF6B00">
+                        🖥 Abrir local (PC + Qwen 2.5 14B)
+                      </button>
+                      <button type="button" id="aiBuilderWebBtn" class="mode-cta">
+                        🌐 Abrir versión web
+                      </button>
+                      <button type="button" id="aiBuildBtn" class="mode-cta" style="background:#fff;color:#FF6B00;border:2px solid #FF6B00">
+                        ⚡ Formulario rápido (cascada cloud)
+                      </button>
+                    </div>
+                    <p class="mode-hint" style="margin-top:18px">
+                      Local: <code>http://localhost:8090</code> · Web estática: <a href="/ai-builder/" target="_blank" rel="noopener">/ai-builder/</a>
+                    </p>
                   </div>
                 </div>
 
