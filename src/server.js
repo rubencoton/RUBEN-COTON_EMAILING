@@ -28,6 +28,7 @@ const spamShield = require("./spamShield");
 const driveScheduler = require("./driveScheduler");
 const sheetsWriteback = require("./sheetsWriteback");
 const trackingSign = require("./trackingSign");
+const pdfGen = require("./pdfGen");
 
 /* Helper writeback: busca _sheetMeta del contacto y encola update */
 const wbForEmail = (email, status) => {
@@ -1797,16 +1798,32 @@ app.get("/api/campaigns/:id/report.pdf", async (req, res) => {
     if (!campaign) return res.status(404).send("Campaña no encontrada");
     const data = buildCampaignReportData(campaign);
     const html = reportRenderer.renderCampaignReport(data, campaign.id);
-    const pdf = await pdfGen.htmlToPdf(html, { format: "A4" });
+    /* P0 fix 2026-05-04: pdfGen ahora importado al top (era ReferenceError).
+     * Blindar: si Drive Docs falla, ofrecer fallback HTML descargable. */
+    let pdf = null;
+    try {
+      pdf = await pdfGen.htmlToPdf(html, { format: "A4" });
+    } catch (pdfErr) {
+      console.warn(`[pdf] htmlToPdf falló, fallback HTML: ${pdfErr.message}`);
+    }
     if (!pdf || pdf.length === 0) {
-      return res.status(503).send("PDF no disponible (Google Drive no configurado).");
+      /* Fallback: si Drive Docs export no funciona (OAuth caído, quota,
+       * timeout), devolver el HTML del informe directamente. El browser
+       * lo abre y el usuario puede imprimirlo a PDF (Ctrl+P). */
+      const code = buildCampaignCode(campaign, calcCampaignSeq(campaign.id));
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="INFORME_${code}.html"`);
+      return res.end(html);
     }
     const code = buildCampaignCode(campaign, calcCampaignSeq(campaign.id));
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="INFORME_${code}.pdf"`);
+    /* P0 UX fix 2026-05-04: cambiar `inline` a `attachment` para forzar
+     * descarga del PDF (era el bug reportado: "no se descarga nada"). */
+    res.setHeader("Content-Disposition", `attachment; filename="INFORME_${code}.pdf"`);
     return res.end(pdf);
   } catch (err) {
-    return res.status(500).send("Error generando PDF: " + err.message);
+    console.error("[pdf] error generando informe:", err);
+    return res.status(500).send("Error generando PDF: " + (err.message || "desconocido"));
   }
 });
 
@@ -1862,16 +1879,25 @@ app.get("/api/campaigns/report/executive.pdf", async (_req, res) => {
       tpl = tpl + inject;
     }
 
-    const pdf = await pdfGen.htmlToPdf(tpl, { format: "A4" });
-    if (!pdf || pdf.length === 0) {
-      return res.status(503).send("PDF no disponible (Google Drive no configurado).");
+    /* P0 fix 2026-05-04: blindar con fallback HTML si Drive Docs falla. */
+    let pdf = null;
+    try {
+      pdf = await pdfGen.htmlToPdf(tpl, { format: "A4" });
+    } catch (pdfErr) {
+      console.warn(`[pdf-exec] htmlToPdf falló, fallback HTML: ${pdfErr.message}`);
     }
     const today = new Date().toISOString().slice(0, 10);
+    if (!pdf || pdf.length === 0) {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="INFORME-EJECUTIVO-${today}.html"`);
+      return res.end(tpl);
+    }
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="INFORME-EJECUTIVO-${today}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="INFORME-EJECUTIVO-${today}.pdf"`);
     return res.end(pdf);
   } catch (err) {
-    return res.status(500).send("Error generando PDF ejecutivo: " + err.message);
+    console.error("[pdf-exec] error:", err);
+    return res.status(500).send("Error generando PDF ejecutivo: " + (err.message || "desconocido"));
   }
 });
 
