@@ -574,6 +574,35 @@ const ensureDataFile = () => {
   }
 };
 
+/* P0 audit 2026-05-04: helper de auditLog. Persiste mutaciones admin
+ * (createCampaign, importContacts, sendCampaign, archive, etc.) en
+ * store.auditLogs para repudio GDPR Art. 30. Bounded a 5000 entries
+ * (rolling), retención 90 días. Hash de email NO completo (privacy). */
+const AUDIT_LOG_MAX = 5000;
+const auditMaskEmail = (e) => {
+  if (!e) return null;
+  const s = String(e);
+  return s.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
+};
+const pushAuditLog = (store, entry) => {
+  if (!store) return;
+  if (!Array.isArray(store.auditLogs)) store.auditLogs = [];
+  const safe = {
+    id: createId("audit"),
+    action: String(entry.action || "unknown").slice(0, 60),
+    targetType: String(entry.targetType || "").slice(0, 40),
+    targetId: String(entry.targetId || "").slice(0, 60),
+    email: auditMaskEmail(entry.email),
+    actor: String(entry.actor || "admin").slice(0, 40),
+    meta: typeof entry.meta === "object" && entry.meta !== null ? entry.meta : {},
+    at: nowIso()
+  };
+  store.auditLogs.unshift(safe);
+  if (store.auditLogs.length > AUDIT_LOG_MAX) {
+    store.auditLogs.length = AUDIT_LOG_MAX;
+  }
+};
+
 class DataStore {
   constructor() {
     this.store = null;
@@ -1101,6 +1130,21 @@ class DataStore {
         store.imports.length = 150;
       }
 
+      /* P0 audit 2026-05-04: repudio GDPR Art. 30 — auditLog import. */
+      pushAuditLog(store, {
+        action: "contacts.import",
+        targetType: "import",
+        targetId: report.id,
+        meta: {
+          source: report.source,
+          fileName: report.fileName,
+          totalRows: report.totalRows,
+          created: report.created,
+          updated: report.updated,
+          invalid: report.invalid
+        }
+      });
+
       return clone(report);
     });
   }
@@ -1468,6 +1512,20 @@ class DataStore {
       }
 
       store.campaigns.push(campaign);
+
+      /* P0 audit 2026-05-04: auditLog createCampaign (repudio GDPR). */
+      pushAuditLog(store, {
+        action: "campaign.create",
+        targetType: "campaign",
+        targetId: campaign.id,
+        meta: {
+          name: campaign.name,
+          subject: campaign.subject,
+          segmentId: campaign.segmentId,
+          listFilter: campaign.listFilter
+        }
+      });
+
       return clone(campaign);
     });
   }
@@ -1796,7 +1854,20 @@ class DataStore {
     const occurredAt = event.occurredAt || nowIso();
 
     const dedupeKey = `${safeType}|${event.campaignId || ""}|${event.email || ""}|${event.url || ""}|${occurredAt}`;
-    const duplicated = store.events.find((entry) => entry.dedupeKey === dedupeKey);
+
+    /* P0 perf 2026-05-04: dedupe lookup era O(N) sobre 100k events ~50ms
+     * por addEvent. Construir Map index lazy (cached en `store._eventDedupeIdx`)
+     * y reutilizar entre calls del mismo store ref. Bajamos a O(1).
+     * El index se invalida cuando store.events se reemplaza (purge/restore). */
+    if (!store._eventDedupeIdx || store._eventDedupeIdx._size !== store.events.length) {
+      const idx = new Map();
+      for (const e of store.events) {
+        if (e && e.dedupeKey) idx.set(e.dedupeKey, e);
+      }
+      idx._size = store.events.length;
+      store._eventDedupeIdx = idx;
+    }
+    const duplicated = store._eventDedupeIdx.get(dedupeKey);
     if (duplicated) {
       return duplicated;
     }
@@ -1821,8 +1892,13 @@ class DataStore {
     };
 
     store.events.unshift(payload);
+    /* P0 perf 2026-05-04: actualizar el index dedupe sin rebuild completo. */
+    if (store._eventDedupeIdx) {
+      store._eventDedupeIdx.set(dedupeKey, payload);
+      store._eventDedupeIdx._size = store.events.length;
+    }
     /* Retención basada en tiempo: mínimo 7 días de historial.
-     * Solo purgamos eventos > 7 días si superamos 25000 entradas. */
+     * Solo purgamos eventos > 7 días si superamos EVENT_MAX. */
     const EVENT_MAX = Number(process.env.EVENT_MAX) || 100000; /* P0 audit 2026-05-01: 25k → 100k para 56k contactos */
     const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
     if (store.events.length > EVENT_MAX) {
@@ -1831,6 +1907,8 @@ class DataStore {
       store.events = withinRetention.length >= EVENT_MAX
         ? withinRetention.slice(0, EVENT_MAX)
         : withinRetention;
+      /* invalidar index tras purge */
+      store._eventDedupeIdx = null;
     }
 
     const contact = store.contacts.find((item) => item.email === payload.email);
