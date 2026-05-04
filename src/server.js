@@ -2207,6 +2207,24 @@ app.post("/api/reply-tracker/scan-now", async (_req, res) => {
  * indefinidamente. Si se quiere eliminar DE VERDAD, usa ?hard=true
  * (solo para admins, borra store + mantiene Drive).
  * El job activo (si está enviando) se cancela siempre. */
+/* P0 fix 2026-05-04: purga masiva de campañas archived (admin only).
+ * Para dejar el store limpio cuando hay backlog de tests/demos archived
+ * que ya no se quieren conservar. Hard delete en un solo mutate batch. */
+app.post("/api/admin/purge-archived-campaigns", (_req, res) => {
+  try {
+    let removed = 0;
+    let before = 0;
+    dataStore.mutate((store) => {
+      before = (store.campaigns || []).length;
+      store.campaigns = (store.campaigns || []).filter((c) => c.status !== "archived");
+      removed = before - store.campaigns.length;
+    });
+    return apiOk(res, { removed, before, after: before - removed });
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
 app.delete("/api/campaigns/:id", (req, res) => {
   try {
     /* P0 fix 2026-05-04 (bug reportado por usuario): "si yo la borro,
