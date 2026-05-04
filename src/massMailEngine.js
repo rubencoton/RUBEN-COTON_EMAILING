@@ -771,12 +771,18 @@ const createMassMailEngine = (config) => {
         const listIdSafe = String(job.name || "campana").toLowerCase()
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "campana";
-        perRecipientHeaders["List-Id"] = `<${listIdSafe}.rubencoton.com>`;
         perRecipientHeaders["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-        /* Feedback-ID = "campaign:sub:mailer:domain" (Google format) */
-        perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:rubencoton:rubencoton.com`;
-        perRecipientHeaders["Precedence"] = "bulk";
-        perRecipientHeaders["Auto-Submitted"] = "auto-generated";
+        /* P0 BANDEJA PRINCIPAL 2026-05-04: Gmail clasifica como Promociones
+         * cuando ve estos 4 headers (señales "newsletter masivo bulk").
+         * Si MAIL_DELIVER_TO_PRIMARY=true (default), los OMITIMOS para que
+         * vaya a bandeja principal Inbox. Mantener List-Unsubscribe RFC 8058
+         * que NO causa Promociones y demuestra cumplimiento legal. */
+        if (String(process.env.MAIL_DELIVER_TO_PRIMARY || "true").toLowerCase() === "false") {
+          perRecipientHeaders["List-Id"] = `<${listIdSafe}.rubencoton.com>`;
+          perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:rubencoton:rubencoton.com`;
+          perRecipientHeaders["Precedence"] = "bulk";
+          perRecipientHeaders["Auto-Submitted"] = "auto-generated";
+        }
         perRecipientHeaders["X-Entity-Ref-ID"] = `${job.id}-${Buffer.from(recipient.email).toString("base64url").slice(0, 12)}`;
         perRecipientHeaders["X-Mailer"] = "RUBEN-COTON_EMAILING/1.0";
         /* HEADERS ANTI-SPAM v2 (2026-04-22 · actualización experta):
