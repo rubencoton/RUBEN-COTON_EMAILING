@@ -2906,6 +2906,78 @@ app.get("/api/mass-mail/status", (_req, res) => {
   });
 });
 
+/* P0 feature 2026-05-04: pausar/reanudar/cancelar campañas individuales.
+ * El usuario pidió poder controlar campañas en cola sin parar todo el motor. */
+app.post("/api/campaigns/:id/pause", (req, res) => {
+  try {
+    const campaign = dataStore.getCampaign(req.params.id);
+    if (!campaign) return apiError(res, 404, "Campaña no encontrada");
+    if (!campaign.jobId) return apiError(res, 400, "Campaña sin job activo");
+    const r = massMailEngine.pauseJob(campaign.jobId);
+    if (!r) return apiError(res, 404, "Job no encontrado en motor");
+    dataStore.mutate((store) => {
+      const c = store.campaigns.find((x) => x.id === req.params.id);
+      if (c) {
+        c.previousStatus = c.status;
+        c.status = "paused";
+        c.pausedAt = new Date().toISOString();
+        c.updatedAt = new Date().toISOString();
+      }
+    });
+    return apiOk(res, { ...r, campaignId: req.params.id });
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
+app.post("/api/campaigns/:id/resume", (req, res) => {
+  try {
+    const campaign = dataStore.getCampaign(req.params.id);
+    if (!campaign) return apiError(res, 404, "Campaña no encontrada");
+    if (!campaign.jobId) return apiError(res, 400, "Campaña sin job activo");
+    const r = massMailEngine.resumeJob(campaign.jobId);
+    if (!r) return apiError(res, 404, "Job no encontrado en motor");
+    dataStore.mutate((store) => {
+      const c = store.campaigns.find((x) => x.id === req.params.id);
+      if (c) {
+        c.status = c.previousStatus || "sending";
+        c.pausedAt = null;
+        c.updatedAt = new Date().toISOString();
+      }
+    });
+    return apiOk(res, { ...r, campaignId: req.params.id });
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
+app.post("/api/campaigns/:id/cancel", (req, res) => {
+  try {
+    const campaign = dataStore.getCampaign(req.params.id);
+    if (!campaign) return apiError(res, 404, "Campaña no encontrada");
+    let cancelResult = null;
+    if (campaign.jobId) {
+      cancelResult = massMailEngine.cancelJob(campaign.jobId);
+    }
+    dataStore.mutate((store) => {
+      const c = store.campaigns.find((x) => x.id === req.params.id);
+      if (c) {
+        c.status = "canceled";
+        c.canceledAt = new Date().toISOString();
+        c.jobId = null;
+        c.updatedAt = new Date().toISOString();
+      }
+    });
+    return apiOk(res, {
+      campaignId: req.params.id,
+      removedFromQueue: cancelResult?.removed || 0,
+      canceled: true
+    });
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
 app.get("/api/setup/checklist", async (_req, res) => {
   try {
     const checklist = await getSetupChecklist();

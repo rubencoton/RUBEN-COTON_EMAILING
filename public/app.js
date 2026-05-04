@@ -749,6 +749,10 @@ const renderCampaigns = (campaigns) => {
       const replies = st.replied || 0;
       const bounces = st.bounced || 0;
       const canSend = c.status === "draft";
+      /* P0 feature 2026-05-04: pause/resume/cancel solo cuando aplica */
+      const canPause = c.status === "sending" || c.status === "queued";
+      const canResume = c.status === "paused";
+      const canCancel = ["sending", "queued", "paused"].includes(c.status);
       return `
       <tr>
         <td><strong>${esc(c.name)}</strong><br/><small class="muted">${esc(c.subject || "")}</small></td>
@@ -762,6 +766,9 @@ const renderCampaigns = (campaigns) => {
         <td class="td-acciones">
           <div class="campaign-actions">
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}
+            ${canPause ? `<button class="mini-btn act-btn act-pause" data-pause-campaign="${esc(c.id)}" type="button" style="background:#f59e0b;color:#fff">⏸ Pausar</button>` : ""}
+            ${canResume ? `<button class="mini-btn act-btn act-resume" data-resume-campaign="${esc(c.id)}" type="button" style="background:#10b981;color:#fff">▶ Reanudar</button>` : ""}
+            ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar envío</button>` : ""}
             <a class="mini-btn act-btn act-view" href="/campaigns/${esc(c.id)}/preview" target="_blank">👁 Ver email</a>
             <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank">📄 Informe</a>
             <a class="mini-btn act-btn act-pdf" href="/api/campaigns/${esc(c.id)}/report.pdf" target="_blank">⬇ PDF</a>
@@ -795,6 +802,52 @@ const renderCampaigns = (campaigns) => {
         await refreshCampaigns();
       } catch (e) {
         alert("Error: " + e.message);
+        button.disabled = false;
+      }
+    });
+  });
+
+  /* P0 feature 2026-05-04: pause/resume/cancel handlers */
+  qsa("[data-pause-campaign]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.pauseCampaign;
+      button.disabled = true;
+      try {
+        await api(`/api/campaigns/${id}/pause`, { method: "POST" });
+        await refreshCampaigns();
+      } catch (e) {
+        alert("Error pausando: " + e.message);
+        button.disabled = false;
+      }
+    });
+  });
+
+  qsa("[data-resume-campaign]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.resumeCampaign;
+      button.disabled = true;
+      try {
+        await api(`/api/campaigns/${id}/resume`, { method: "POST" });
+        await refreshCampaigns();
+      } catch (e) {
+        alert("Error reanudando: " + e.message);
+        button.disabled = false;
+      }
+    });
+  });
+
+  qsa("[data-cancel-campaign]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.cancelCampaign;
+      const name = button.dataset.campaignName || id;
+      if (!confirm(`¿Cancelar el envío de "${name}"?\nLos pendientes en cola se descartarán. Los ya enviados permanecen.`)) return;
+      button.disabled = true;
+      try {
+        const r = await api(`/api/campaigns/${id}/cancel`, { method: "POST" });
+        alert(`Cancelado. Eliminados de cola: ${r.removedFromQueue || 0}`);
+        await refreshCampaigns();
+      } catch (e) {
+        alert("Error cancelando: " + e.message);
         button.disabled = false;
       }
     });

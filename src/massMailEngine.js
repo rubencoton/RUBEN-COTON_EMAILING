@@ -609,6 +609,13 @@ const createMassMailEngine = (config) => {
       } catch (_e) { /* nunca fallar el send por re-check */ }
     }
 
+    /* P0 feature 2026-05-04: si la campaña/job está pausada, re-encolar
+     * al final y saltar. La cola sigue procesando OTROS jobs activos. */
+    if (pausedJobs.has(job.id)) {
+      queue.push({ jobId: job.id, recipientIndex: item.recipientIndex });
+      return;
+    }
+
     /* Per-domain throttle: si el mismo @host recibio email hace <60s,
      * volvemos a encolar al final y procesamos otro. */
     if (tooSoonForDomain(recipient.email)) {
@@ -1363,8 +1370,29 @@ const createMassMailEngine = (config) => {
     }
     job.status = "canceled";
     job.canceledAt = new Date().toISOString();
+    pausedJobs.delete(jobId);
     return { jobId, removed: before - queue.length, queueSize: queue.length };
   };
+
+  /* P0 feature 2026-05-04: pausar/reanudar UNA campaña concreta sin
+   * parar todo el motor. Útil para campañas largas de 1000+ recipients
+   * cuando hay que detenerlas a mitad sin perder los pendientes. */
+  const pausedJobs = new Set();
+  const pauseJob = (jobId) => {
+    if (!jobs.has(jobId)) return null;
+    pausedJobs.add(jobId);
+    const job = jobs.get(jobId);
+    if (job) job.status = "paused";
+    return { jobId, paused: true };
+  };
+  const resumeJob = (jobId) => {
+    if (!jobs.has(jobId)) return null;
+    pausedJobs.delete(jobId);
+    const job = jobs.get(jobId);
+    if (job && job.status === "paused") job.status = "running";
+    return { jobId, paused: false };
+  };
+  const isJobPaused = (jobId) => pausedJobs.has(jobId);
 
   const clearAllQueue = () => {
     const count = queue.length;
@@ -1397,7 +1425,10 @@ const createMassMailEngine = (config) => {
     verifyConnection,
     setPaused,
     cancelJob,
-    clearAllQueue
+    clearAllQueue,
+    pauseJob,
+    resumeJob,
+    isJobPaused
   };
 };
 
