@@ -18,6 +18,7 @@
  */
 
 const { google } = require("googleapis");
+const { getOAuthClient } = require("./googleHub");
 
 const FLUSH_INTERVAL_MS = Number(process.env.WRITEBACK_FLUSH_MS || 30000);
 const MAX_BATCH_REQUESTS = 100;
@@ -45,19 +46,10 @@ const STATUS_COLOR = {
   respondido: { bg: { red: 0.18, green: 0.49, blue: 0.20 }, fg: { red: 1, green: 1, blue: 1 } }
 };
 
-/* Auth: reusa la misma OAuth que sheetsSync. */
-let _auth = null;
-const getAuth = () => {
-  if (_auth) return _auth;
-  const id = process.env.GOOGLE_OAUTH_CLIENT_ID;
-  const secret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  const refresh = process.env.GOOGLE_OAUTH_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
-  if (!id || !secret || !refresh) return null;
-  const oauth2 = new google.auth.OAuth2(id, secret);
-  oauth2.setCredentials({ refresh_token: refresh });
-  _auth = oauth2;
-  return _auth;
-};
+/* Auth: usa el OAuth client SINGLETON de googleHub.js
+ * P0-J refactor 2026-05-04: evita 4 instancias paralelas refrescando token
+ * simultaneamente (Google revoca uno y el modulo muere hasta restart). */
+const getAuth = () => getOAuthClient();
 
 /**
  * Encola un cambio de estado para un contacto.

@@ -13,6 +13,7 @@
  */
 
 const { google } = require("googleapis");
+const { getOAuthClient } = require("./googleHub");
 
 /* ─── Config ─── */
 const CREDENTIALS_JSON = process.env.GOOGLE_SHEETS_CREDENTIALS || "";
@@ -158,9 +159,17 @@ const findHeader = (headers, candidates) => {
 const SKIP_TABS = ["ccaa"];
 
 /* ─── Auth: soporta OAuth (recomendado), API Key, o Service Account ─── */
+/* P0-J refactor 2026-05-04: el modo OAuth usa el SINGLETON de googleHub.js
+ * para evitar 4 instancias paralelas refrescando token simultaneamente
+ * (Google revoca uno y el modulo muere hasta restart). API Key y Service
+ * Account siguen creando su propio cliente porque tienen credenciales/scopes
+ * distintos al singleton. */
 const getAuth = () => {
   /* Modo 1 (RECOMENDADO): OAuth con refresh token de manager@rubencoton.com */
   if (OAUTH_CLIENT_ID && OAUTH_CLIENT_SECRET && OAUTH_REFRESH_TOKEN) {
+    const singleton = getOAuthClient();
+    if (singleton) return singleton;
+    /* Fallback defensivo: si el singleton fallo (raro), construir uno propio */
     const oauth2 = new google.auth.OAuth2(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET);
     oauth2.setCredentials({ refresh_token: OAUTH_REFRESH_TOKEN });
     return oauth2;
