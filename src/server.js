@@ -2906,6 +2906,18 @@ app.get("/api/mass-mail/status", (_req, res) => {
   });
 });
 
+/* P0 blindar 2026-05-04: endpoint dedicado para monitorizar cap diario.
+ * Devuelve estado completo: used/cap/remaining/pct/cuándo libera siguiente
+ * slot. Usado por dashboard y monitorización externa. */
+app.get("/api/mass-mail/cap-status", (_req, res) => {
+  try {
+    const status = massMailEngine.getDailyCapStatus();
+    return apiOk(res, status);
+  } catch (err) {
+    return apiError(res, 500, err.message);
+  }
+});
+
 /* P0 feature 2026-05-04: pausar/reanudar/cancelar campañas individuales.
  * El usuario pidió poder controlar campañas en cola sin parar todo el motor. */
 app.post("/api/campaigns/:id/pause", (req, res) => {

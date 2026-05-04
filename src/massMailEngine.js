@@ -417,10 +417,50 @@ const createMassMailEngine = (config) => {
   const recordSend = () => {
     sendTimestamps.push(Date.now());
     saveState();
+    /* P0 blindar 2026-05-04: alerta cuando se acerca al 90% del cap diario.
+     * Permite al admin saber que la cuota se va a agotar pronto. */
+    const used = sendTimestamps.length;
+    const cap = getEffectiveCap();
+    const pct = (used / cap) * 100;
+    if (pct >= 90 && pct < 100 && (used % 10 === 0 || used === cap - 1)) {
+      console.warn(`[massMail] CAP DIARIO al ${pct.toFixed(1)}%: ${used}/${cap}. Quedan ${cap - used} slots antes de pausar.`);
+    }
+    if (used >= cap) {
+      const msNext = msUntilNextFreeSlot();
+      const hNext = (msNext / (60 * 60 * 1000)).toFixed(1);
+      console.warn(`[massMail] CAP DIARIO ALCANZADO ${used}/${cap}. Motor PAUSA hasta liberar slot (~${hNext}h).`);
+    }
   };
 
   const isDailyCapReached = () => {
     return getDailyUsed() >= getEffectiveCap();
+  };
+
+  /* P0 blindar 2026-05-04: cap detalle para monitor externo. */
+  const getDailyCapStatus = () => {
+    const used = getDailyUsed();
+    const cap = getEffectiveCap();
+    const remaining = Math.max(0, cap - used);
+    const pct = cap > 0 ? (used / cap) * 100 : 0;
+    let msUntilNext = 0;
+    let nextSlotAt = null;
+    if (used >= cap && sendTimestamps.length > 0) {
+      const oldest = sendTimestamps[0];
+      msUntilNext = Math.max(0, oldest + 24 * 60 * 60 * 1000 - Date.now());
+      nextSlotAt = new Date(oldest + 24 * 60 * 60 * 1000).toISOString();
+    }
+    return {
+      cap,
+      used,
+      remaining,
+      pctUsed: Math.round(pct * 10) / 10,
+      capReached: used >= cap,
+      msUntilNextSlot: msUntilNext,
+      nextSlotFreeAt: nextSlotAt,
+      windowHours: 24,
+      warmupActive: warmupEnabled,
+      warmupDay: getWarmupDay()
+    };
   };
 
   /* Cuando se alcanza, calculamos cuanto tarda en liberarse 1 hueco. */
@@ -628,6 +668,17 @@ const createMassMailEngine = (config) => {
        * (No tocamos `ticker` aquí porque la closure del setTimeout aún no se
        * ha disparado; el flag se evalúa en el siguiente tick). */
       __throttleHit = true;
+      return;
+    }
+
+    /* P0 blindar 2026-05-04: DOBLE CHECK del cap diario JUSTO antes del
+     * envío real. Defensa en profundidad: aunque processNext lo verificó
+     * arriba, entre ese check y aquí pueden pasar await/yields. Si por
+     * cualquier motivo el cap se ha alcanzado, abortamos y re-encolamos.
+     * GARANTÍA: NUNCA se envía si used >= cap. */
+    if (isDailyCapReached()) {
+      queue.push({ jobId: job.id, recipientIndex: item.recipientIndex });
+      console.warn(`[massMail] cap re-check positivo justo antes del send. Abortando recipient ${recipient.email}, re-encolado.`);
       return;
     }
 
@@ -1428,7 +1479,12 @@ const createMassMailEngine = (config) => {
     clearAllQueue,
     pauseJob,
     resumeJob,
-    isJobPaused
+    isJobPaused,
+    /* Blindaje cap diario */
+    getDailyCapStatus,
+    getDailyUsed,
+    getDailyRemaining,
+    isDailyCapReached
   };
 };
 
