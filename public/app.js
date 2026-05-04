@@ -2829,19 +2829,27 @@ qs("#btn-report-monthly")?.addEventListener("click", async (e) => {
   const dot = el.querySelector(".side-agent-dot");
   const label = el.querySelector(".side-agent-label");
 
+  /* P0 fix 2026-05-04 (UX): el usuario reportó confusión con "PC: desactivado".
+   * Reescrito con texto más claro + tooltip explicando que la app FUNCIONA
+   * sin el PC (cascada cloud 8 providers). */
   async function refresh() {
     try {
       const r = await fetch("/api/local-agent/status", { credentials: "include" });
       const j = await r.json();
       if (!j || j.status !== "ok") {
         el.dataset.state = "disabled";
-        if (label) label.textContent = "PC: error";
+        if (label) label.textContent = "IA cloud activa";
+        el.title = "Aviso al consultar PC. La IA cloud (8 cerebros) funciona normal.";
         return;
       }
       if (!j.enabled) {
         el.dataset.state = "disabled";
-        if (label) label.textContent = "PC: desactivado";
-        el.title = "LOCAL_AGENT_TOKEN no configurado en VPS. AI usa solo cloud.";
+        if (label) label.textContent = "IA: cloud (PC OFF)";
+        el.title = "PC local NO conectado. La aplicación usa cascada IA cloud:\n" +
+          "SambaNova, NVIDIA, Cerebras, Mistral, OpenRouter, Groq, Gemini.\n\n" +
+          "Para activar PC + Qwen 2.5 14B local (RTX 4070):\n" +
+          "1. En tu PC: doble-clic en RUBEN-COTON_HTML\\Iniciar-Server.bat\n" +
+          "2. Espera 1 min y refresca esta página.";
         return;
       }
       if (j.online) {
@@ -2849,16 +2857,19 @@ qs("#btn-report-monthly")?.addEventListener("click", async (e) => {
         const m = j.meta || {};
         const ago = (j.secondsAgo == null) ? "?" : `${j.secondsAgo}s`;
         if (label) label.textContent = `PC: ONLINE`;
-        el.title = `Último ping hace ${ago} · ${m.hostname || "?"} · ${m.ollamaModel || ""}` +
-          (m.ollamaReady === false ? " (Ollama no listo)" : "");
+        el.title = `IA local activa (Qwen 2.5 14B en RTX 4070).\n` +
+          `Último ping hace ${ago} · ${m.hostname || "?"} · ${m.ollamaModel || ""}` +
+          (m.ollamaReady === false ? "\n⚠ Ollama no listo todavía." : "");
       } else {
         el.dataset.state = "offline";
-        if (label) label.textContent = "PC: offline";
-        el.title = "PC local apagado. La IA usa fallback cloud (Groq/Sambanova).";
+        if (label) label.textContent = "IA: cloud (PC OFF)";
+        el.title = "PC local apagado o sin red. La aplicación usa cascada IA cloud:\n" +
+          "SambaNova, NVIDIA, Cerebras, Mistral, OpenRouter, Groq, Gemini.\n\n" +
+          "Para arrancar PC: doble-clic en RUBEN-COTON_HTML\\Iniciar-Server.bat";
       }
     } catch (_e) {
       el.dataset.state = "disabled";
-      if (label) label.textContent = "PC: ?";
+      if (label) label.textContent = "IA cloud activa";
     }
   }
 
