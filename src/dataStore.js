@@ -770,7 +770,12 @@ class DataStore {
       ["unsubscribed", "bounced", "complained", "suppressed"].includes(c.status)
     ).length;
 
-    const campaignStats = store.campaigns.reduce(
+    /* P0 fix 2026-05-04 (bug reportado por usuario): el dashboard mostraba
+     * 18 campañas y 11 enviadas pero la tabla "Estado campañas" solo
+     * tenía 2 visibles. Causa: getOverview contaba TODAS las campañas
+     * (incluidas archived). Ahora filtra solo activas (no archived). */
+    const activeCampaigns = store.campaigns.filter((c) => c.status !== "archived");
+    const campaignStats = activeCampaigns.reduce(
       (acc, campaign) => {
         acc.total += 1;
         acc.sent += toNumber(campaign.stats?.sent, 0);
@@ -780,10 +785,12 @@ class DataStore {
         acc.unsubscribed += toNumber(campaign.stats?.unsubscribed, 0);
         acc.bounced += toNumber(campaign.stats?.bounced, 0);
         acc.complained += toNumber(campaign.stats?.complained, 0);
+        if (campaign.status === "sent") acc.sentCampaigns += 1;
         return acc;
       },
       {
         total: 0,
+        sentCampaigns: 0,
         sent: 0,
         delivered: 0,
         opened: 0,
@@ -793,6 +800,28 @@ class DataStore {
         complained: 0
       }
     );
+
+    /* Lista de campañas activas para mostrar en dashboard inicio
+     * (reemplaza "Sin actividad reciente" cuando hay campañas). */
+    const recentCampaigns = activeCampaigns
+      .slice()
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+      .slice(0, 8)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        subject: c.subject,
+        status: c.status,
+        stats: {
+          sent: toNumber(c.stats?.sent, 0),
+          opened: toNumber(c.stats?.openedUnique, 0),
+          clicked: toNumber(c.stats?.clickedUnique, 0),
+          bounced: toNumber(c.stats?.bounced, 0),
+          replied: toNumber(c.stats?.replied, 0),
+          totalRecipients: toNumber(c.stats?.total, 0)
+        },
+        updatedAt: c.updatedAt || c.createdAt
+      }));
 
     return {
       contacts: {
@@ -810,7 +839,8 @@ class DataStore {
         published: store.workflows.filter((wf) => wf.status === "published").length
       },
       recentImports: sortByCreatedDesc(store.imports).slice(0, 8),
-      recentEvents: sortByCreatedDesc(store.events).slice(0, 20)
+      recentEvents: sortByCreatedDesc(store.events).slice(0, 20),
+      recentCampaigns
     };
   }
 

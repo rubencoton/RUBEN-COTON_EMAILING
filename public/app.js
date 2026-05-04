@@ -898,17 +898,57 @@ const refreshPanel = async () => {
     }).join("");
   }
 
-  /* Actividad reciente */
-  const history = data.massMail?.history || [];
-  if (dashActivity && history.length) {
-    dashActivity.innerHTML = history.slice(0, 8).map(h => {
-      const time = new Date(h.at).toLocaleString("es-ES", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" });
-      const color = h.type === "sent" ? "green" : h.type === "queued_job" ? "yellow" : "red";
-      const label = h.type === "sent" ? `Enviado a ${h.email || ""}` : h.type === "queued_job" ? `Campaña en cola (${h.totalRecipients || 0} dest.)` : h.type;
-      return `<div class="dash-activity-item"><span class="dash-activity-dot ${color}"></span><span>${label}</span><span class="muted" style="margin-left:auto;font-size:11px">${time}</span></div>`;
-    }).join("");
+  /* P0 fix 2026-05-04 (bug usuario): mostrar lista de campañas activas
+   * con sus stats reales en el dashboard inicio. Antes mostraba historial
+   * de eventos del motor (poco útil) o "Sin actividad reciente" cuando
+   * había campañas válidas. */
+  const recentCamps = dash.recentCampaigns || [];
+  if (dashActivity && recentCamps.length) {
+    const statusLabel = (s) => ({
+      draft: "Borrador", queued: "En cola", sending: "Enviando",
+      sent: "Enviada", paused: "Pausada", failed: "Error",
+      scheduled: "Programada", completed: "Completada"
+    })[s] || s;
+    const statusColor = (s) => ({
+      sent: "#10b981", sending: "#FF6B00", queued: "#FF6B00",
+      draft: "#94a3b8", failed: "#ef4444", paused: "#f59e0b",
+      scheduled: "#3b82f6"
+    })[s] || "#94a3b8";
+    dashActivity.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="text-align:left;color:#64748b;border-bottom:1px solid #e2e8f0">
+            <th style="padding:8px 6px">Campaña</th>
+            <th style="padding:8px 6px">Estado</th>
+            <th style="padding:8px 6px;text-align:right">Enviados</th>
+            <th style="padding:8px 6px;text-align:right">Aperturas</th>
+            <th style="padding:8px 6px;text-align:right">Clics</th>
+            <th style="padding:8px 6px;text-align:right">Rebotes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recentCamps.map(c => `
+            <tr style="border-bottom:1px solid #f1f5f9">
+              <td style="padding:10px 6px">
+                <strong>${esc(c.name || "(sin nombre)")}</strong>
+                ${c.subject ? `<div class="muted" style="font-size:11px">${esc(c.subject).slice(0,60)}</div>` : ""}
+              </td>
+              <td style="padding:10px 6px">
+                <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase">
+                  ${statusLabel(c.status)}
+                </span>
+              </td>
+              <td style="padding:10px 6px;text-align:right">${c.stats?.sent || 0}</td>
+              <td style="padding:10px 6px;text-align:right">${c.stats?.opened || 0}</td>
+              <td style="padding:10px 6px;text-align:right">${c.stats?.clicked || 0}</td>
+              <td style="padding:10px 6px;text-align:right">${c.stats?.bounced || 0}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
   } else if (dashActivity) {
-    dashActivity.innerHTML = '<p class="muted">Sin actividad reciente. Crea tu primera campaña para ver resultados aquí.</p>';
+    dashActivity.innerHTML = '<p class="muted">Sin campañas activas. Pulsa "Crear campaña" en el menú lateral para empezar.</p>';
   }
 };
 

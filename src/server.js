@@ -2209,7 +2209,11 @@ app.post("/api/reply-tracker/scan-now", async (_req, res) => {
  * El job activo (si está enviando) se cancela siempre. */
 app.delete("/api/campaigns/:id", (req, res) => {
   try {
-    const hardDelete = String(req.query.hard || "").toLowerCase() === "true";
+    /* P0 fix 2026-05-04 (bug reportado por usuario): "si yo la borro,
+     * pues ya está eliminada". Cambio default de soft a HARD delete.
+     * Para conservar (soft archive) hay que pasar ?soft=true explícitamente. */
+    const softDelete = String(req.query.soft || "").toLowerCase() === "true";
+    const hardDelete = !softDelete;
     let campaignName = "";
     let jobIdToCancel = null;
     let changed = false;
