@@ -868,6 +868,10 @@ const renderCampaigns = (campaigns) => {
     }
     return { pct: pct.toFixed(1), label, cls };
   };
+  /* PETICION USUARIO 2026-05-05: porcentaje GRANDE como dato principal,
+   * número pequeño arriba, etiqueta abajo. Alturas fijas en cada bloque
+   * para que entre filas todos los números, porcentajes y etiquetas
+   * queden a la misma altura horizontal (alineación columnar perfecta). */
   const cellMetric = (n, kind, value, base) => {
     const e = evalMetric(kind, value, base);
     const colors = {
@@ -875,10 +879,10 @@ const renderCampaigns = (campaigns) => {
       warn: "background:#fef3c7;color:#92400e",
       bad: "background:#fee2e2;color:#991b1b"
     };
-    return `<div style="text-align:center;line-height:1.2">
-      <div style="font-size:18px;font-weight:900;color:#111">${n.toLocaleString("es-ES")}</div>
-      <div style="font-size:11px;color:#666;font-weight:600;margin-top:2px">${e.pct}%</div>
-      <div style="display:inline-block;font-size:8.5pt;font-weight:800;letter-spacing:0.4px;padding:2px 8px;border-radius:10px;margin-top:4px;${colors[e.cls]}">${e.label}</div>
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;line-height:1.1;gap:4px">
+      <div style="height:16px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#64748b">${n.toLocaleString("es-ES")}</div>
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${e.pct}%</div>
+      <div style="height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:8.5pt;font-weight:800;letter-spacing:0.4px;padding:0 8px;border-radius:10px;${colors[e.cls]}">${e.label}</div>
     </div>`;
   };
 
@@ -897,21 +901,21 @@ const renderCampaigns = (campaigns) => {
       const canCancel = ["sending", "queued", "paused"].includes(c.status);
       return `
       <tr>
-        <td><strong>${esc(c.name)}</strong><br/><small class="muted">${esc(c.subject || "")}</small></td>
-        <td>${statusBadge(c.status, c.queuePosition)}</td>
-        <td style="text-align:center;font-size:14px;font-weight:700">${total.toLocaleString("es-ES")}</td>
-        <td>${cellMetric(sent, "sent", sent, total)}</td>
-        <td>${cellMetric(opens, "open", opens, sent)}</td>
-        <td>${cellMetric(clicks, "click", clicks, sent)}</td>
-        <td>${cellMetric(clicks, "ctor", clicks, opens)}</td>
-        <td>${cellMetric(replies, "reply", replies, sent)}</td>
-        <td>${cellMetric(bounces, "bounce", bounces, sent)}</td>
+        <td style="vertical-align:middle"><strong>${esc(c.name)}</strong><br/><small class="muted">${esc(c.subject || "")}</small></td>
+        <td style="text-align:center;vertical-align:middle">${statusBadge(c.status, c.queuePosition)}</td>
+        <td style="text-align:center;vertical-align:middle;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${total.toLocaleString("es-ES")}</td>
+        <td style="vertical-align:middle">${cellMetric(sent, "sent", sent, total)}</td>
+        <td style="vertical-align:middle">${cellMetric(opens, "open", opens, sent)}</td>
+        <td style="vertical-align:middle">${cellMetric(clicks, "click", clicks, sent)}</td>
+        <td style="vertical-align:middle">${cellMetric(clicks, "ctor", clicks, opens)}</td>
+        <td style="vertical-align:middle">${cellMetric(replies, "reply", replies, sent)}</td>
+        <td style="vertical-align:middle">${cellMetric(bounces, "bounce", bounces, sent)}</td>
         <td class="td-acciones">
           <div class="campaign-actions">
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}
             ${canPause ? `<button class="mini-btn act-btn act-pause" data-pause-campaign="${esc(c.id)}" type="button" style="background:#f59e0b;color:#fff">⏸ Pausar</button>` : ""}
             ${canResume ? `<button class="mini-btn act-btn act-resume" data-resume-campaign="${esc(c.id)}" type="button" style="background:#10b981;color:#fff">▶ Reanudar</button>` : ""}
-            ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar envío</button>` : ""}
+            ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar</button>` : ""}
             <a class="mini-btn act-btn act-view" href="/campaigns/${esc(c.id)}/preview" target="_blank">👁 Ver email</a>
             <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank">📄 Informe</a>
             <a class="mini-btn act-btn act-pdf" href="/api/campaigns/${esc(c.id)}/report.pdf" target="_blank">⬇ PDF</a>
@@ -1107,10 +1111,16 @@ const refreshPanel = async () => {
    * porque el usuario los encontraba confusos. Ahora solo mostramos la
    * tabla de campañas activas con sus stats individuales. */
 
-  /* P0 fix 2026-05-04 (bug usuario): mostrar lista de campañas activas
-   * con sus stats reales en el dashboard inicio. Antes mostraba historial
-   * de eventos del motor (poco útil) o "Sin actividad reciente" cuando
-   * había campañas válidas. */
+  /* PETICION USUARIO 2026-05-05: el dashboard de Inicio debe mostrar:
+   *   1) Resumen agregado de campañas EN PROCESO (no eliminadas) con datos
+   *      medios y etiqueta global de evaluación (EXCELENTE / BUENO / ...).
+   *   2) Tabla individual con porcentajes y etiqueta por métrica.
+   *
+   * "EN PROCESO" = campañas que aparecen en `recentCampaigns` (el endpoint
+   * `getOverview()` ya filtra archived/eliminadas).
+   *
+   * Benchmarks alineados con `renderCampaigns.evalMetric` para coherencia
+   * entre Inicio y la pestaña Estado campañas. */
   const recentCamps = dash.recentCampaigns || [];
   if (dashActivity && recentCamps.length) {
     const statusLabel = (s) => ({
@@ -1123,39 +1133,158 @@ const refreshPanel = async () => {
       draft: "#94a3b8", failed: "#ef4444", paused: "#f59e0b",
       scheduled: "#3b82f6"
     })[s] || "#94a3b8";
-    dashActivity.innerHTML = `
+
+    /* Evalúa una métrica → { label, cls } con cls ∈ {ok, warn, bad}.
+     * Mismos benchmarks que renderCampaigns. */
+    const evalRate = (kind, pct) => {
+      if (kind === "sent") {
+        if (pct >= 75) return { label: "CASI HECHO", cls: "ok" };
+        if (pct >= 50) return { label: "AVANZANDO", cls: "ok" };
+        if (pct >= 25) return { label: "EN MARCHA", cls: "warn" };
+        return { label: "INICIANDO", cls: "warn" };
+      }
+      if (kind === "open") {
+        if (pct >= 20) return { label: "EXCELENTE", cls: "ok" };
+        if (pct >= 15) return { label: "BUENO", cls: "ok" };
+        if (pct >= 10) return { label: "NORMAL", cls: "warn" };
+        return { label: "POR MEJORAR", cls: "bad" };
+      }
+      if (kind === "click") {
+        if (pct >= 5) return { label: "EXCELENTE", cls: "ok" };
+        if (pct >= 3) return { label: "BUENO", cls: "ok" };
+        if (pct >= 2) return { label: "NORMAL", cls: "warn" };
+        return { label: "POR MEJORAR", cls: "bad" };
+      }
+      if (kind === "reply") {
+        if (pct >= 2) return { label: "EXCELENTE", cls: "ok" };
+        if (pct >= 1) return { label: "BUENO", cls: "ok" };
+        if (pct >= 0.5) return { label: "NORMAL", cls: "warn" };
+        return { label: "POR MEJORAR", cls: "bad" };
+      }
+      if (kind === "bounce") {
+        if (pct < 2) return { label: "EXCELENTE", cls: "ok" };
+        if (pct < 5) return { label: "BUENO", cls: "ok" };
+        if (pct < 8) return { label: "NORMAL", cls: "warn" };
+        return { label: "POR MEJORAR", cls: "bad" };
+      }
+      return { label: "—", cls: "warn" };
+    };
+    const badgeStyle = (cls) => ({
+      ok:   "background:#d1fae5;color:#065f46",
+      warn: "background:#fef3c7;color:#92400e",
+      bad:  "background:#fee2e2;color:#991b1b"
+    })[cls] || "background:#e2e8f0;color:#475569";
+    const pctOf = (num, base) => (base > 0 ? (num / base) * 100 : 0);
+    const fmt = (n) => Number(n).toLocaleString("es-ES");
+    const fmtPct = (p) => `${p.toFixed(1)}%`;
+
+    /* ---- 1) RESUMEN AGREGADO ---- */
+    const totals = recentCamps.reduce((acc, c) => {
+      const s = c.stats || {};
+      acc.total   += s.total   || 0;
+      acc.sent    += s.sent    || 0;
+      acc.opened  += s.openedUnique  || s.opened  || 0;
+      acc.clicked += s.clickedUnique || s.clicked || 0;
+      acc.replied += s.replied || 0;
+      acc.bounced += s.bounced || 0;
+      return acc;
+    }, { total: 0, sent: 0, opened: 0, clicked: 0, replied: 0, bounced: 0 });
+
+    const summarySent    = pctOf(totals.sent,    totals.total);
+    const summaryOpen    = pctOf(totals.opened,  totals.sent);
+    const summaryClick   = pctOf(totals.clicked, totals.sent);
+    const summaryReply   = pctOf(totals.replied, totals.sent);
+    const summaryBounce  = pctOf(totals.bounced, totals.sent);
+
+    const summaryCells = [
+      { key: "sent",   title: "ENVIADOS",   num: totals.sent,    base: totals.total, pct: summarySent,   eval: evalRate("sent",   summarySent)   },
+      { key: "open",   title: "APERTURAS",  num: totals.opened,  base: totals.sent,  pct: summaryOpen,   eval: evalRate("open",   summaryOpen)   },
+      { key: "click",  title: "CLICS",      num: totals.clicked, base: totals.sent,  pct: summaryClick,  eval: evalRate("click",  summaryClick)  },
+      { key: "reply",  title: "RESPUESTAS", num: totals.replied, base: totals.sent,  pct: summaryReply,  eval: evalRate("reply",  summaryReply)  },
+      { key: "bounce", title: "REBOTES",    num: totals.bounced, base: totals.sent,  pct: summaryBounce, eval: evalRate("bounce", summaryBounce) },
+    ];
+
+    const summaryBlock = `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:18px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:800;letter-spacing:0.5px;color:#0f172a;text-transform:uppercase">
+            Resumen de campañas en proceso
+          </div>
+          <div style="font-size:12px;color:#64748b">
+            ${recentCamps.length} campaña${recentCamps.length === 1 ? "" : "s"} ·
+            ${fmt(totals.total)} destinatarios totales
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:10px">
+          ${summaryCells.map(c => `
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 10px;text-align:center">
+              <div style="font-size:10.5px;font-weight:800;color:#64748b;letter-spacing:0.6px">${c.title}</div>
+              <div style="font-size:22px;font-weight:900;color:#111;margin-top:4px;line-height:1.1">${fmt(c.num)}</div>
+              <div style="font-size:12px;color:#475569;font-weight:700;margin-top:2px">${fmtPct(c.pct)}</div>
+              <div style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:0.4px;padding:3px 9px;border-radius:10px;margin-top:6px;${badgeStyle(c.eval.cls)}">${c.eval.label}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+
+    /* ---- 2) TABLA INDIVIDUAL CON PORCENTAJES + ETIQUETAS ---- */
+    const cellMetric = (kind, num, base) => {
+      const pct = pctOf(num, base);
+      const e = evalRate(kind, pct);
+      return `
+        <td style="padding:10px 6px;text-align:center;line-height:1.25">
+          <div style="font-size:14px;font-weight:800;color:#111">${fmt(num)}</div>
+          <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px">${fmtPct(pct)}</div>
+          <div style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:0.4px;padding:2px 8px;border-radius:10px;margin-top:4px;${badgeStyle(e.cls)}">${e.label}</div>
+        </td>`;
+    };
+
+    const tableBlock = `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
-          <tr style="text-align:left;color:#64748b;border-bottom:1px solid #e2e8f0">
-            <th style="padding:8px 6px">Campaña</th>
-            <th style="padding:8px 6px">Estado</th>
-            <th style="padding:8px 6px;text-align:right">Enviados</th>
-            <th style="padding:8px 6px;text-align:right">Aperturas</th>
-            <th style="padding:8px 6px;text-align:right">Clics</th>
-            <th style="padding:8px 6px;text-align:right">Rebotes</th>
+          <tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
+            <th style="padding:8px 6px;text-align:left">Campaña</th>
+            <th style="padding:8px 6px;text-align:center">Estado</th>
+            <th style="padding:8px 6px;text-align:center">Enviados</th>
+            <th style="padding:8px 6px;text-align:center">Aperturas</th>
+            <th style="padding:8px 6px;text-align:center">Clics</th>
+            <th style="padding:8px 6px;text-align:center">Respuestas</th>
+            <th style="padding:8px 6px;text-align:center">Rebotes</th>
           </tr>
         </thead>
         <tbody>
-          ${recentCamps.map(c => `
-            <tr style="border-bottom:1px solid #f1f5f9">
-              <td style="padding:10px 6px">
-                <strong>${esc(c.name || "(sin nombre)")}</strong>
-                ${c.subject ? `<div class="muted" style="font-size:11px">${esc(c.subject).slice(0,60)}</div>` : ""}
-              </td>
-              <td style="padding:10px 6px">
-                <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase">
-                  ${statusLabel(c.status)}
-                </span>
-              </td>
-              <td style="padding:10px 6px;text-align:right">${c.stats?.sent || 0}</td>
-              <td style="padding:10px 6px;text-align:right">${c.stats?.opened || 0}</td>
-              <td style="padding:10px 6px;text-align:right">${c.stats?.clicked || 0}</td>
-              <td style="padding:10px 6px;text-align:right">${c.stats?.bounced || 0}</td>
-            </tr>
-          `).join("")}
+          ${recentCamps.map(c => {
+            const s = c.stats || {};
+            const total   = s.total   || 0;
+            const sent    = s.sent    || 0;
+            const opened  = s.openedUnique  || s.opened  || 0;
+            const clicked = s.clickedUnique || s.clicked || 0;
+            const replied = s.replied || 0;
+            const bounced = s.bounced || 0;
+            return `
+              <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:10px 6px">
+                  <strong>${esc(c.name || "(sin nombre)")}</strong>
+                  ${c.subject ? `<div class="muted" style="font-size:11px">${esc(c.subject).slice(0,60)}</div>` : ""}
+                </td>
+                <td style="padding:10px 6px;text-align:center">
+                  <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase">
+                    ${statusLabel(c.status)}
+                  </span>
+                </td>
+                ${cellMetric("sent",   sent,    total)}
+                ${cellMetric("open",   opened,  sent)}
+                ${cellMetric("click",  clicked, sent)}
+                ${cellMetric("reply",  replied, sent)}
+                ${cellMetric("bounce", bounced, sent)}
+              </tr>`;
+          }).join("")}
         </tbody>
       </table>
     `;
+
+    dashActivity.innerHTML = summaryBlock + tableBlock;
   } else if (dashActivity) {
     dashActivity.innerHTML = '<p class="muted">Sin campañas activas. Pulsa "Crear campaña" en el menú lateral para empezar.</p>';
   }

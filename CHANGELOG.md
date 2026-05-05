@@ -6,6 +6,36 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Dashboard Inicio + tabla Estado campañas: armonía visual
+
+### Añadido
+
+- **Bloque "Resumen de campañas en proceso"** en dashboard de Inicio, encima de la tabla individual. Muestra totales agregados (destinatarios, número de campañas en proceso) y 5 cards con datos medios calculados sobre el conjunto: ENVIADOS, APERTURAS, CLICS, RESPUESTAS, REBOTES. Cada card incluye número, porcentaje y etiqueta de evaluación (`EXCELENTE` / `BUENO` / `NORMAL` / `POR MEJORAR`).
+- **Porcentajes y etiqueta por métrica** en cada fila de la tabla de campañas activas del Inicio. Cada celda métrica muestra ahora 3 líneas: número, porcentaje y etiqueta de evaluación con color (verde / ámbar / rojo).
+- **Columna "Respuestas"** añadida a la tabla del Inicio (antes solo había Enviados, Aperturas, Clics, Rebotes).
+
+### Cambiado
+
+- **Definición operativa de "campaña en proceso":** campaña no eliminada presente en `recentCampaigns` del endpoint `/api/dashboard` (que ya filtra archivadas). Si el usuario elimina una campaña, desaparece del resumen.
+- **Subtítulo del card "Estado de campañas activas"** en `public/index.html` reformulado para reflejar que ahora muestra resumen agregado + detalle individual.
+- **Cabeceras de la tabla del Inicio** centradas (`text-align:center`) para alinear con las celdas métricas.
+- **Tabla "Estado campañas" (pestaña dedicada):**
+  - **Porcentaje GRANDE** (22px, dato principal) en cada celda métrica. Antes era el número grande y el porcentaje pequeño.
+  - **Número** pasa a 12px arriba; **etiqueta** sigue abajo.
+  - **Alturas fijas** por bloque (16/28/20px) → todos los números, porcentajes y etiquetas alineados a la misma altura horizontal entre filas.
+  - **Cabeceras** centradas (`text-align:center`) para todas las columnas excepto "Campaña".
+  - **Celda DESTINATARIOS:** número agrandado a 22px para igualar visualmente al porcentaje de las métricas.
+  - `vertical-align:middle` en todos los `<td>` de la fila para centrado vertical consistente.
+- **Botón "⛔ Cancelar envío" → "⛔ Cancelar"** en la tabla Estado campañas. El texto largo se truncaba en la columna Acción.
+
+### Justificación
+
+Petición usuario 2026-05-05: necesita ver de un vistazo el rendimiento global y por campaña, con porcentajes como dato principal (no número crudo). El resumen agregado y las etiquetas de evaluación permiten interpretar el estado real (excelente / por mejorar) sin conocer benchmarks de email marketing.
+
+Benchmarks compartidos entre `renderCampaigns.evalMetric` y el dashboard de Inicio (`public/app.js`) para coherencia visual.
+
+---
+
 ## [2026-05-05] — Sesión armonía visual + ventana 8-20h
 
 ### Añadido
