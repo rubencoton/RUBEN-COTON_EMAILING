@@ -934,8 +934,19 @@ const refreshPanel = async () => {
     const stateLabel = data.massMail.paused
       ? "PAUSADO"
       : (winOpen ? "ACTIVO" : "EN HORARIO PAUSA");
-    engineStatusEl.textContent = `${stateLabel} (${modeLabel})`;
-    engineQueueEl.textContent = `${data.massMail.ratePerMinute}/min | cola ${data.massMail.queueSize}${winLabel ? " | " + winLabel : ""}`;
+    /* Armonia visual 2026-05-05: estado grande + tag canal pequena
+     * (antes "ACTIVO (GMAIL API)" rompia en 2 lineas). */
+    engineStatusEl.innerHTML = `
+      <div style="font-weight:900;line-height:1.1">${stateLabel}</div>
+      <div style="font-size:10px;color:#888;font-weight:700;margin-top:6px;letter-spacing:0.5px">${modeLabel}</div>
+    `;
+    /* Armonia visual 2026-05-05: cifra grande + info secundaria en lineas
+     * separadas (antes era todo en una linea muy saturado). */
+    engineQueueEl.innerHTML = `
+      <div style="font-size:24px;font-weight:900;color:#FF6B00;line-height:1.1">${data.massMail.ratePerMinute}/min</div>
+      <div style="font-size:11px;color:#666;font-weight:600;margin-top:6px">Cola: ${data.massMail.queueSize}</div>
+      ${win ? `<div style="font-size:10px;color:${winOpen ? "#10b981" : "#f59e0b"};font-weight:700;margin-top:4px;letter-spacing:0.3px">${winOpen ? "●" : "○"} Ventana ${win.startHour}-${win.endHour}h</div>` : ""}
+    `;
     setStatusStyle(engineStatusEl, data.massMail.paused ? "error" : (winOpen ? "ok" : "warn"));
   } else {
     engineStatusEl.textContent = "NO CONFIGURADO";

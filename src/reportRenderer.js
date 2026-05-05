@@ -310,9 +310,9 @@ function renderCampaignReport(reportData, campaignId) {
   ${sectionHeader("03", "Métricas detalladas")}
   <table cellpadding="0" cellspacing="0" border="0" width="100%">
     <tr>
-      ${kpiCell(fmt(total), "Destinatarios", "", "#6b7280")}
+      ${kpiCell(fmt(total), "Destinatarios", "", BLANCO)}
       ${sep}
-      ${kpiCell(fmt(sent), "Enviados", pct(sent, total) + " del total", "#6b7280")}
+      ${kpiCell(fmt(sent), "Enviados", pct(sent, total) + " del total", BLANCO)}
       ${sep}
       ${kpiCell(fmt(opened), "Aperturas", pct(opened, sent), "#10b981")}
       ${sep}
@@ -326,7 +326,7 @@ function renderCampaignReport(reportData, campaignId) {
       ${sep}
       ${kpiCell(fmt(unsub), "Bajas", pct(unsub, sent), "#f59e0b")}
       ${sep}
-      ${kpiCell(ctor.toFixed(1) + "%", "CTOR", "clic / apertura", "#6b7280")}
+      ${kpiCell(ctor.toFixed(1) + "%", "CTOR", "clic / apertura", BLANCO)}
       ${sep}
       ${kpiCell(deliv.toFixed(1) + "%", "Entregabilidad", "", "#10b981")}
     </tr>
