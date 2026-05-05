@@ -87,9 +87,22 @@ body {
 .app-shell.is-collapsed .side-brand { padding: 16px 12px; justify-content: center; }
 .app-shell.is-collapsed .side-brand-text { display: none; }
 .app-shell.is-collapsed .brand-logo { width: 40px; height: 40px; }
-.app-shell.is-collapsed .side-tabs .tab { justify-content: center; padding: 12px 8px; }
-.app-shell.is-collapsed .side-tabs .tab-label,
-.app-shell.is-collapsed .side-tabs .tab > :not(.tab-icon),
+/* PETICION USUARIO 2026-05-05: en collapsed se mantienen los iconos
+ * SVG visibles, solo desaparece el texto. font-size:0 en el .tab oculta
+ * los text nodes (el texto del button que va sin envoltorio span). El
+ * SVG mantiene su tamaño porque tiene width/height en CSS. */
+.app-shell.is-collapsed .side-tabs .tab {
+  justify-content: center;
+  padding: 12px 8px;
+  gap: 0;
+  font-size: 0;
+}
+.app-shell.is-collapsed .side-tabs .tab .tab-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  margin: 0 auto;
+}
 .app-shell.is-collapsed .side-agent-label,
 .app-shell.is-collapsed .side-dev { display: none; }
 .app-shell.is-collapsed .app-content { margin-left: 72px; }
