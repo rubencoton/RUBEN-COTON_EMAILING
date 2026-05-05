@@ -37,6 +37,13 @@ async function scanReplies() {
     const msgs = list.data.messages || [];
     if (!msgs.length) return { ok: true, scanned: 0, registered: 0 };
 
+    /* P0 UX 2026-05-05 (peticion usuario): detectar bounces (mailer-daemon
+     * notifications) y moverlos a PAPELERA para que no saturen INBOX. */
+    const isBounceSender = (sender) =>
+      /mailer-daemon|postmaster|noreply.*delivery|delivery.*noreply/i.test(sender || "");
+    const isBounceSubject = (subj) =>
+      /delivery (status notification|failure)|undelivered mail|mail delivery (failed|failure)|returned mail|failure notice|undeliverable|no se ha podido entregar|correo no entregado/i.test(subj || "");
+
     const campaigns = _dataStoreRef.listAllCampaigns ? _dataStoreRef.listAllCampaigns() : _dataStoreRef.listCampaigns();
     /* Index por email de recipient → array de campañas recientes */
     const byRecipient = new Map();
@@ -57,13 +64,26 @@ async function scanReplies() {
           userId: "me",
           id: m.id,
           format: "metadata",
-          metadataHeaders: ["From", "Subject", "In-Reply-To", "References", "Message-Id", "Date", "Auto-Submitted", "X-Autorespond", "X-Autoreply", "Precedence"]
+          metadataHeaders: ["From", "Subject", "In-Reply-To", "References", "Message-Id", "Date", "Auto-Submitted", "X-Autorespond", "X-Autoreply", "Precedence", "X-Failed-Recipients"]
         });
         const headers = Object.fromEntries((get.data.payload?.headers || []).map((h) => [h.name.toLowerCase(), h.value]));
         const from = String(headers["from"] || "");
+        const subject = String(headers["subject"] || "");
         const fromEmail = (from.match(/<([^>]+)>/) || from.match(/([^\s<>]+@[^\s<>]+)/) || [])[1];
         const senderEmail = String(fromEmail || "").toLowerCase().trim();
         if (!senderEmail) continue;
+
+        /* DETECCION BOUNCE: si es notification de mailer-daemon/postmaster,
+         * mover a papelera y NO registrar como reply. */
+        if (isBounceSender(senderEmail) || isBounceSubject(subject)) {
+          try {
+            await gmail.users.messages.trash({ userId: "me", id: m.id });
+            console.log(`[replyTracker] bounce a papelera: ${senderEmail} | ${subject.slice(0,80)}`);
+          } catch (e) {
+            console.warn(`[replyTracker] no se pudo borrar bounce ${m.id}: ${e.message}`);
+          }
+          continue;
+        }
 
         /* P0 audit 2026-05-01: filtrar AUTORESPONDERS (out-of-office,
          * vacation, autoreply). RFC 3834 + heurística de Subject. Antes
