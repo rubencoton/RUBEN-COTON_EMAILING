@@ -684,6 +684,33 @@ h3 {
 
 .table tbody tr:hover { background: #f9fafb; }
 
+/* Tabla campañas — sticky header + sortable (2026-05-05) */
+#campaignsTable { border-collapse: separate; border-spacing: 0; overflow: visible; }
+#campaignsTable thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 5;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+#campaignsTable thead th:hover { background: #fdf3e7; }
+#campaignsTable thead th[data-sort-key="__none__"] { cursor: default; }
+#campaignsTable thead th[data-sort-key="__none__"]:hover { background: #f9fafb; }
+#campaignsTable thead th .sort-arrow {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s;
+}
+#campaignsTable thead th[data-sort-active="true"] .sort-arrow {
+  opacity: 1;
+  color: var(--brand-red);
+}
+
 /* ═══════════════════════════════════════
    JSON BOX
    ═══════════════════════════════════════ */

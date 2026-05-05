@@ -813,11 +813,17 @@ class DataStore {
         subject: c.subject,
         status: c.status,
         stats: {
+          /* P0 FIX 2026-05-05 (bug usuario captura: % enviados=0.0% siempre):
+           * el frontend lee `s.total` para calcular pct enviados, pero aquí
+           * solo expusimos `totalRecipients`. Resultado: total=0 → div/0 → 0%.
+           * Ahora exponemos ambos: `total` (esperado por el frontend) y
+           * `totalRecipients` (compat con cualquier consumer externo). */
           sent: toNumber(c.stats?.sent, 0),
           opened: toNumber(c.stats?.openedUnique, 0),
           clicked: toNumber(c.stats?.clickedUnique, 0),
           bounced: toNumber(c.stats?.bounced, 0),
           replied: toNumber(c.stats?.replied, 0),
+          total: toNumber(c.stats?.total, 0),
           totalRecipients: toNumber(c.stats?.total, 0)
         },
         updatedAt: c.updatedAt || c.createdAt

@@ -818,7 +818,76 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+/* Estado de ordenación de la tabla "Estado campañas" — petición usuario 2026-05-05.
+ * Sticky en HTML/CSS; aquí sólo sort. Persiste entre re-renders del polling. */
+const campaignsSortState = window.__campaignsSortState || (window.__campaignsSortState = { key: null, dir: "desc" });
+const campaignSortValue = (c, key) => {
+  const st = c.stats || {};
+  const total = st.total || 0;
+  const sent = st.sent || 0;
+  const opens = st.openedUnique || st.opened || 0;
+  const clicks = st.clickedUnique || st.clicked || 0;
+  const replies = st.replied || 0;
+  const bounces = st.bounced || 0;
+  switch (key) {
+    case "name": return String(c.name || "").toLowerCase();
+    case "status": return String(c.status || "").toLowerCase();
+    case "total": return total;
+    case "sent": return total > 0 ? sent / total : 0;
+    case "opens": return sent > 0 ? opens / sent : 0;
+    case "clicks": return sent > 0 ? clicks / sent : 0;
+    case "ctor": return opens > 0 ? clicks / opens : 0;
+    case "replies": return sent > 0 ? replies / sent : 0;
+    case "bounces": return sent > 0 ? bounces / sent : 0;
+    default: return 0;
+  }
+};
+const initCampaignSortListener = () => {
+  if (window.__campaignsSortInit) return;
+  const thead = document.querySelector("#campaignsTable thead");
+  if (!thead) return;
+  window.__campaignsSortInit = true;
+  thead.addEventListener("click", (ev) => {
+    const th = ev.target.closest("th[data-sort-key]");
+    if (!th) return;
+    const key = th.dataset.sortKey;
+    if (!key || key === "__none__") return;
+    if (campaignsSortState.key === key) {
+      campaignsSortState.dir = campaignsSortState.dir === "asc" ? "desc" : "asc";
+    } else {
+      campaignsSortState.key = key;
+      campaignsSortState.dir = key === "name" ? "asc" : "desc";
+    }
+    if (Array.isArray(state.campaigns)) renderCampaigns(state.campaigns);
+  });
+};
+const updateCampaignSortIndicators = () => {
+  const ths = document.querySelectorAll("#campaignsTable thead th[data-sort-key]");
+  ths.forEach((th) => {
+    const k = th.dataset.sortKey;
+    const active = k === campaignsSortState.key && k !== "__none__";
+    th.dataset.sortActive = String(active);
+    const arrow = th.querySelector(".sort-arrow");
+    if (arrow) {
+      if (k === "__none__") { arrow.style.display = "none"; return; }
+      arrow.textContent = active ? (campaignsSortState.dir === "asc" ? "▲" : "▼") : "⇅";
+    }
+  });
+};
+
 const renderCampaigns = (campaigns) => {
+  initCampaignSortListener();
+  if (campaignsSortState.key && Array.isArray(campaigns)) {
+    const dir = campaignsSortState.dir === "desc" ? -1 : 1;
+    campaigns = [...campaigns].sort((a, b) => {
+      const va = campaignSortValue(a, campaignsSortState.key);
+      const vb = campaignSortValue(b, campaignsSortState.key);
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dir;
+      }
+      return ((va || 0) - (vb || 0)) * dir;
+    });
+  }
   const statusLabels = {
     draft: "Borrador",
     queued: "En cola",
@@ -939,6 +1008,8 @@ const renderCampaigns = (campaigns) => {
     `;
     })
     .join("");
+
+  updateCampaignSortIndicators();
 
   qsa("[data-send-campaign]").forEach((button) => {
     button.addEventListener("click", () => sendCampaign(button.dataset.sendCampaign, button));
