@@ -38,11 +38,13 @@ body {
   /* Se ajusta a página A4 útil (sin desbordar al imprimir) */
   min-height: calc(100vh - 60px);
   padding: 56px 56px 48px;
-  background: linear-gradient(145deg, #FF6B00 0%, #E65100 55%, #BF360C 100%);
+  /* DARK MODE 2026-05-05 (peticion usuario): fondo negro + logo NEG con
+   * letras blancas. Mantiene cinta naranja arriba como acento corporativo. */
+  background: #0a0a0a;
   color: #fff;
   border-radius: 18px;
   margin-bottom: 40px;
-  box-shadow: 0 18px 50px rgba(230,81,0,0.35);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
   overflow: hidden;
   page-break-after: always;
   break-after: page;
@@ -53,14 +55,14 @@ body {
 .cover::before {
   content: "";
   position: absolute; top: 0; left: 0; right: 0; height: 10px;
-  background: #FFB74D;
+  background: #FF6B00;
 }
 .cover::after {
   content: "";
   position: absolute; inset: 0;
   background:
-    radial-gradient(circle at 15% 85%, rgba(244,180,0,0.18), transparent 55%),
-    radial-gradient(circle at 85% 15%, rgba(255,255,255,0.12), transparent 55%);
+    radial-gradient(circle at 15% 85%, rgba(255,107,0,0.10), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(255,107,0,0.08), transparent 55%);
   pointer-events: none;
 }
 .cover-inner { position: relative; z-index: 1; }
@@ -74,9 +76,12 @@ body {
 .cover-logo {
   width: 100px; height: 100px;
   border-radius: 14px;
-  background: #fff;
+  /* DARK MODE: logo NEG (letras blancas) ya viene sobre fondo negro,
+   * no necesita fondo blanco extra. Mantengo borde sutil para definicion. */
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
   padding: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -534,7 +539,7 @@ tr:hover td { background: var(--rojo-soft); }
     min-height: 0 !important;
     height: 297mm !important; /* A4 alto completo */
     width: 210mm !important;
-    background: linear-gradient(145deg, #FF6B00 0%, #E65100 55%, #BF360C 100%) !important;
+    background: #0a0a0a !important;
     color: #fff !important;
     display: flex !important;
     flex-direction: column !important;
@@ -668,7 +673,7 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="cover">
     <div class="cover-inner">
       <div class="cover-header">
-        <img class="cover-logo" src="/assets/logo-ruben-coton.png" alt="Logo RUBEN COTON">
+        <img class="cover-logo" src="/assets/logo-rubencoton-neg.png" alt="Logo RUBEN COTON">
         <div class="cover-brand">
           <h1>RUBEN COTON</h1>
           <div class="tagline">Management · Booking de Artistas</div>
@@ -734,7 +739,7 @@ tr:hover td { background: var(--rojo-soft); }
 
   <!-- ========= FOOTER ========= -->
   <div class="footer">
-    <img src="/assets/logo-ruben-coton.png" alt="RUBEN COTON">
+    <img src="/assets/logo-rubencoton-neg.png" alt="RUBEN COTON">
     <p><strong>RUBEN COTON</strong></p>
     <p>Booking &amp; Management de Artistas</p>
     <p style="margin-top:8px">📧 manager@rubencoton.com <span class="sep">·</span> 📍 Madrid</p>
@@ -822,7 +827,7 @@ const grade = (val, bench, inverse) => {
 function pageHeader(title, pg) {
   return `
     <div class="page-header">
-      <img src="/assets/logo-ruben-coton.png" alt="">
+      <img src="/assets/logo-rubencoton-neg.png" alt="">
       <div>
         <div class="ph-title">${esc(title)}</div>
         <div class="ph-sub">RUBEN COTON · Informe de Campaña</div>
