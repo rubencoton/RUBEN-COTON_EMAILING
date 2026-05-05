@@ -312,6 +312,21 @@ tabs.forEach((tab) => {
   tab.addEventListener("click", () => activateTab(tab.dataset.tab));
 });
 
+/* PETICION USUARIO 2026-05-05: clic en el logo del menú lateral
+ * pliega/despliega el sidebar. Estado persiste en localStorage. */
+const sideToggleBtn = qs("#sideToggle");
+const appShellEl = qs(".app-shell");
+const SIDE_KEY = "ui:sideCollapsed";
+if (sideToggleBtn && appShellEl) {
+  if (localStorage.getItem(SIDE_KEY) === "1") {
+    appShellEl.classList.add("is-collapsed");
+  }
+  sideToggleBtn.addEventListener("click", () => {
+    const collapsed = appShellEl.classList.toggle("is-collapsed");
+    localStorage.setItem(SIDE_KEY, collapsed ? "1" : "0");
+  });
+}
+
 const fillSelectOptions = (select, items, placeholder, getLabel) => {
   if (!select) return;
   const options = [

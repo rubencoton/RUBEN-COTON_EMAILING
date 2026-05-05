@@ -207,16 +207,18 @@ body {
   page-break-after: always;
 }
 .toc-head {
-  background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+  /* PETICION USUARIO 2026-05-05: índice con cabecera NEGRA coherente
+   * con el resto del informe (antes gradient naranja desacorde). */
+  background: #000;
   color: #fff;
-  padding: 24px 30px;
+  padding: 22px 28px;
   display: flex;
   align-items: center;
   gap: 14px;
-  border-bottom: 5px solid var(--amarillo);
+  border-bottom: 4px solid var(--rojo-2);
 }
-.toc-head h2 { color: #fff; font-size: 18pt; margin: 0; border: none; padding: 0; display: flex; align-items: center; gap: 14px; }
-.toc-head .toc-meta { margin-left: auto; color: var(--amarillo); font-size: 9.5pt; letter-spacing: 2px; font-weight: 800; }
+.toc-head h2 { color: #fff; font-size: 17pt; margin: 0; border: none; padding: 0; display: flex; align-items: center; gap: 14px; background: transparent; }
+.toc-head .toc-meta { margin-left: auto; color: var(--rojo-2); font-size: 9.5pt; letter-spacing: 2px; font-weight: 800; }
 .toc-list { padding: 20px 30px 28px; }
 .toc-list ol { margin: 0; padding: 0; list-style: none; counter-reset: toc; }
 .toc-list li { margin: 8px 0; counter-increment: toc; }
@@ -234,13 +236,15 @@ body {
   content: counter(toc, decimal-leading-zero);
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 40px; padding: 4px 10px;
-  background: var(--rojo); color: #fff;
+  /* Coherente con cabecera negra: chip negro con número en blanco. */
+  background: #000; color: #fff;
   border-radius: 6px;
-  font-size: 10pt; font-weight: 800;
+  font-size: 10pt; font-weight: 900;
   flex-shrink: 0;
+  letter-spacing: 1px;
 }
 .toc-list a .dots { flex: 1; border-bottom: 2px dotted #ccc; margin: 0 10px; transform: translateY(-4px); }
-.toc-list a .pg { color: var(--rojo); font-weight: 800; font-size: 10pt; }
+.toc-list a .pg { color: var(--rojo-2); font-weight: 800; font-size: 10pt; }
 
 /* ========== SECCIONES ========== */
 .section {
@@ -564,7 +568,7 @@ tr:hover td { background: var(--rojo-soft); }
   .cover-meta-item { padding: 14px 16px !important; }
   .cover-footer { padding-top: 16px !important; margin-top: auto !important; }
 
-  /* === ToC página entera === */
+  /* === ToC página entera === negro coherente con la pauta */
   .toc {
     page-break-after: always !important; break-after: page !important;
     page-break-inside: avoid !important; break-inside: avoid !important;
@@ -572,7 +576,16 @@ tr:hover td { background: var(--rojo-soft); }
     margin: 0 !important;
     border-radius: 0 !important;
   }
-  .toc-head { background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%) !important; color: #fff !important; }
+  .toc-head { background: #000 !important; color: #fff !important; border-bottom: 4px solid var(--rojo-2) !important; }
+  .toc-head .toc-meta { color: var(--rojo-2) !important; }
+
+  /* === Cada sección en página propia para paginación coherente === */
+  .section {
+    page-break-before: always !important;
+    break-before: page !important;
+    page-break-inside: auto !important;
+  }
+  .section:first-of-type { page-break-before: auto !important; }
 
   /* === Secciones === evitan cortes pero permiten flujo si son largas */
   .section {
