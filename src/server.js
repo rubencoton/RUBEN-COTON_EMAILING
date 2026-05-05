@@ -354,6 +354,42 @@ const apiOk = (res, payload = {}) => res.json({ status: "ok", ...payload });
 const apiError = (res, statusCode, message, extra = {}) =>
   res.status(statusCode).json({ status: "error", message, ...extra });
 
+/* P0 BLINDAJE 2026-05-05: helper para recrear un job perdido tras restart.
+ * Reenvia los recipients pendientes (sin sentAt ni bouncedAt) al motor. */
+const recreateLostJob = (campaign) => {
+  const snapshot = campaign.recipientsSnapshot || [];
+  const pendientes = snapshot
+    .filter((rcp) => !rcp.sentAt && !rcp.bouncedAt && rcp.status !== "sent" && rcp.status !== "bounced")
+    .map((rcp) => rcp.email);
+  if (!pendientes.length) {
+    /* No hay nada que reenviar → marcar como completed. */
+    return { recreated: false, completed: true };
+  }
+  try {
+    const newJob = massMailEngine.enqueueJob({
+      campaignId: campaign.id,
+      name: campaign.name,
+      subject: campaign.subject,
+      html: campaign.html,
+      text: campaign.text,
+      fromName: campaign.fromName,
+      fromEmail: campaign.fromEmail,
+      replyTo: campaign.replyTo,
+      recipients: pendientes,
+      attachments: attachments.getAttachmentsForSending(campaign.id)
+    });
+    dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)));
+    /* Si la campana estaba paused, mantenerla paused tras recrear job. */
+    if (campaign.status === "paused") {
+      try { massMailEngine.pauseJob(newJob.id); } catch (_e) {}
+    }
+    return { recreated: true, jobId: newJob.id, pending: pendientes.length };
+  } catch (e) {
+    console.warn(`[sync] no se pudo recrear job ${campaign.id}: ${e.message}`);
+    return { recreated: false, error: e.message };
+  }
+};
+
 const syncCampaignsWithEngine = () => {
   const campaigns = dataStore.listCampaigns();
   const engineStatus = massMailEngine.getStatus();
@@ -364,43 +400,54 @@ const syncCampaignsWithEngine = () => {
   /* P0-EMERGENCY 2026-05-01: si hay 500 campañas huérfanas tras stress
    * test, hacer 500 mutates secuenciales clona el store (55MB) 500
    * veces → 27.5GB de RAM en la pila → OOM. Acumular las huérfanas y
-   * hacer UN solo mutate batch al final. */
-  const orphans = [];
+   * hacer UN solo mutate batch al final.
+   *
+   * P0 BLINDAJE 2026-05-05: en vez de marcar failed las campanas con job
+   * huerfano (sending/paused sin job en motor), AUTO-RECREAR el job con
+   * recipients pendientes. Asi un restart del container no rompe campanas
+   * en curso — el motor las recoge sola al boot. */
+  const recreated = [];
+  const completed = [];
   campaigns.forEach((campaign) => {
+    const isActive = ["sending", "queued", "paused"].includes(campaign.status);
+    if (!isActive) return;
+
     if (!campaign.jobId) {
-      if (["sending", "queued"].includes(campaign.status)) {
-        orphans.push({ id: campaign.id, jobId: null });
-      }
+      /* Campana activa sin jobId: recrear. */
+      const r = recreateLostJob(campaign);
+      if (r.recreated) recreated.push({ id: campaign.id, jobId: r.jobId, pending: r.pending });
+      else if (r.completed) completed.push(campaign.id);
       return;
     }
     const job = massMailEngine.getJob(campaign.jobId);
     if (!job) {
-      if (["sending", "queued"].includes(campaign.status)) {
-        orphans.push({ id: campaign.id, jobId: campaign.jobId });
-      }
+      /* Job perdido del motor: recrear. */
+      const r = recreateLostJob(campaign);
+      if (r.recreated) recreated.push({ id: campaign.id, jobId: r.jobId, pending: r.pending });
+      else if (r.completed) completed.push(campaign.id);
       return;
     }
     const pos = posByJob.has(campaign.jobId) ? posByJob.get(campaign.jobId) : null;
     dataStore.syncCampaignByJob(campaign.id, { ...job, queuePosition: pos });
   });
 
-  if (orphans.length > 0) {
-    /* Batch mutate: 1 clone del store en lugar de N. */
+  if (completed.length > 0) {
+    /* Marcar como completed las que no tenian recipients pendientes. */
     dataStore.mutate((store) => {
       const now = new Date().toISOString();
-      const orphansById = new Map(orphans.map((o) => [o.id, o]));
+      const completedSet = new Set(completed);
       store.campaigns.forEach((c) => {
-        const o = orphansById.get(c.id);
-        if (!o) return;
-        c.status = "failed";
-        c.stats = c.stats || {};
-        c.stats.failReason = o.jobId
-          ? `Job ${o.jobId} no encontrado en el motor (probable reinicio). Reenvía si es necesario.`
-          : "Job perdido tras reinicio del contenedor (recuperación automática). Reenvía cuando quieras.";
-        c.updatedAt = now;
+        if (completedSet.has(c.id)) {
+          c.status = "completed";
+          c.completedAt = now;
+          c.updatedAt = now;
+        }
       });
     });
-    console.warn(`[sync] ${orphans.length} campañas huérfanas marcadas como failed (batch single mutate).`);
+    console.log(`[sync] ${completed.length} campanas marcadas como completed (sin pendientes).`);
+  }
+  if (recreated.length > 0) {
+    console.log(`[sync] ${recreated.length} jobs recreados auto tras restart:`, JSON.stringify(recreated.slice(0, 5)));
   }
 };
 
@@ -3005,9 +3052,15 @@ app.post("/api/campaigns/:id/pause", (req, res) => {
   try {
     const campaign = dataStore.getCampaign(req.params.id);
     if (!campaign) return apiError(res, 404, "Campaña no encontrada");
-    if (!campaign.jobId) return apiError(res, 400, "Campaña sin job activo");
-    const r = massMailEngine.pauseJob(campaign.jobId);
-    if (!r) return apiError(res, 404, "Job no encontrado en motor");
+
+    /* P0 BLINDAJE 2026-05-05: tolerante si el job se perdio del motor
+     * (restart). Pausar a nivel dataStore funciona aunque el motor no
+     * tenga el job — sync auto-recovery lo recreara pausado al boot. */
+    let r = { paused: true };
+    if (campaign.jobId) {
+      const motorR = massMailEngine.pauseJob(campaign.jobId);
+      if (motorR) r = motorR;
+    }
     dataStore.mutate((store) => {
       const c = store.campaigns.find((x) => x.id === req.params.id);
       if (c) {
