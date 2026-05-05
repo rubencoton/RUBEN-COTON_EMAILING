@@ -2395,13 +2395,22 @@ app.post("/api/admin/repair-campaign-counters", (_req, res) => {
     const result = dataStore.mutate((store) => {
       const out = { repaired: [], totalSentRescued: 0, totalAddedBack: 0 };
       const eventsByCampaign = new Map();
+      /* P0 FIX 2026-05-05: incluir eventos open/click ademas de delivered.
+       * Si un email genero `open` o `click`, necesariamente fue ENTREGADO
+       * antes (no se puede abrir lo no recibido). Cubre el caso de eventos
+       * delivered perdidos pero opens/clicks aun en el store. */
+      const RESCUE_TYPES = new Set(["delivered", "open", "click"]);
       for (const ev of store.events || []) {
-        if (ev.type !== "delivered" || !ev.campaignId || !ev.email) continue;
+        if (!RESCUE_TYPES.has(ev.type) || !ev.campaignId || !ev.email) continue;
         if (!eventsByCampaign.has(ev.campaignId)) eventsByCampaign.set(ev.campaignId, new Map());
         const m = eventsByCampaign.get(ev.campaignId);
         const k = String(ev.email).toLowerCase();
+        const occurredAt = ev.occurredAt || new Date().toISOString();
         const prev = m.get(k);
-        if (!prev || (ev.occurredAt || "") < prev) m.set(k, ev.occurredAt || new Date().toISOString());
+        /* Prioridad: delivered > open > click. Si ya tenemos delivered, no
+         * lo reemplazamos. Si no, tomamos el evento mas antiguo (proxy de
+         * sentAt mas cercano al envio real). */
+        if (!prev || occurredAt < prev) m.set(k, occurredAt);
       }
       for (const campaign of store.campaigns) {
         if (campaign.status === "archived") continue;

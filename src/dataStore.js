@@ -1904,8 +1904,21 @@ class DataStore {
         }
       });
 
+      /* P0 FIX 2026-05-05 (bug usuario "0 enviados pero 5 aperturas"):
+       * jobDetail.recipients trae solo los recipients del job ACTUAL (los
+       * pendientes tras un restart con preserveHistory). Si contaramos sent
+       * solo ahi, perderiamos los recipients ya enviados que viven en
+       * recipientsSnapshot pero no en el job actual.
+       *
+       * Solucion: contar sent y bounced desde el SNAPSHOT COMPLETO
+       * (que conserva la historia gracias a preserveHistory). queued sigue
+       * viniendo del job actual porque solo el motor sabe quien esta vivo. */
+      const finalSnap = ensureArray(campaign.recipientsSnapshot);
+      const sentTotal = finalSnap.filter((r) => r.sentAt).length;
+      const bouncedTotal = finalSnap.filter((r) => r.bouncedAt).length;
       campaign.stats.queued = queued;
-      campaign.stats.sent = sent;
+      campaign.stats.sent = sentTotal;
+      campaign.stats.bounced = bouncedTotal;
 
       /* Posición en la cola global del motor (0 = activa ahora). */
       if (typeof jobDetail.queuePosition === "number" || jobDetail.queuePosition === null) {
