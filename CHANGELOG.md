@@ -6,6 +6,35 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — CIERRE v2.0: app lista para uso en producción
+
+### Añadido
+
+- **`data/disposable-domains.txt`** — lista comunidad **5.437 dominios** desechables (`disposable-email-domains/disposable-email-domains` GitHub). Antes solo 22 hardcoded → ahora se filtra una superficie ~250x mayor.
+- **`SKIP_CRM_SLUGS` como env var** en `src/sheetsSync.js`. Combina hardcoded (`prueba-hoja-de-testeo-crm`) con CSV de la env var. Permite añadir CRMs de prueba sin redeploy.
+- **Sidebar collapsed: iconos visibles** para Manual de uso (📄) y IA local agent (●). Antes en collapsed quedaba el sidebar vacío después de los tabs principales. Ahora el dot del agent local sigue mostrando verde/rojo/gris incluso plegado.
+
+### Cambiado
+
+- **Tagline unificada "DJ Profesional · Madrid"** en `public/campaign-report.html` (portada), `public/manual.html` (portada), `public/executive-report.html`. Antes había mezcla de "DJ Profesional" / "Booking & Management" / "Informe Ejecutivo".
+
+### Verificado (audit final)
+
+- ✅ Crear campaña → enviar: lock anti-doble-envío, validaciones spam, cap masivo (500/60.000), confirmación `forceSend`. Robusto.
+- ✅ Bounces NO saturan inbox: `replyTracker` v2 con triple guard (sender daemon + auto-submitted header + body parse) auto-trashea mailer-daemon. Solo respuestas reales aparecen en Inbox.
+- ✅ Sheets writeback en tiempo real: `WRITEBACK_FLUSH_MS=1500`. Cada open/click/reply/unsubscribe se refleja en la columna Merge status en <2s.
+- ✅ Tracking firmado: `TRACKING_REQUIRE_HMAC=1` en producción. Server aborta si falta `TRACKING_SECRET`. Pixel y redirect verifican firma timing-safe.
+- ✅ Paused sticky tras deploy: `syncCampaignsWithEngine` no recrea job si campaña está paused. /resume reconstruye desde recipientsSnapshot.
+- ✅ DELETE purga events: hard delete elimina campaña + events asociados + reset dedupe idx.
+- ✅ Unsubscribe registra evento + writeback Sheets con label "BAJA".
+- ✅ Manual de uso accesible desde sidebar (`/manual`).
+
+### Estado
+
+**App lista para uso intensivo.** Puedes lanzar campaña con confianza.
+
+---
+
 ## [2026-05-05] — Tabla Inicio: alineación columnar perfecta (2ª iter)
 
 ### Cambiado

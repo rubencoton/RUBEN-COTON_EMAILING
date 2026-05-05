@@ -163,10 +163,16 @@ const SKIP_TABS = ["ccaa"];
  * PETICION USUARIO 2026-05-05: la carpeta "PRUEBA HOJA DE TESTEO CRM" es
  * una hoja de pruebas y NO debe cargarse en el sistema (no aparece en
  * Inicio, no aparece en Crear campaña, no se sincroniza, no se hace
- * writeback). Match por slug normalizado del título del spreadsheet. */
-const SKIP_CRM_SLUGS = new Set([
-  "prueba-hoja-de-testeo-crm"
-]);
+ * writeback). Match por slug normalizado del título del spreadsheet.
+ *
+ * Refactor 2026-05-05: ahora SKIP_CRM_SLUGS combina hardcoded + env var
+ * SKIP_CRM_SLUGS (CSV de slugs) para añadir CRMs de prueba sin redeploy. */
+const SKIP_CRM_SLUGS = (() => {
+  const set = new Set(["prueba-hoja-de-testeo-crm"]);
+  const fromEnv = String(process.env.SKIP_CRM_SLUGS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  for (const s of fromEnv) set.add(s);
+  return set;
+})();
 
 /* ─── Auth: soporta OAuth (recomendado), API Key, o Service Account ─── */
 /* P0-J refactor 2026-05-04: el modo OAuth usa el SINGLETON de googleHub.js

@@ -105,6 +105,31 @@ body {
 }
 .app-shell.is-collapsed .side-agent-label,
 .app-shell.is-collapsed .side-dev { display: none; }
+/* Manual de uso colapsado: solo icono SVG visible (font-size:0 oculta el
+ * text node "Manual de uso"). Centrado con flex. */
+.app-shell.is-collapsed .side-manual {
+  font-size: 0;
+  justify-content: center;
+  padding: 12px 8px;
+  gap: 0;
+}
+.app-shell.is-collapsed .side-manual svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+/* IA local agent colapsado: solo el dot semaforo (verde online / rojo
+ * offline / gris disabled). Centrado, sin texto. */
+.app-shell.is-collapsed .side-agent {
+  justify-content: center;
+  padding: 10px 8px;
+  font-size: 0;
+}
+.app-shell.is-collapsed .side-agent-dot {
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+}
 .app-shell.is-collapsed .app-content { margin-left: 72px; }
 
 .brand-logo {
