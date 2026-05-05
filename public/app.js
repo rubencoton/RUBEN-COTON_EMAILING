@@ -900,7 +900,7 @@ const refreshPanel = async () => {
     normalizedDb === "ok"
       ? "CONECTADA"
       : dbIsFallbackMode
-        ? "MODO LOCAL"
+        ? "EN VPS"
         : data.status === "ok"
           ? "REVISAR"
           : "ERROR";
@@ -922,9 +922,21 @@ const refreshPanel = async () => {
       : "SMTP";
 
   if (data.massMail?.enabled) {
-    engineStatusEl.textContent = `${data.massMail.paused ? "PAUSADO" : "ACTIVO"} (${modeLabel})`;
-    engineQueueEl.textContent = `${data.massMail.ratePerMinute}/min | cola ${data.massMail.queueSize}`;
-    setStatusStyle(engineStatusEl, data.massMail.paused ? "error" : "ok");
+    /* Ventana horaria 8-20h: si esta fuera, motor pausa automaticamente
+     * para parecer humano y no bot 24/7 (peticion usuario 2026-05-05). */
+    const win = data.massMail.sendingWindow;
+    const winOpen = win?.isOpen !== false;
+    const winLabel = win
+      ? (winOpen
+          ? `Ventana ${win.startHour}-${win.endHour}h Madrid`
+          : `Fuera ventana ${win.startHour}-${win.endHour}h`)
+      : "";
+    const stateLabel = data.massMail.paused
+      ? "PAUSADO"
+      : (winOpen ? "ACTIVO" : "EN HORARIO PAUSA");
+    engineStatusEl.textContent = `${stateLabel} (${modeLabel})`;
+    engineQueueEl.textContent = `${data.massMail.ratePerMinute}/min | cola ${data.massMail.queueSize}${winLabel ? " | " + winLabel : ""}`;
+    setStatusStyle(engineStatusEl, data.massMail.paused ? "error" : (winOpen ? "ok" : "warn"));
   } else {
     engineStatusEl.textContent = "NO CONFIGURADO";
     engineQueueEl.textContent = "Configura canal de envío";
