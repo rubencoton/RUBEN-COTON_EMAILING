@@ -454,20 +454,23 @@ tr:hover td { background: var(--rojo-soft); }
 .glossary dt { font-weight: 800; color: var(--rojo); margin-top: 12px; font-size: 11pt; }
 .glossary dd { margin: 3px 0 0 0; color: #444; font-size: 10.5pt; }
 
-/* ========== FOOTER (ROJO corporativo) ========== */
+/* ========== FOOTER (pauta visual aprobada: blanco + chip negro logo) ========== */
 .footer {
   margin-top: 40px;
-  padding: 30px 24px 22px;
-  background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
-  color: #fff;
+  padding: 26px 24px 22px;
+  background: #ffffff;
+  color: #1a1a1a;
   border-radius: 12px;
   text-align: center;
   font-size: 10pt;
-  border-top: 6px solid var(--amarillo);
+  border-top: 3px solid #000;
+  border-left: 1px solid var(--gris-2);
+  border-right: 1px solid var(--gris-2);
+  border-bottom: 1px solid var(--gris-2);
 }
-.footer img { width: 60px; height: 60px; border-radius: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 4px; margin-bottom: 10px; }
-.footer strong { color: var(--amarillo); font-size: 12pt; letter-spacing: 2px; }
-.footer .sep { color: var(--amarillo); margin: 0 8px; }
+.footer img { max-width: 200px; height: auto; margin-bottom: 14px; }
+.footer strong { color: #1a1a1a; font-size: 12pt; letter-spacing: 2px; }
+.footer .sep { color: var(--rojo-2); margin: 0 8px; font-weight: 700; }
 
 /* ========== BOTÓN PDF ========== */
 .print-btn {
@@ -753,12 +756,12 @@ tr:hover td { background: var(--rojo-soft); }
         <li><a href="#conclusiones"><span>Conclusiones y recomendaciones</span><span class="dots"></span><span class="pg">pág. 08</span></a></li>
         <li><a href="#glosario"><span>Glosario de términos</span><span class="dots"></span><span class="pg">pág. 09</span></a></li>
       </ol>
-      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-2)">
-        <a href="#destinatarios" style="display:flex;align-items:center;text-decoration:none;color:#1a1a1a;font-weight:700">
-          <span style="background:#000;color:#fff;padding:3px 10px;border-radius:6px;font-size:9pt;letter-spacing:1px;margin-right:10px">ANEXO</span>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-2);display:flex;align-items:center">
+        <span style="background:#000;color:#fff;padding:4px 12px;border-radius:6px;font-size:9pt;letter-spacing:2px;margin-right:14px;font-weight:900;flex-shrink:0">ANEXO</span>
+        <a href="#destinatarios" style="flex:1;display:flex;align-items:center;text-decoration:none;color:#1a1a1a;font-weight:700">
           <span>Destinatarios — empresas y entidades</span>
           <span class="dots"></span>
-          <span class="pg">final</span>
+          <span class="pg" style="color:var(--rojo-2)">final</span>
         </a>
       </div>
     </div>
@@ -1122,7 +1125,7 @@ function render(d) {
         <dt>DKIM (DomainKeys Identified Mail)</dt>
         <dd>Firma criptográfica del email con clave pública en DNS. Garantiza que el contenido no fue alterado en tránsito.</dd>
         <dt>DMARC</dt>
-        <dd>Política DNS que indica qué hacer con emails que fallan SPF/DKIM (`p=none` solo monitoriza, `p=quarantine` los manda a spam, `p=reject` los rechaza).</dd>
+        <dd>Política DNS que indica qué hacer con emails que fallan SPF/DKIM (<code>p=none</code> solo monitoriza, <code>p=quarantine</code> los manda a spam, <code>p=reject</code> los rechaza).</dd>
         <dt>RGPD</dt>
         <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales. Obliga a tener base legal de envío, ofrecer baja fácil y limitar tratamiento.</dd>
       </dl>

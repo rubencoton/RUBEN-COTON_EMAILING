@@ -518,17 +518,13 @@
               <p class="muted" style="margin:0">Todas tus campañas creadas. Pulsa "Enviar" para lanzarlas.</p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <a href="/api/campaigns/report/executive.pdf" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#FF6B00,#E65100);color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
-                📊 Informe ejecutivo (PDF)
+              <!-- Único informe ejecutivo: cómputo de todas las campañas
+                   activas (no eliminadas). Petición usuario 2026-05-05.
+                   Botones "Generar semanal" y "Generar mensual" eliminados —
+                   solo hay 1 informe ejecutivo + 1 informe por campaña. -->
+              <a href="/campaigns/report/executive" target="_blank" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#000;color:#fff;text-decoration:none;padding:10px 16px;font-weight:700;border-radius:8px">
+                📊 Informe ejecutivo
               </a>
-              <!-- Boton "Sincronizar al Drive" eliminado 2026-05-05: los informes
-                   se ven directamente en la app, no se crean carpetas en Drive. -->
-              <button type="button" id="btn-report-weekly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#BF360C;border:2px solid #FFB74D;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
-                📅 Generar semanal
-              </button>
-              <button type="button" id="btn-report-monthly" class="mini-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#BF360C;border:2px solid #FFB74D;padding:10px 16px;font-weight:700;border-radius:8px;cursor:pointer">
-                🗓 Generar mensual
-              </button>
             </div>
           </div>
           <div style="margin:12px 0 18px;display:none">
