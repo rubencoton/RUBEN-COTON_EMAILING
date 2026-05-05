@@ -412,6 +412,29 @@ const syncCampaignsWithEngine = () => {
     const isActive = ["sending", "queued", "paused"].includes(campaign.status);
     if (!isActive) return;
 
+    /* P0 FIX 2026-05-05 (peticion usuario "cada deploy reactiva la campana"):
+     * si esta paused, NO recrear job al boot. El sync solo debe ocuparse
+     * de campanas activas (sending/queued). Las paused se quedan asi hasta
+     * que el usuario pulse Reanudar — solo entonces se recrea el job.
+     * Si el jobId esta perdido del motor, lo limpiamos del store para
+     * que /resume sepa que debe recrear. */
+    if (campaign.status === "paused") {
+      if (campaign.jobId) {
+        const j = massMailEngine.getJob(campaign.jobId);
+        if (!j) {
+          /* Job perdido tras restart: limpiamos jobId para que resume recree. */
+          dataStore.mutate((store) => {
+            const c = store.campaigns.find((x) => x.id === campaign.id);
+            if (c) { c.jobId = null; c.updatedAt = new Date().toISOString(); }
+          });
+        } else {
+          /* Job sigue en motor: asegurar que esta paused (idempotente). */
+          try { massMailEngine.pauseJob(campaign.jobId); } catch (_e) {}
+        }
+      }
+      return;
+    }
+
     if (!campaign.jobId) {
       /* Campana activa sin jobId: recrear. */
       const r = recreateLostJob(campaign);
@@ -3141,13 +3164,12 @@ app.post("/api/campaigns/:id/resume", (req, res) => {
   try {
     const campaign = dataStore.getCampaign(req.params.id);
     if (!campaign) return apiError(res, 404, "Campaña no encontrada");
-    if (!campaign.jobId) return apiError(res, 400, "Campaña sin job activo");
 
     /* P0 FIX 2026-05-05: si el job se perdio del motor (typical tras
-     * reinicios container Coolify), RECREAR con los recipients pendientes
-     * en lugar de devolver 404. UX para el usuario: solo importa que se
-     * reanude el envio. */
-    let r = massMailEngine.resumeJob(campaign.jobId);
+     * reinicios container Coolify) O si la campana quedo paused sin
+     * jobId tras un boot, RECREAR con los recipients pendientes en lugar
+     * de devolver 404/400. UX: solo importa que se reanude el envio. */
+    let r = campaign.jobId ? massMailEngine.resumeJob(campaign.jobId) : null;
     if (!r) {
       /* Reconstruir cola con recipients que NO esten ya enviados/rebotados. */
       const snapshot = campaign.recipientsSnapshot || [];
