@@ -30,6 +30,23 @@ const getSecret = () => {
     _secret = fromEnv;
     return _secret;
   }
+  /* P0 audit 2026-05-05: si TRACKING_REQUIRE_HMAC=1 (modo enforce) y NO
+   * hay TRACKING_SECRET en env, abortar arrancando porque toda firma
+   * autogenerada será rechazada al primer restart -> opens/clicks de
+   * campañas activas dejan de contar silenciosamente.
+   *
+   * En modo permisivo (default 0), seguimos autogenerando con WARN para
+   * compatibilidad con instalaciones de demo / dev local. */
+  const enforce = String(process.env.TRACKING_REQUIRE_HMAC || "").trim() === "1";
+  if (enforce) {
+    console.error(
+      "[trackingSign] FATAL: TRACKING_REQUIRE_HMAC=1 pero TRACKING_SECRET " +
+      "no está definido (o tiene <16 chars). Abortando arranque para evitar " +
+      "que toda firma autogenerada se invalide al primer restart. " +
+      "Genera el secret con: openssl rand -hex 32  y añádelo a env."
+    );
+    process.exit(1);
+  }
   /* Autogenerate fallback: 32 random bytes hex.
    * NOTA: en cluster/multi-replica esto produce firmas inconsistentes.
    * Producción debe setear TRACKING_SECRET en env. */

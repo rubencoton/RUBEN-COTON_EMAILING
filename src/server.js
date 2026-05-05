@@ -2142,11 +2142,44 @@ app.get("/api/drive/archive", async (_req, res) => {
  * INFORME EJECUTIVO GLOBAL — histórico completo de campañas
  * ========================================================== */
 
-/* JSON con agregados + listado histórico */
-app.get("/api/campaigns/report/executive", (_req, res) => {
+/* JSON con agregados + listado histórico
+ *
+ * P0 audit 2026-05-05:
+ * 1) Filtrar campañas archivadas (status="archived") para que el cómputo
+ *    agregado refleje solo campañas en proceso/históricas no eliminadas.
+ * 2) Soportar `?scope=weekly|monthly|historic` con `periodLabel`/`periodFrom`/
+ *    `periodTo` correctos. Antes la ruta HTML directa siempre caía a
+ *    "historic" porque el JS leía `meta.scope` que no venía. */
+app.get("/api/campaigns/report/executive", (req, res) => {
   try {
     syncCampaignsWithEngine();
-    const campaigns = dataStore.listCampaigns();
+    const allCampaigns = dataStore.listCampaigns() || [];
+    /* Excluir archivadas del cómputo agregado */
+    let campaigns = allCampaigns.filter((c) => c && c.status !== "archived");
+
+    /* Resolver scope y ventana temporal */
+    const scope = String(req.query.scope || "historic").toLowerCase();
+    let periodFrom = null, periodTo = null, periodLabel = "Histórico completo";
+    const now = new Date();
+    if (scope === "weekly") {
+      periodTo = now;
+      periodFrom = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+      const fmtD = (d) => d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+      periodLabel = `Última semana (${fmtD(periodFrom)} – ${fmtD(periodTo)})`;
+    } else if (scope === "monthly") {
+      periodTo = now;
+      periodFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+      const fmtM = (d) => d.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+      periodLabel = `Mes en curso (${fmtM(now)})`;
+    }
+    if (periodFrom && periodTo) {
+      campaigns = campaigns.filter((c) => {
+        const dateRef = c.sentAt || c.updatedAt || c.createdAt;
+        if (!dateRef) return false;
+        const t = new Date(dateRef).getTime();
+        return t >= periodFrom.getTime() && t <= periodTo.getTime();
+      });
+    }
 
     /* Totales */
     let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalRecipients = 0;
@@ -2184,7 +2217,10 @@ app.get("/api/campaigns/report/executive", (_req, res) => {
         rates: {
           openRate: sent > 0 ? opened / sent : 0,
           clickRate: sent > 0 ? clicked / sent : 0,
-          bounceRate: (sent + bounced) > 0 ? bounced / (sent + bounced) : 0
+          /* P0 audit 2026-05-05: bounceRate = bounced/total (consistente
+           * con campaign-report.html:886). Antes usaba bounced/(sent+bounced)
+           * que daba ratios incoherentes entre los 2 informes. */
+          bounceRate: total > 0 ? bounced / total : 0
         }
       };
     });
@@ -2205,8 +2241,19 @@ app.get("/api/campaigns/report/executive", (_req, res) => {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, v]) => ({ month: key, ...v }));
 
+    /* Best vs Worst (filtra sent>=10 para no penalizar campañas pequeñas) */
+    const eligible = rows.filter((r) => r.stats.sent >= 10);
+    const best = [...eligible].sort((a, b) => b.rates.openRate - a.rates.openRate)[0] || null;
+    const worst = [...eligible].sort((a, b) => a.rates.openRate - b.rates.openRate)[0] || null;
+
     return apiOk(res, {
       generatedAt: new Date().toISOString(),
+      meta: {
+        scope,
+        periodLabel,
+        periodFrom: periodFrom ? periodFrom.toISOString() : null,
+        periodTo: periodTo ? periodTo.toISOString() : null
+      },
       totals: {
         campaigns: campaigns.length,
         recipients: totalRecipients,
@@ -2216,11 +2263,15 @@ app.get("/api/campaigns/report/executive", (_req, res) => {
         bounced: totalBounced,
         openRate: totalSent > 0 ? totalOpened / totalSent : 0,
         clickRate: totalSent > 0 ? totalClicked / totalSent : 0,
-        bounceRate: (totalSent + totalBounced) > 0 ? totalBounced / (totalSent + totalBounced) : 0
+        /* P0 audit 2026-05-05: bounceRate = bounced/recipients (total)
+         * consistente con campaign-report.html. */
+        bounceRate: totalRecipients > 0 ? totalBounced / totalRecipients : 0
       },
       byStatus,
       monthly,
       top5,
+      best,
+      worst,
       campaigns: rows
     });
   } catch (error) {
@@ -2356,6 +2407,16 @@ app.delete("/api/campaigns/:id", (req, res) => {
       jobIdToCancel = target.jobId || null;
       if (hardDelete) {
         store.campaigns = store.campaigns.filter((c) => c.id !== req.params.id);
+        /* P0 audit 2026-05-05: hard delete tambien purga events asociados
+         * para no dejar eventos huerfanos que infla store.json. Y limpia
+         * el indice de dedupe (que se reconstruira on-demand). */
+        if (Array.isArray(store.events)) {
+          const before = store.events.length;
+          store.events = store.events.filter((e) => e && e.campaignId !== req.params.id);
+          const purged = before - store.events.length;
+          if (purged > 0) console.log(`[campaigns][DELETE] purgados ${purged} events de la campana ${req.params.id}`);
+        }
+        store._eventDedupeIdx = null;
       } else {
         target.status = "archived";
         target.archivedAt = new Date().toISOString();
@@ -3865,6 +3926,28 @@ const processUnsubscribe = (email, source = "post") => {
     const masked = decoded.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
     if (contact) {
       dataStore.createOrUpdateContact({ email: decoded, status: "unsubscribed" }, "update");
+      /* P0 audit 2026-05-05: registrar evento + writeback Sheets para que
+       * stats.unsubscribed se incremente y la columna Merge status muestre
+       * "BAJA". Buscamos campañas activas que tengan a este contacto como
+       * destinatario para asociar el evento. */
+      try {
+        const allCamps = dataStore.listCampaigns({});
+        const matchedCamps = (allCamps || []).filter((c) =>
+          Array.isArray(c.recipientsSnapshot) && c.recipientsSnapshot.some((r) => String(r.email || "").toLowerCase() === decoded)
+        );
+        for (const c of matchedCamps) {
+          dataStore.addEvent({
+            type: "unsubscribe",
+            campaignId: c.id,
+            email: decoded,
+            occurredAt: new Date().toISOString(),
+            source: `unsub_${source}`
+          });
+        }
+        wbForEmail(decoded, "unsubscribed");
+      } catch (e) {
+        console.warn(`[unsubscribe][${source}] addEvent/writeback err: ${e.message}`);
+      }
       console.log(`[unsubscribe][${source}] Baja procesada: ${masked}`);
       return { ok: true, found: true, email: decoded };
     }
@@ -3911,16 +3994,10 @@ app.get("/unsubscribe", (req, res) => {
         </body></html>
       `);
     }
-    const allContacts = dataStore.listContacts({});
-    const contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
-    /* P0 audit 2026-05-01: enmascarar email (GDPR Art. 32). */
-    const maskedG = decoded.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
-    if (contact) {
-      dataStore.createOrUpdateContact({ email: decoded, status: "unsubscribed" }, "update");
-      console.log(`[unsubscribe] Baja procesada: ${maskedG}`);
-    } else {
-      console.log(`[unsubscribe] Email no encontrado: ${maskedG}`);
-    }
+    /* P0 audit 2026-05-05: GET handler ahora delega en processUnsubscribe
+     * (que registra evento + writeback). Antes solo cambiaba status y
+     * silenciaba stats. */
+    processUnsubscribe(email, "get");
     return res.send(`
       <html><body style="font-family:sans-serif;text-align:center;padding:60px">
         <h2 style="color:#10b981">Baja confirmada</h2>

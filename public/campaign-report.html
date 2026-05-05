@@ -1093,24 +1093,38 @@ function render(d) {
       <dl class="glossary">
         <dt>Tasa de apertura (Open Rate)</dt>
         <dd>Porcentaje de destinatarios que abrieron el email al menos una vez, sobre emails entregados.</dd>
-        <dt>Tasa de clic (CTR)</dt>
+        <dt>Tasa de clic (CTR — Click-Through Rate)</dt>
         <dd>Porcentaje de destinatarios que hicieron clic en algún enlace del email, sobre emails entregados.</dd>
         <dt>CTOR (Click-to-Open Ratio)</dt>
         <dd>Porcentaje de los que abrieron que además clicaron. Mide la calidad del contenido del email.</dd>
+        <dt>CTA (Call To Action)</dt>
+        <dd>Llamada a la acción. Botón o enlace destacado que invita al destinatario a un paso concreto (responder, agendar, escuchar...).</dd>
         <dt>Rebote (Bounce)</dt>
-        <dd>Email que no pudo entregarse. Puede ser soft (temporal) o hard (permanente, dirección no existe).</dd>
+        <dd>Email que no pudo entregarse. Hay dos tipos:</dd>
+        <dt style="margin-left:18px;font-size:11pt">→ Soft bounce</dt>
+        <dd>Rechazo temporal: buzón lleno, servidor caído, etc. El motor reintenta automáticamente.</dd>
+        <dt style="margin-left:18px;font-size:11pt">→ Hard bounce</dt>
+        <dd>Rechazo permanente: dirección inexistente o dominio no resuelve. El contacto se marca como bounced y se excluye de futuras campañas.</dd>
         <dt>Baja (Unsubscribe)</dt>
-        <dd>Destinatario que pide dejar de recibir emails mediante el enlace del pie del correo.</dd>
-        <dt>Entregabilidad</dt>
+        <dd>Destinatario que pide dejar de recibir emails mediante el enlace del pie o el botón nativo de Gmail/Outlook (RFC 8058 one-click). Excluido inmediatamente de futuras campañas (RGPD Art. 21).</dd>
+        <dt>Entregabilidad (Deliverability)</dt>
         <dd>Porcentaje de emails que llegaron correctamente a bandeja, sin rebotar.</dd>
         <dt>Benchmark</dt>
-        <dd>Valor de referencia del sector. Permite comparar una campaña con el promedio del mercado.</dd>
+        <dd>Valor de referencia del sector. Permite comparar una campaña con el promedio del mercado (Mailjet/HubSpot/Campaign Monitor 2024-25).</dd>
+        <dt>Lista negra (Blacklist) / Lista blanca (Whitelist)</dt>
+        <dd>Registros públicos de IPs/dominios marcados como spam (Spamhaus, Barracuda, etc.). Caer en lista negra hunde la entregabilidad. La lista blanca es el opuesto: dominios reputados que pasan filtros casi automáticamente.</dd>
+        <dt>Warm-up</dt>
+        <dd>Calentamiento progresivo del dominio: se empieza enviando 100 emails/día y se sube gradualmente hasta el cap (1.950/24h). Construye reputación con Gmail/Outlook antes de enviar a volumen.</dd>
         <dt>CCAA</dt>
         <dd>Comunidad Autónoma. Región administrativa de España.</dd>
-        <dt>DKIM / SPF / DMARC</dt>
-        <dd>Protocolos de autenticación del remitente. Evitan que el email caiga en spam.</dd>
+        <dt>SPF (Sender Policy Framework)</dt>
+        <dd>Registro DNS que declara qué servidores pueden enviar correo en nombre del dominio. Sin SPF correcto, Gmail marca como spam.</dd>
+        <dt>DKIM (DomainKeys Identified Mail)</dt>
+        <dd>Firma criptográfica del email con clave pública en DNS. Garantiza que el contenido no fue alterado en tránsito.</dd>
+        <dt>DMARC</dt>
+        <dd>Política DNS que indica qué hacer con emails que fallan SPF/DKIM (`p=none` solo monitoriza, `p=quarantine` los manda a spam, `p=reject` los rechaza).</dd>
         <dt>RGPD</dt>
-        <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales.</dd>
+        <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales. Obliga a tener base legal de envío, ofrecer baja fácil y limitar tratamiento.</dd>
       </dl>
     </div>
 

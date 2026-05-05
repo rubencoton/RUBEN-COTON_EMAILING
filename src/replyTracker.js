@@ -113,12 +113,15 @@ async function scanReplies() {
                   },
                   occurredAt: new Date(Number(get.data.internalDate || Date.now())).toISOString()
                 });
-                /* Writeback rebotado en hoja CRM. */
+                /* Writeback rebotado en hoja CRM.
+                 * P0 audit 2026-05-05: usar listContacts({search}) en vez
+                 * de listContacts({}) (carga TODOS los 56k contactos en
+                 * cada bounce). El parámetro search filtra por email/nombre
+                 * antes de devolver. */
                 try {
                   const sheetsWriteback = require("./sheetsWriteback");
-                  const c = _dataStoreRef.getContactByEmail
-                    ? _dataStoreRef.getContactByEmail(failedTo)
-                    : (_dataStoreRef.listContacts({}) || []).find((x) => String(x.email || "").toLowerCase() === failedTo);
+                  const matching = _dataStoreRef.listContacts({ search: failedTo }) || [];
+                  const c = matching.find((x) => String(x.email || "").toLowerCase() === failedTo);
                   if (c) {
                     let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
                     if (typeof meta === "string") { try { meta = JSON.parse(meta); } catch (_e) { meta = null; } }

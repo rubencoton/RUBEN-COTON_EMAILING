@@ -46,17 +46,22 @@ const STATUS_PRIORITY = {
   rebotado: 2,
   abierto: 3,
   clicado: 4,
-  respondido: 5
+  respondido: 5,
+  /* P0 audit 2026-05-05: añadido "unsubscribed" como estado terminal de
+   * mayor prioridad. Si un contacto se da de baja, se ve en la columna
+   * Merge status y queda registrado en stats. */
+  unsubscribed: 6
 };
 
 /* PETICION USUARIO 2026-05-05: texto SIEMPRE NEGRO + MAYUSCULAS,
  * fondos PASTEL claros para que el texto se lea bien. */
 const STATUS_COLOR = {
-  enviado:    { bg: { red: 0.96, green: 0.96, blue: 0.97 }, fg: { red: 0, green: 0, blue: 0 } }, /* gris muy claro */
-  rebotado:   { bg: { red: 0.99, green: 0.89, blue: 0.89 }, fg: { red: 0, green: 0, blue: 0 } }, /* rojo pastel #fee2e2 */
-  abierto:    { bg: { red: 0.82, green: 0.98, blue: 0.90 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel claro #d1fae5 */
-  clicado:    { bg: { red: 0.65, green: 0.95, blue: 0.81 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel medio #a7f3d0 */
-  respondido: { bg: { red: 0.43, green: 0.91, blue: 0.72 }, fg: { red: 0, green: 0, blue: 0 } }  /* verde pastel oscuro #6ee7b7 */
+  enviado:      { bg: { red: 0.96, green: 0.96, blue: 0.97 }, fg: { red: 0, green: 0, blue: 0 } }, /* gris muy claro */
+  rebotado:     { bg: { red: 0.99, green: 0.89, blue: 0.89 }, fg: { red: 0, green: 0, blue: 0 } }, /* rojo pastel #fee2e2 */
+  abierto:      { bg: { red: 0.82, green: 0.98, blue: 0.90 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel claro #d1fae5 */
+  clicado:      { bg: { red: 0.65, green: 0.95, blue: 0.81 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel medio #a7f3d0 */
+  respondido:   { bg: { red: 0.43, green: 0.91, blue: 0.72 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel oscuro #6ee7b7 */
+  unsubscribed: { bg: { red: 0.97, green: 0.95, blue: 0.78 }, fg: { red: 0, green: 0, blue: 0 } }  /* amarillo pastel #f7f2c7 */
 };
 /* Mapeo lowercase -> uppercase para escribir en celda. */
 const STATUS_LABEL_UPPER = {
@@ -64,7 +69,8 @@ const STATUS_LABEL_UPPER = {
   rebotado: "REBOTADO",
   abierto: "ABIERTO",
   clicado: "CLICADO",
-  respondido: "RESPONDIDO"
+  respondido: "RESPONDIDO",
+  unsubscribed: "BAJA"
 };
 
 /* Auth: usa el OAuth client SINGLETON de googleHub.js

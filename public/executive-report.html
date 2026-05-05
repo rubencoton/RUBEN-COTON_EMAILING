@@ -680,6 +680,27 @@
         '</div>'
       ) : "",
 
+      // BEST vs WORST (P1 audit 2026-05-05): comparativa explícita para
+      // identificar la mejor y la peor campaña con muestra suficiente
+      // (sent>=10) y delta de openRate. Ayuda a la directiva a localizar
+      // qué replicar y qué evitar.
+      (data.best && data.worst && data.best.id !== data.worst.id) ? (
+        '<h2 class="section-title">⚖️ Mejor vs peor campaña</h2>' +
+        '<div class="rates-grid" style="grid-template-columns:repeat(2,1fr)">' +
+        '  <div class="rate-card" style="border-top:5px solid #10b981">' +
+        '    <div class="rate-label" style="color:#10b981">🥇 Mejor: ' + esc(data.best.name) + '</div>' +
+        '    <div class="rate-value">' + pct(data.best.rates.openRate) + '</div>' +
+        '    <div style="font-size:12px;color:#666">' + fmt(data.best.stats.opened) + ' aperturas / ' + fmt(data.best.stats.sent) + ' enviados</div>' +
+        '  </div>' +
+        '  <div class="rate-card" style="border-top:5px solid #dc2626">' +
+        '    <div class="rate-label" style="color:#dc2626">🪫 Peor: ' + esc(data.worst.name) + '</div>' +
+        '    <div class="rate-value">' + pct(data.worst.rates.openRate) + '</div>' +
+        '    <div style="font-size:12px;color:#666">' + fmt(data.worst.stats.opened) + ' aperturas / ' + fmt(data.worst.stats.sent) + ' enviados</div>' +
+        '  </div>' +
+        '</div>' +
+        '<p style="font-size:12px;color:#666;margin:-8px 0 24px;font-style:italic">Solo se consideran campañas con ≥10 envíos para evitar sesgo de muestras pequeñas. Delta de apertura: <strong>' + ((data.best.rates.openRate - data.worst.rates.openRate) * 100).toFixed(1) + ' puntos porcentuales</strong>.</p>'
+      ) : "",
+
       // EVOLUCION MENSUAL
       data.monthly.length > 0 ? (
         '<h2 class="section-title">📈 Evolución mensual de envíos</h2>' +

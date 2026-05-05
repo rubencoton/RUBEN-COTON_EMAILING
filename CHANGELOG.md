@@ -6,6 +6,49 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Hardening P0 pre-lanzamiento + informes depurados
+
+### Añadido (Backend)
+
+- **`status:"unsubscribed"`** soportado en `src/sheetsWriteback.js` con color amarillo pastel + label "BAJA". Ahora el operador ve en la columna Merge Status quien se ha dado de baja.
+- **Handlers `/unsubscribe` GET y POST** registran `dataStore.addEvent({type:"unsubscribe"})` para todas las campañas activas que tenían al contacto, y disparan writeback Sheets con status `unsubscribed`. Antes solo cambiaban `contact.status` y stats `unsubscribed` quedaban en cero.
+- **`src/server.js` — endpoint `/api/campaigns/report/executive`** soporta `?scope=weekly|monthly|historic` con `meta:{scope, periodLabel, periodFrom, periodTo}` en la respuesta. La gráfica y la tabla del informe ejecutivo HTML ahora pueden filtrar el periodo.
+- **`best` y `worst`** en respuesta del endpoint executive (filtra `sent>=10` para no penalizar muestras pequeñas). Renderizado en `executive-report.html` como sección "⚖️ Mejor vs peor campaña" con delta de openRate en puntos porcentuales.
+- **Glosario campaign-report.html** ampliado: CTA, soft bounce, hard bounce, lista negra/blanca, warm-up, SPF, DKIM, DMARC. Términos relevantes para presentar a directiva/sponsor.
+
+### Cambiado (P0 audit pre-lanzamiento)
+
+- **`src/server.js` DELETE `/api/campaigns/:id` (hard delete)** ahora también purga eventos huérfanos asociados (`store.events.filter(...)`) y limpia el índice de dedupe. Antes los eventos quedaban indefinidamente y el `data/store.json` crecía sin tope.
+- **`src/server.js` endpoint executive** filtra campañas archivadas (`status !== "archived"`) del cómputo agregado, igual que ya hace el dashboard.
+- **`src/server.js` y `public/campaign-report.html` — `bounceRate` unificado** a `bounced/total`. Antes el ejecutivo usaba `bounced/(sent+bounced)` y el individual `bounced/total`, dando ratios incoherentes entre los 2 informes para la misma campaña.
+- **`src/trackingSign.js`:** si `TRACKING_REQUIRE_HMAC=1` y `TRACKING_SECRET` no está en env (o tiene <16 chars) el proceso **aborta el arranque** (`process.exit(1)`) con mensaje claro. Antes autogeneraba en memoria silenciosamente y al primer restart todas las URLs firmadas quedaban inválidas.
+- **`src/replyTracker.js`:** uso de `listContacts({ search: failedTo })` en vez de `listContacts({})` al recibir un bounce. Carga ~1 contacto en vez de los 56k completos. Quita la llamada a `getContactByEmail` que no existía.
+
+### Justificación
+
+Auditoría profunda 2026-05-05 (2 subagentes paralelos: tracking flow + contenido informes). Bugs P0 detectados:
+1. DELETE deja events huérfanos → bloat indefinido del store.
+2. Unsubscribe no incrementa stats ni pinta Sheets → reportes incoherentes para directiva.
+3. trackingSign autogen silencioso → opens/clicks invalidados tras cada restart.
+4. `getContactByEmail` no existía → cargar 56k contactos en cada bounce.
+5. bounceRate inconsistente entre los 2 informes.
+6. Executive no filtraba archived ni soportaba scope.
+
+Estado: 0 bugs P0 conocidos en código. El usuario puede lanzar campaña con confianza tras setear las env vars de Coolify.
+
+### Test
+
+- `node --check` en `server.js`, `sheetsWriteback.js`, `trackingSign.js`, `replyTracker.js` → OK.
+
+### Acción manual requerida en Coolify (NO es código)
+
+- **`TRACKING_SECRET`**: generar con `openssl rand -hex 32` y añadir a env. Ahora es **obligatorio** porque el server aborta si falta y `TRACKING_REQUIRE_HMAC=1`.
+- **`TRACKING_REQUIRE_HMAC=1`**: activar para rechazar firmas inválidas/ausentes.
+- **`MAIL_UNSUBSCRIBE_BASE_URL=https://emailing.rubencoton.com/unsubscribe`**: ya documentado, confirmar.
+- **DNS DMARC** en `_dmarc.rubencoton.com` con `p=quarantine; rua=mailto:postmaster@rubencoton.com`.
+
+---
+
 ## [2026-05-05] — Executive Report rediseño armónico
 
 ### Cambiado
