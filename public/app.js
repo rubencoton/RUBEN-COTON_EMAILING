@@ -824,16 +824,67 @@ const renderCampaigns = (campaigns) => {
     }
     return `<span class="status-badge status-${esc(s)}">${esc(label)}</span>${extra}`;
   };
+  /* PETICION USUARIO 2026-05-05: cada celda metrica con 3 lineas:
+   * - Numero (arriba)
+   * - Porcentaje (medio)
+   * - Estado (abajo, con color: excelente/bueno/normal/por mejorar)
+   *
+   * Benchmarks ajustados a sector publico (concejalias). */
+  const evalMetric = (kind, value, base) => {
+    const pct = base > 0 ? (value / base) * 100 : 0;
+    let label, cls;
+    if (kind === "sent") {
+      if (pct >= 75) { label = "CASI HECHO"; cls = "ok"; }
+      else if (pct >= 50) { label = "AVANZANDO"; cls = "ok"; }
+      else if (pct >= 25) { label = "EN MARCHA"; cls = "warn"; }
+      else { label = "INICIANDO"; cls = "warn"; }
+    } else if (kind === "open") {
+      if (pct >= 20) { label = "EXCELENTE"; cls = "ok"; }
+      else if (pct >= 15) { label = "BUENO"; cls = "ok"; }
+      else if (pct >= 10) { label = "NORMAL"; cls = "warn"; }
+      else { label = "POR MEJORAR"; cls = "bad"; }
+    } else if (kind === "click") {
+      if (pct >= 5) { label = "EXCELENTE"; cls = "ok"; }
+      else if (pct >= 3) { label = "BUENO"; cls = "ok"; }
+      else if (pct >= 2) { label = "NORMAL"; cls = "warn"; }
+      else { label = "POR MEJORAR"; cls = "bad"; }
+    } else if (kind === "reply") {
+      if (pct >= 2) { label = "EXCELENTE"; cls = "ok"; }
+      else if (pct >= 1) { label = "BUENO"; cls = "ok"; }
+      else if (pct >= 0.5) { label = "NORMAL"; cls = "warn"; }
+      else { label = "POR MEJORAR"; cls = "bad"; }
+    } else if (kind === "bounce") {
+      if (pct < 2) { label = "EXCELENTE"; cls = "ok"; }
+      else if (pct < 5) { label = "BUENO"; cls = "ok"; }
+      else if (pct < 8) { label = "NORMAL"; cls = "warn"; }
+      else { label = "POR MEJORAR"; cls = "bad"; }
+    }
+    return { pct: pct.toFixed(1), label, cls };
+  };
+  const cellMetric = (n, kind, value, base) => {
+    const e = evalMetric(kind, value, base);
+    const colors = {
+      ok: "background:#d1fae5;color:#065f46",
+      warn: "background:#fef3c7;color:#92400e",
+      bad: "background:#fee2e2;color:#991b1b"
+    };
+    return `<div style="text-align:center;line-height:1.2">
+      <div style="font-size:18px;font-weight:900;color:#111">${n.toLocaleString("es-ES")}</div>
+      <div style="font-size:11px;color:#666;font-weight:600;margin-top:2px">${e.pct}%</div>
+      <div style="display:inline-block;font-size:8.5pt;font-weight:800;letter-spacing:0.4px;padding:2px 8px;border-radius:10px;margin-top:4px;${colors[e.cls]}">${e.label}</div>
+    </div>`;
+  };
+
   campaignsTableBody.innerHTML = campaigns
     .map((c) => {
       const st = c.stats || {};
+      const total = st.total || 0;
       const sent = st.sent || 0;
-      const opens = st.opened || 0;
-      const clicks = st.clicked || 0;
+      const opens = st.openedUnique || st.opened || 0;
+      const clicks = st.clickedUnique || st.clicked || 0;
       const replies = st.replied || 0;
       const bounces = st.bounced || 0;
       const canSend = c.status === "draft";
-      /* P0 feature 2026-05-04: pause/resume/cancel solo cuando aplica */
       const canPause = c.status === "sending" || c.status === "queued";
       const canResume = c.status === "paused";
       const canCancel = ["sending", "queued", "paused"].includes(c.status);
@@ -841,12 +892,12 @@ const renderCampaigns = (campaigns) => {
       <tr>
         <td><strong>${esc(c.name)}</strong><br/><small class="muted">${esc(c.subject || "")}</small></td>
         <td>${statusBadge(c.status, c.queuePosition)}</td>
-        <td>${(st.total || 0).toLocaleString("es-ES")}</td>
-        <td>${sent.toLocaleString("es-ES")}</td>
-        <td>${opens.toLocaleString("es-ES")}${sent ? ` <small class="muted">(${Math.round(opens/sent*100)}%)</small>` : ""}</td>
-        <td>${clicks.toLocaleString("es-ES")}${sent ? ` <small class="muted">(${Math.round(clicks/sent*100)}%)</small>` : ""}</td>
-        <td>${replies.toLocaleString("es-ES")}${sent ? ` <small class="muted">(${Math.round(replies/sent*100)}%)</small>` : ""}</td>
-        <td>${bounces.toLocaleString("es-ES")}</td>
+        <td style="text-align:center;font-size:14px;font-weight:700">${total.toLocaleString("es-ES")}</td>
+        <td>${cellMetric(sent, "sent", sent, total)}</td>
+        <td>${cellMetric(opens, "open", opens, sent)}</td>
+        <td>${cellMetric(clicks, "click", clicks, sent)}</td>
+        <td>${cellMetric(replies, "reply", replies, sent)}</td>
+        <td>${cellMetric(bounces, "bounce", bounces, sent)}</td>
         <td class="td-acciones">
           <div class="campaign-actions">
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}

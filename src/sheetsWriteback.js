@@ -38,13 +38,22 @@ const STATUS_PRIORITY = {
   respondido: 5
 };
 
+/* PETICION USUARIO 2026-05-05: texto SIEMPRE NEGRO + MAYUSCULAS,
+ * fondos PASTEL claros para que el texto se lea bien. */
 const STATUS_COLOR = {
-  enviado:    { bg: { red: 1,    green: 1,    blue: 1    }, fg: { red: 0, green: 0, blue: 0 } },
-  /* P0 user 2026-05-04: rebotado pasa de NEGRO a ROJO (#dc2626) */
-  rebotado:   { bg: { red: 0.86, green: 0.15, blue: 0.15 }, fg: { red: 1, green: 1, blue: 1 } },
-  abierto:    { bg: { red: 0.72, green: 0.88, blue: 0.80 }, fg: { red: 0, green: 0, blue: 0 } },
-  clicado:    { bg: { red: 0.34, green: 0.73, blue: 0.54 }, fg: { red: 1, green: 1, blue: 1 } },
-  respondido: { bg: { red: 0.18, green: 0.49, blue: 0.20 }, fg: { red: 1, green: 1, blue: 1 } }
+  enviado:    { bg: { red: 0.96, green: 0.96, blue: 0.97 }, fg: { red: 0, green: 0, blue: 0 } }, /* gris muy claro */
+  rebotado:   { bg: { red: 0.99, green: 0.89, blue: 0.89 }, fg: { red: 0, green: 0, blue: 0 } }, /* rojo pastel #fee2e2 */
+  abierto:    { bg: { red: 0.82, green: 0.98, blue: 0.90 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel claro #d1fae5 */
+  clicado:    { bg: { red: 0.65, green: 0.95, blue: 0.81 }, fg: { red: 0, green: 0, blue: 0 } }, /* verde pastel medio #a7f3d0 */
+  respondido: { bg: { red: 0.43, green: 0.91, blue: 0.72 }, fg: { red: 0, green: 0, blue: 0 } }  /* verde pastel oscuro #6ee7b7 */
+};
+/* Mapeo lowercase -> uppercase para escribir en celda. */
+const STATUS_LABEL_UPPER = {
+  enviado: "ENVIADO",
+  rebotado: "REBOTADO",
+  abierto: "ABIERTO",
+  clicado: "CLICADO",
+  respondido: "RESPONDIDO"
 };
 
 /* Auth: usa el OAuth client SINGLETON de googleHub.js
@@ -119,14 +128,15 @@ const flush = async () => {
   for (const [sheetId, items] of Object.entries(bySheet)) {
     const requests = items.map((it) => {
       const colors = STATUS_COLOR[it.status];
+      const upperLabel = STATUS_LABEL_UPPER[it.status] || String(it.status).toUpperCase();
       return {
         updateCells: {
           rows: [{
             values: [{
-              userEnteredValue: { stringValue: it.status },
+              userEnteredValue: { stringValue: upperLabel },
               userEnteredFormat: {
                 backgroundColor: colors.bg,
-                textFormat: { foregroundColor: colors.fg, bold: it.status === "rebotado" || it.status === "respondido" }
+                textFormat: { foregroundColor: colors.fg, bold: true }
               }
             }]
           }],

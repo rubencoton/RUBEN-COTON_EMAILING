@@ -8,88 +8,72 @@
 html { scroll-behavior: smooth; }
 body {
   font-family: "Inter", "Segoe UI", -apple-system, Arial, sans-serif;
-  /* DARK MODE 2026-05-05 (peticion usuario): TODO el informe en negro
-   * + letras blancas + cabeceras naranjas como acento. */
-  color: #ffffff;
-  background: #0a0a0a;
-  line-height: 1.6;
+  /* PETICION USUARIO 2026-05-05: vuelta a fondo BLANCO porque el informe
+   * se imprime a PDF y fondo negro consume mucha tinta. Acentos naranjas. */
+  color: #1a1a1a;
+  background: #f4f4f6;
+  line-height: 1.65;
   font-size: 11pt;
   padding: 24px;
   -webkit-font-smoothing: antialiased;
-  /* Impresión: fuerza conservar los colores corporativos. */
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 .container { max-width: 880px; margin: 0 auto; }
 
-/* ========== CORPORATIVO: VARIABLES (DARK MODE) ========== */
+/* ========== CORPORATIVO: VARIABLES (LIGHT MODE) ========== */
 :root {
-  --rojo: #FF6B00;          /* naranja vivo para cabeceras */
-  --rojo-2: #FF8533;        /* hover/secundario */
-  --rojo-soft: #1a1a1a;     /* card oscura (antes pastel) */
+  --rojo: #E65100;            /* naranja oscuro */
+  --rojo-2: #FF6B00;          /* naranja vivo */
+  --rojo-soft: #fff5e6;       /* fondo card naranja suave */
   --amarillo: #FFB74D;
-  --negro: #0a0a0a;         /* fondo principal */
-  --gris-1: #1a1a1a;        /* card / seccion fondo */
-  --gris-2: #2a2a2a;         /* bordes */
-  --gris-3: #cccccc;         /* texto secundario */
+  --negro: #1a1a1a;
+  --gris-1: #f9fafb;          /* card / seccion fondo */
+  --gris-2: #e5e7eb;          /* bordes */
+  --gris-3: #6b7280;          /* texto secundario */
 }
 
 /* ========== PORTADA CORPORATIVA (rojo / amarillo / blanco) ========== */
 .cover {
   position: relative;
-  /* Se ajusta a página A4 útil (sin desbordar al imprimir) */
   min-height: calc(100vh - 60px);
-  padding: 56px 56px 48px;
-  /* DARK MODE 2026-05-05 (peticion usuario): fondo negro + logo NEG con
-   * letras blancas. Mantiene cinta naranja arriba como acento corporativo. */
-  background: #0a0a0a;
-  color: #fff;
+  padding: 0 0 48px;
+  /* PETICION USUARIO 2026-05-05: fondo BLANCO en portada (apto PDF). */
+  background: #ffffff;
+  color: #1a1a1a;
   border-radius: 18px;
   margin-bottom: 40px;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.08);
   overflow: hidden;
+  border: 1px solid var(--gris-2);
   page-break-after: always;
   break-after: page;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
 }
 .cover::before {
   content: "";
-  position: absolute; top: 0; left: 0; right: 0; height: 10px;
-  background: #FF6B00;
+  position: absolute; top: 0; left: 0; right: 0; height: 14px;
+  background: linear-gradient(90deg, var(--rojo-2), var(--rojo), var(--amarillo));
 }
-.cover::after {
-  content: "";
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(circle at 15% 85%, rgba(255,107,0,0.10), transparent 55%),
-    radial-gradient(circle at 85% 15%, rgba(255,107,0,0.08), transparent 55%);
-  pointer-events: none;
-}
-.cover-inner { position: relative; z-index: 1; }
+.cover-inner { position: relative; z-index: 1; padding: 56px 64px; }
 .cover-header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
+  gap: 24px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--gris-2);
 }
 .cover-logo {
   width: 100px; height: 100px;
   border-radius: 14px;
-  /* DARK MODE: logo NEG (letras blancas) ya viene sobre fondo negro,
-   * no necesita fondo blanco extra. Mantengo borde sutil para definicion. */
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #ffffff;
+  border: 1px solid var(--gris-2);
   padding: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   object-fit: contain;
   flex-shrink: 0;
 }
 .cover-brand { flex: 1; }
 .cover-brand h1 {
-  color: #fff !important;
+  color: #1a1a1a !important;
   font-size: 28pt;
   letter-spacing: 6px;
   margin: 0;
@@ -98,7 +82,7 @@ body {
   line-height: 1.1;
 }
 .cover-brand .tagline {
-  color: var(--amarillo);
+  color: var(--rojo);
   font-size: 11pt;
   letter-spacing: 4px;
   text-transform: uppercase;
@@ -106,12 +90,12 @@ body {
   margin-top: 4px;
 }
 
-.cover-middle { text-align: center; padding: 28px 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.cover-middle { text-align: center; padding: 28px 20px; }
 .cover-doctype {
   display: inline-block;
-  background: rgba(244,180,0,0.15);
-  border: 1.5px solid var(--amarillo);
-  color: var(--amarillo);
+  background: var(--rojo-soft);
+  border: 1px solid var(--rojo-2);
+  color: var(--rojo);
   padding: 8px 24px;
   border-radius: 30px;
   font-size: 10pt;
@@ -208,7 +192,7 @@ body {
 
 /* ========== ÍNDICE ========== */
 .toc {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 14px;
   margin-bottom: 40px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.06);
@@ -231,7 +215,7 @@ body {
 .toc-list li { margin: 8px 0; counter-increment: toc; }
 .toc-list a {
   display: flex; align-items: center; gap: 14px;
-  color: #ffffff; text-decoration: none;
+  color: #1a1a1a; text-decoration: none;
   font-weight: 600; font-size: 11.5pt;
   padding: 12px 14px;
   border-radius: 8px;
@@ -253,7 +237,7 @@ body {
 
 /* ========== SECCIONES ========== */
 .section {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   padding: 28px 34px;
   margin-bottom: 24px;
@@ -278,12 +262,12 @@ h1 .num {
   letter-spacing: 0;
 }
 h2 { color: var(--rojo); font-size: 14pt; margin: 22px 0 12px; padding-left: 12px; border-left: 4px solid var(--amarillo); }
-h3 { color: #ffffff; font-size: 12pt; margin: 16px 0 8px; font-weight: 800; }
+h3 { color: #1a1a1a; font-size: 12pt; margin: 16px 0 8px; font-weight: 800; }
 p { margin: 8px 0; }
 
 .intro {
   font-size: 11pt;
-  color: #cccccc;
+  color: #6b7280;
   font-style: italic;
   margin-bottom: 14px;
 }
@@ -302,7 +286,7 @@ p { margin: 8px 0; }
   border-radius: 8px;
 }
 .meta-item .lbl { font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: var(--gris-3); font-weight: 800; }
-.meta-item .val { font-size: 12pt; color: #ffffff; margin-top: 4px; font-weight: 700; word-break: break-word; }
+.meta-item .val { font-size: 12pt; color: #1a1a1a; margin-top: 4px; font-weight: 700; word-break: break-word; }
 
 /* ========== KPIS ========== */
 .kpi-grid {
@@ -312,7 +296,7 @@ p { margin: 8px 0; }
   margin: 16px 0;
 }
 .kpi {
-  background: #1a1a1a;
+  background: #ffffff;
   border: 1px solid var(--gris-2);
   border-top: 5px solid var(--rojo-2);
   padding: 18px 14px;
@@ -337,7 +321,7 @@ p { margin: 8px 0; }
 
 /* ========== BARRAS ========== */
 .bar-row { display: grid; grid-template-columns: 180px 1fr 80px; gap: 14px; align-items: center; margin: 10px 0; }
-.bar-label { font-size: 10.5pt; font-weight: 700; color: #cccccc; }
+.bar-label { font-size: 10.5pt; font-weight: 700; color: #6b7280; }
 .bar-track { background: #2a2a2a; height: 18px; border-radius: 9px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4); }
 .bar-fill { height: 100%; background: linear-gradient(90deg, var(--rojo), var(--rojo-2) 60%, var(--amarillo)); border-radius: 9px; }
 .bar-value { font-size: 10.5pt; font-weight: 800; color: var(--rojo); text-align: right; }
@@ -348,7 +332,7 @@ table {
   border-collapse: collapse;
   margin: 14px 0;
   font-size: 10pt;
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -376,12 +360,15 @@ tr:hover td { background: var(--rojo-soft); }
   text-transform: uppercase;
   white-space: nowrap;
 }
-.status-clic { background: #166534; color: #dcfce7; }
-.status-abierto { background: #1e40af; color: #dbeafe; }
-.status-enviado { background: #3730a3; color: #e0e7ff; }
-.status-rebote { background: #991b1b; color: #fee2e2; }
-.status-baja { background: #92400e; color: #fef3c7; }
-.status-en-cola { background: #374151; color: #f3f4f6; }
+/* PETICION USUARIO 2026-05-05: gradiente verde según interacción.
+ * abierto = verde claro, clic = verde medio, respondido = verde oscuro. */
+.status-en-cola { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.status-enviado { background: #e0e7ff; color: #3730a3; }
+.status-abierto { background: #a7f3d0; color: #065f46; }
+.status-clic { background: #34d399; color: #ffffff; }
+.status-respondido { background: #065f46; color: #ffffff; }
+.status-rebote { background: #fee2e2; color: #991b1b; }
+.status-baja { background: #fef3c7; color: #92400e; }
 
 /* ========== CALLOUTS ========== */
 .callout {
@@ -390,11 +377,11 @@ tr:hover td { background: var(--rojo-soft); }
   margin: 16px 0;
   font-size: 11pt;
 }
-.callout.exec { background: #2a2a2a; border-left: 5px solid var(--rojo-2); color: #ffffff; }
-.callout.ok { background: #1a2e25; border-left: 5px solid #10b981; color: #ffffff; }
-.callout.tip { background: #1e2a3d; border-left: 5px solid #3b82f6; color: #ffffff; }
-.callout.warn { background: #2a2618; border-left: 5px solid var(--amarillo); color: #ffffff; }
-.callout.alert { background: #2a1a1a; border-left: 5px solid var(--rojo-2); color: #ffffff; }
+.callout.exec { background: var(--rojo-soft); border-left: 5px solid var(--rojo-2); color: #1a1a1a; }
+.callout.ok { background: #e6f7ec; border-left: 5px solid #10b981; color: #1a1a1a; }
+.callout.tip { background: #eef4ff; border-left: 5px solid #3b82f6; color: #1a1a1a; }
+.callout.warn { background: #fff8e1; border-left: 5px solid var(--amarillo); color: #1a1a1a; }
+.callout.alert { background: #fee2e2; border-left: 5px solid var(--rojo-2); color: #1a1a1a; }
 .callout strong { color: var(--rojo-2); }
 .callout h3 { margin-top: 0; }
 
@@ -416,7 +403,7 @@ tr:hover td { background: var(--rojo-soft); }
 
 /* ========== EMAIL PREVIEW ========== */
 .email-preview {
-  background: #1a1a1a;
+  background: #ffffff;
   border: 2px solid var(--gris-2);
   border-radius: 12px;
   overflow: hidden;
@@ -513,12 +500,12 @@ tr:hover td { background: var(--rojo-soft); }
     @bottom-left { content: ""; }
   }
 
-  /* Global - DARK MODE en print tambien */
+  /* Global - LIGHT MODE en print (apto PDF profesional) */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
   html, body {
     padding: 0 !important; margin: 0 !important;
-    background: #0a0a0a !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
     font-size: 10.5pt !important;
     line-height: 1.45 !important;
     font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
@@ -542,8 +529,8 @@ tr:hover td { background: var(--rojo-soft); }
     min-height: 0 !important;
     height: 297mm !important; /* A4 alto completo */
     width: 210mm !important;
-    background: #0a0a0a !important;
-    color: #fff !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -630,9 +617,8 @@ tr:hover td { background: var(--rojo-soft); }
     padding: 8px 10px !important;
     border-bottom: 2px solid #FFB74D !important;
   }
-  td { padding: 7px 10px !important; border-bottom: 1px solid #2a2a2a !important; color: #ffffff !important; }
-  tbody tr:nth-child(even) { background: #1a1a1a !important; }
-  tbody tr:nth-child(odd) { background: #0f0f0f !important; }
+  td { padding: 7px 10px !important; border-bottom: 1px solid #e5e7eb !important; color: #1a1a1a !important; }
+  tbody tr:nth-child(even) { background: #f9fafb !important; }
 
   /* Bloques que nunca se parten */
   .email-preview, .callout, .privacy-notice, .kpi, .rate-card, .bar-row, .summary-card {
@@ -677,7 +663,7 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="cover">
     <div class="cover-inner">
       <div class="cover-header">
-        <img class="cover-logo" src="/assets/logo-rubencoton-neg.png" alt="Logo RUBEN COTON">
+        <img class="cover-logo" src="/assets/logo-ruben-coton.png" alt="Logo RUBEN COTON">
         <div class="cover-brand">
           <h1>RUBEN COTON</h1>
           <div class="tagline">Management · Booking de Artistas</div>
@@ -743,7 +729,7 @@ tr:hover td { background: var(--rojo-soft); }
 
   <!-- ========= FOOTER ========= -->
   <div class="footer">
-    <img src="/assets/logo-rubencoton-neg.png" alt="RUBEN COTON">
+    <img src="/assets/logo-ruben-coton.png" alt="RUBEN COTON">
     <p><strong>RUBEN COTON</strong></p>
     <p>Booking &amp; Management de Artistas</p>
     <p style="margin-top:8px">📧 manager@rubencoton.com <span class="sep">·</span> 📍 Madrid</p>
@@ -831,7 +817,7 @@ const grade = (val, bench, inverse) => {
 function pageHeader(title, pg) {
   return `
     <div class="page-header">
-      <img src="/assets/logo-rubencoton-neg.png" alt="">
+      <img src="/assets/logo-ruben-coton.png" alt="">
       <div>
         <div class="ph-title">${esc(title)}</div>
         <div class="ph-sub">RUBEN COTON · Informe de Campaña</div>
@@ -916,7 +902,6 @@ function render(d) {
       <td>${esc(r.municipio)}</td>
       <td>${esc(r.provincia)}</td>
       <td>${esc(r.ccaa)}</td>
-      <td>${esc(r.poblacion || "—")}</td>
       <td>${esc(r.categoria)}</td>
       <td><span class="status-pill status-${esc(rStatusSlug)}">${esc(rStatus)}</span></td>
     </tr>
@@ -1000,12 +985,11 @@ function render(d) {
             <th>Municipio</th>
             <th>Provincia</th>
             <th>CCAA</th>
-            <th>Población</th>
             <th>Categoría</th>
             <th>Estado</th>
           </tr>
         </thead>
-        <tbody>${recRows || '<tr><td colspan="8" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
+        <tbody>${recRows || '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
       </table>
     </div>
 
