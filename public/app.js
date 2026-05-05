@@ -848,6 +848,13 @@ const renderCampaigns = (campaigns) => {
       else if (pct >= 3) { label = "BUENO"; cls = "ok"; }
       else if (pct >= 2) { label = "NORMAL"; cls = "warn"; }
       else { label = "POR MEJORAR"; cls = "bad"; }
+    } else if (kind === "ctor") {
+      /* CTOR (clic ÷ apertura): mide si quienes abren acaban interactuando.
+       * Benchmarks de email marketing: 10-15% normal, >25% excepcional. */
+      if (pct >= 25) { label = "EXCELENTE"; cls = "ok"; }
+      else if (pct >= 15) { label = "BUENO"; cls = "ok"; }
+      else if (pct >= 10) { label = "NORMAL"; cls = "warn"; }
+      else { label = "POR MEJORAR"; cls = "bad"; }
     } else if (kind === "reply") {
       if (pct >= 2) { label = "EXCELENTE"; cls = "ok"; }
       else if (pct >= 1) { label = "BUENO"; cls = "ok"; }
@@ -896,6 +903,7 @@ const renderCampaigns = (campaigns) => {
         <td>${cellMetric(sent, "sent", sent, total)}</td>
         <td>${cellMetric(opens, "open", opens, sent)}</td>
         <td>${cellMetric(clicks, "click", clicks, sent)}</td>
+        <td>${cellMetric(clicks, "ctor", clicks, opens)}</td>
         <td>${cellMetric(replies, "reply", replies, sent)}</td>
         <td>${cellMetric(bounces, "bounce", bounces, sent)}</td>
         <td class="td-acciones">
