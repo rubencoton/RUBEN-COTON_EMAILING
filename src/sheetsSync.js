@@ -144,6 +144,7 @@ const PHONE_HEADERS = ["telefono", "teléfono"];
 const PROVINCE_HEADERS = ["provincia"];
 const CCAA_HEADERS = ["ccaa", "c.c.a.", "comunidad autónoma", "comunidad autonoma"];
 const CITY_HEADERS = ["municipio", "ubicacion", "ubicación"];
+const POPULATION_HEADERS = ["poblacion", "población"];
 const MERGE_STATUS_HEADERS = ["merge status", "estado", "estado envio", "estado envío"];
 
 const findHeader = (headers, candidates) => {
@@ -236,6 +237,7 @@ const readSheet = async (sheets, spreadsheetId) => {
       const provinceIdx = findHeader(headers, PROVINCE_HEADERS);
       const ccaaIdx = findHeader(headers, CCAA_HEADERS);
       const cityIdx = findHeader(headers, CITY_HEADERS);
+      const populationIdx = findHeader(headers, POPULATION_HEADERS);
       /* Columna 'Merge status' donde el writeback escribe el estado
        * del envio. Si la pestaña no la tiene, _sheetMeta queda sin col
        * y el writeback la ignora silenciosamente. */
@@ -270,6 +272,7 @@ const readSheet = async (sheets, spreadsheetId) => {
             provincia: provinceIdx !== -1 ? (row[provinceIdx] || "").trim() : "",
             ccaa: ccaaIdx !== -1 ? (row[ccaaIdx] || "").trim() : "",
             municipio: cityIdx !== -1 ? (row[cityIdx] || "").trim() : "",
+            poblacion: populationIdx !== -1 ? (row[populationIdx] || "").trim() : "",
             _sheetMeta: sheetMeta
           }
         });

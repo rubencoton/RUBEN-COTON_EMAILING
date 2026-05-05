@@ -912,6 +912,7 @@ function render(d) {
       <td>${esc(r.municipio)}</td>
       <td>${esc(r.provincia)}</td>
       <td>${esc(r.ccaa)}</td>
+      <td>${esc(r.poblacion || "—")}</td>
       <td>${esc(r.categoria)}</td>
       <td><span class="status-pill status-${esc(rStatusSlug)}">${esc(rStatus)}</span></td>
     </tr>
@@ -995,11 +996,12 @@ function render(d) {
             <th>Municipio</th>
             <th>Provincia</th>
             <th>CCAA</th>
+            <th>Población</th>
             <th>Categoría</th>
             <th>Estado</th>
           </tr>
         </thead>
-        <tbody>${recRows || '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
+        <tbody>${recRows || '<tr><td colspan="8" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
       </table>
     </div>
 

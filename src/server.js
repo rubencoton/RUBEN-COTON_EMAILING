@@ -1336,12 +1336,25 @@ function buildCampaignReportData(campaign) {
    *    campana actual. Un contacto en multiples pestanas (festejos +
    *    infantil + cultura) mostraba INFANTIL en una campana de FESTEJOS.
    *    Ahora usa el filtro de la campana (listFilter.tag) si existe.
-   * 3. empresa: si company esta vacio o es de otra pestana, fallback
-   *    a 'Ayuntamiento de [municipio]' (mas relevante para festejos). */
+   * 3. empresa: si CRM es ayuntamientos (venta-booking) y la categoria
+   *    es una concejalia, mostrar 'Concejalia de [Cat] de [Municipio]'.
+   *    Sino, company > 'Ayuntamiento de [municipio]' > '—'. */
   const campaignSegTag = String(campaign.listFilter?.tag || "").trim();
   const campaignSegLabel = campaignSegTag
     ? campaignSegTag.replace(/^seg-?/, "").replace(/-/g, " ").toUpperCase()
     : null;
+  /* Categorias = concejalias dentro del CRM venta-booking (peticion user
+   * 2026-05-05). Si crmTag = crm-venta-booking + segTag esta en lista,
+   * la empresa se renderiza como "Concejalia de [Cat] de [Municipio]". */
+  const CONCEJALIAS = new Set([
+    "festejos", "juventud", "igualdad", "cultura", "ctro cultura",
+    "infantil", "teatro", "abuelos", "ctro.cultura"
+  ]);
+  /* "festejos" -> "Festejos" (capitalize espanol). */
+  const titleCase = (s) => String(s || "").toLowerCase()
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
   const recipientsSnapshot = campaign.recipientsSnapshot || [];
   const recipients = recipientsSnapshot.map((r) => {
@@ -1356,9 +1369,19 @@ function buildCampaignReportData(campaign) {
       || "—";
     const crmTag = tags.find((t) => t.startsWith("crm"));
     const municipio = cf.municipio || "—";
-    /* Empresa: company > 'Ayuntamiento de X' (si tiene municipio) > '—' */
-    const empresa = c.company
-      || (municipio !== "—" ? `Ayuntamiento de ${municipio}` : "—");
+    /* Empresa: si es CRM venta-booking + concejalia → "Concejalia de [Cat]
+     * de [Municipio]". Si no, company > "Ayuntamiento de X" > "—". */
+    const isAyto = crmTag === "crm-venta-booking";
+    const segLow = String(campaignSegLabel || "").toLowerCase().trim();
+    const isConcejalia = isAyto && CONCEJALIAS.has(segLow);
+    let empresa;
+    if (isConcejalia && municipio !== "—") {
+      empresa = `Concejalía de ${titleCase(segLow)} de ${municipio}`;
+    } else if (isAyto && municipio !== "—") {
+      empresa = `Ayuntamiento de ${municipio}`;
+    } else {
+      empresa = c.company || (municipio !== "—" ? municipio : "—");
+    }
 
     let status = "en cola";
     if (r.clickedAt) status = "clic";
@@ -1366,11 +1389,21 @@ function buildCampaignReportData(campaign) {
     else if (r.bouncedAt) status = "rebote";
     else if (r.unsubscribedAt) status = "baja";
     else if (r.deliveredAt || r.sentAt) status = "enviado";
+    /* Formato poblacion: "12.345 hab." si numerico, sino tal cual. */
+    const popRaw = String(cf.poblacion || "").trim();
+    let poblacion = "—";
+    if (popRaw) {
+      const num = Number(popRaw.replace(/\./g, "").replace(/,/g, "."));
+      poblacion = Number.isFinite(num) && num > 0
+        ? `${num.toLocaleString("es-ES")} hab.`
+        : popRaw;
+    }
     return {
       empresa,
       municipio,
       provincia: cf.provincia || "—",
       ccaa: cf.ccaa || "—",
+      poblacion,
       categoria,
       fuente: crmTag ? crmTag.replace(/^crm-?/, "").replace(/-/g, " ").toUpperCase() : "—",
       status
