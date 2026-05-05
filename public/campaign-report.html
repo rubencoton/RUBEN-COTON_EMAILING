@@ -232,7 +232,8 @@ body {
   border-bottom: 1px dashed var(--gris-2);
 }
 .toc-list a:hover { background: var(--rojo-soft); color: var(--rojo); padding-left: 20px; }
-.toc-list a::before {
+/* Counter solo en items del <ol> (NO en el <a> del anexo). */
+.toc-list ol a::before {
   content: counter(toc, decimal-leading-zero);
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 40px; padding: 4px 10px;
@@ -769,8 +770,9 @@ tr:hover td { background: var(--rojo-soft); }
         <li><a href="#conclusiones"><span>Conclusiones y recomendaciones</span><span class="dots"></span><span class="pg">pág. 08</span></a></li>
         <li><a href="#glosario"><span>Glosario de términos</span><span class="dots"></span><span class="pg">pág. 09</span></a></li>
       </ol>
-      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-2);display:flex;align-items:center">
-        <span style="background:#000;color:#fff;padding:4px 12px;border-radius:6px;font-size:9pt;letter-spacing:2px;margin-right:14px;font-weight:900;flex-shrink:0">ANEXO</span>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-2);display:flex;align-items:center;gap:10px">
+        <span style="background:#000;color:#fff;padding:4px 12px;border-radius:6px;font-size:9pt;letter-spacing:2px;font-weight:900;flex-shrink:0">ANEXO</span>
+        <span style="background:var(--rojo-2);color:#fff;min-width:40px;padding:4px 10px;border-radius:6px;font-size:10pt;font-weight:900;letter-spacing:1px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">01</span>
         <a href="#destinatarios" style="flex:1;display:flex;align-items:center;text-decoration:none;color:#1a1a1a;font-weight:700">
           <span>Destinatarios — empresas y entidades</span>
           <span class="dots"></span>
