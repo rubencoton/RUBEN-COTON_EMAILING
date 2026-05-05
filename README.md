@@ -134,7 +134,7 @@ UUID app emailing: `zal9cskfqsps8sbur3ypxxcw`
 | `MAIL_SEND_TZ` | `Europe/Madrid` | TZ ventana |
 | `MAIL_DELIVER_TO_PRIMARY` | `true` | Omite headers bulk → Inbox |
 | `DRIVE_ARCHIVE_ENABLED` | `false` | Carpetas Drive (off por defecto) |
-| `WRITEBACK_FLUSH_MS` | `30000` | Flush Sheets Merge status |
+| `WRITEBACK_FLUSH_MS` | `1500` | Debounce flush Sheets Merge status (casi tiempo real) |
 
 Ver `.env.example` para lista completa.
 

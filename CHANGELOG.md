@@ -6,6 +6,30 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Merge Status casi tiempo real + informe con logo NEG_RRSS
+
+### Cambiado
+
+- **Merge Status writeback en Sheets pasa de 30s → 1.5s** (`WRITEBACK_FLUSH_MS=1500`). El usuario quiere ver el estado del último envío reflejado en su columna "Merge status" de Google Sheets en tiempo (casi) real mientras la campaña corre. Con cadencia 3 emails/min hay como mucho 1 evento por ventana de 1.5s, así que cada envío se refleja inmediatamente. Ráfagas de opens/clicks se siguen agrupando en una sola `batchUpdate` por sheetId. Rate-limit Sheets (60 writes/min/user) sobradamente respetado.
+- **Informe `campaign-report.html` (la plantilla imprimible a PDF):**
+  - Cabecera de portada en **bloque negro** con **logo NEG_RRSS** (`logo-rubencoton-neg.png`) — letras blancas sobre fondo negro. Da armonía visual con la marca RUBEN COTON.
+  - Footer con el mismo logo NEG_RRSS sobre fondo negro propio (chip negro embebido en footer claro).
+  - Texto del título `RUBEN COTON` ahora en blanco (sobre fondo negro de la cabecera) en lugar de gris oscuro.
+  - El cuerpo del informe se mantiene en fondo blanco/claro para ahorrar tinta en impresión PDF.
+
+### Justificación
+
+Petición usuario 2026-05-05:
+- Merge Status: "tiene que ir en tiempo real, o sea, cuando estamos enviando se envía y se hace esto se envía y se hace esto" → debounce a 1.5s.
+- Informes: "el informe blanco es una m*** … quiero que el informe tenga armonía visual, que utilices el logo letras, el de redes sociales, que es letras blancas fondo negro" → NEG_RRSS en cabecera y footer.
+
+### Rollback
+
+- Merge Status: `WRITEBACK_FLUSH_MS=30000` en variables de entorno Coolify para volver al comportamiento anterior.
+- Informes: revertir commit (los cambios están aislados en `public/campaign-report.html`).
+
+---
+
 ## [2026-05-05] — Dashboard Inicio + tabla Estado campañas: armonía visual
 
 ### Añadido

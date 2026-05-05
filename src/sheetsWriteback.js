@@ -6,8 +6,9 @@
  *
  * Cada contacto guarda en customFields._sheetMeta {sheetId, gid, tabName,
  * row, col} (lo guarda sheetsSync al importar). Cuando hay un evento
- * (sent/bounce/open/click/reply), pushear a una cola en memoria. Cada 30s,
- * agrupar por sheetId y hacer batchUpdate con todos los cambios pendientes.
+ * (sent/bounce/open/click/reply), pushear a una cola en memoria. Tras un
+ * debounce corto (1.5s por defecto), agrupar por sheetId y hacer batchUpdate
+ * con todos los cambios pendientes.
  *
  * Color por estado (peticion usuario, actualizado 2026-05-04):
  *   enviado     -> sin color de fondo (texto "enviado")
@@ -15,12 +16,22 @@
  *   abierto     -> fondo VERDE CLARO
  *   clicado     -> fondo VERDE MEDIO + texto blanco
  *   respondido  -> fondo VERDE OSCURO + texto blanco
+ *
+ * PETICION USUARIO 2026-05-05: el usuario quiere ver el Merge status en
+ * tiempo real desde Google Sheets mientras envía la campaña. Antes el
+ * flush era cada 30s (acumulaba demasiado). Ahora cada 1.5s -> con cadencia
+ * 3 emails/min sólo hay ~1 email por ventana, así que cada envío se refleja
+ * casi al instante. Sigue siendo eficiente para ráfagas de opens/clicks
+ * (se agrupan en una sola batchUpdate por sheetId).
+ *
+ * Rate-limit Google Sheets: 60 writes/min/user. Con 3 emails/min + opens/
+ * clicks/replies puntuales estamos muy por debajo del límite.
  */
 
 const { google } = require("googleapis");
 const { getOAuthClient } = require("./googleHub");
 
-const FLUSH_INTERVAL_MS = Number(process.env.WRITEBACK_FLUSH_MS || 30000);
+const FLUSH_INTERVAL_MS = Number(process.env.WRITEBACK_FLUSH_MS || 1500);
 const MAX_BATCH_REQUESTS = 100;
 
 /* Cola en memoria. Cada item: {sheetId, gid, tabName, row, col, status, email, at} */

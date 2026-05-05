@@ -55,26 +55,31 @@ body {
   background: linear-gradient(90deg, var(--rojo-2), var(--rojo), var(--amarillo));
 }
 .cover-inner { position: relative; z-index: 1; padding: 56px 64px; }
+/* PETICION USUARIO 2026-05-05: cabecera de portada en NEGRO con logo
+ * NEG_RRSS (letras blancas sobre fondo negro). Da armonía visual con
+ * la marca RUBEN COTON. El resto del informe sigue en blanco para
+ * ahorrar tinta al imprimir a PDF. */
 .cover-header {
   display: flex;
   align-items: center;
   gap: 24px;
-  padding-bottom: 28px;
-  border-bottom: 1px solid var(--gris-2);
+  padding: 28px 32px;
+  background: #000000;
+  border-radius: 12px;
+  margin-bottom: 28px;
 }
 .cover-logo {
-  width: 100px; height: 100px;
-  border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid var(--gris-2);
-  padding: 8px;
+  width: auto;
+  max-width: 220px;
+  height: 64px;
   object-fit: contain;
   flex-shrink: 0;
 }
 .cover-brand { flex: 1; }
 .cover-brand h1 {
-  color: #1a1a1a !important;
-  font-size: 28pt;
+  /* Sobre fondo negro de la cabecera */
+  color: #ffffff !important;
+  font-size: 26pt;
   letter-spacing: 6px;
   margin: 0;
   border: none; padding: 0;
@@ -82,12 +87,12 @@ body {
   line-height: 1.1;
 }
 .cover-brand .tagline {
-  color: var(--rojo);
-  font-size: 11pt;
+  color: var(--rojo-2);
+  font-size: 10.5pt;
   letter-spacing: 4px;
   text-transform: uppercase;
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .cover-middle { text-align: center; padding: 28px 20px; }
@@ -663,7 +668,7 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="cover">
     <div class="cover-inner">
       <div class="cover-header">
-        <img class="cover-logo" src="/assets/logo-ruben-coton.png" alt="Logo RUBEN COTON">
+        <img class="cover-logo" src="/assets/logo-rubencoton-neg.png" alt="Logo RUBEN COTON">
         <div class="cover-brand">
           <h1>RUBEN COTON</h1>
           <div class="tagline">Management · Booking de Artistas</div>
@@ -729,7 +734,7 @@ tr:hover td { background: var(--rojo-soft); }
 
   <!-- ========= FOOTER ========= -->
   <div class="footer">
-    <img src="/assets/logo-ruben-coton.png" alt="RUBEN COTON">
+    <img src="/assets/logo-rubencoton-neg.png" alt="RUBEN COTON" style="max-width:240px;height:auto;background:#000;padding:12px 18px;border-radius:8px">
     <p><strong>RUBEN COTON</strong></p>
     <p>Booking &amp; Management de Artistas</p>
     <p style="margin-top:8px">📧 manager@rubencoton.com <span class="sep">·</span> 📍 Madrid</p>
