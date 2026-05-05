@@ -2867,7 +2867,7 @@ qs("#btn-report-monthly")?.addEventListener("click", async (e) => {
       }
       if (!j.enabled) {
         el.dataset.state = "disabled";
-        if (label) label.textContent = "IA: cloud (PC OFF)";
+        if (label) label.textContent = "IA: solo cloud";
         el.title = "PC local NO conectado. La aplicación usa cascada IA cloud:\n" +
           "SambaNova, NVIDIA, Cerebras, Mistral, OpenRouter, Groq, Gemini.\n\n" +
           "Para activar PC + Qwen 2.5 14B local (RTX 4070):\n" +
@@ -2879,13 +2879,13 @@ qs("#btn-report-monthly")?.addEventListener("click", async (e) => {
         el.dataset.state = "online";
         const m = j.meta || {};
         const ago = (j.secondsAgo == null) ? "?" : `${j.secondsAgo}s`;
-        if (label) label.textContent = `PC: ONLINE`;
+        if (label) label.textContent = `IA: PC + cloud`;
         el.title = `IA local activa (Qwen 2.5 14B en RTX 4070).\n` +
           `Último ping hace ${ago} · ${m.hostname || "?"} · ${m.ollamaModel || ""}` +
           (m.ollamaReady === false ? "\n⚠ Ollama no listo todavía." : "");
       } else {
         el.dataset.state = "offline";
-        if (label) label.textContent = "IA: cloud (PC OFF)";
+        if (label) label.textContent = "IA: solo cloud";
         el.title = "PC local apagado o sin red. La aplicación usa cascada IA cloud:\n" +
           "SambaNova, NVIDIA, Cerebras, Mistral, OpenRouter, Groq, Gemini.\n\n" +
           "Para arrancar PC: doble-clic en RUBEN-COTON_HTML\\Iniciar-Server.bat";
