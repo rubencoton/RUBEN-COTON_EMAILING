@@ -2734,14 +2734,19 @@ app.post("/api/campaigns/:id/resend", (req, res) => {
 });
 
 /* BLINDAJE: lock in-memory por campaña para que dos requests /send simultáneos
- * no encolen dos jobs. Se libera tras 5s para no bloquear retries legítimos. */
+ * no encolen dos jobs. Se libera tras 30s para no bloquear retries legítimos.
+ *
+ * P0 FIX 2026-05-05: el lock se setea AHORA solo justo antes del enqueueJob
+ * real, no al inicio. Antes los returns tempranos por validacion (massive,
+ * anti-spam, sin destinatarios) dejaban el lock 30s bloqueando el retry
+ * legitimo del usuario tras confirmar el modal. */
 const sendCampaignLocks = new Map();
 app.post("/api/campaigns/:id/send", (req, res) => {
   const campaignId = req.params.id;
   if (sendCampaignLocks.get(campaignId)) {
     return apiError(res, 409, "Ya hay un envío en proceso para esta campaña. Espera unos segundos.");
   }
-  sendCampaignLocks.set(campaignId, Date.now());
+  let lockSet = false;
   try {
     /* Proteccion doble-envio: si la campaña ya está en sending/queued, 409. */
     const existing = dataStore.getCampaign(campaignId);
@@ -2812,6 +2817,14 @@ app.post("/api/campaigns/:id/send", (req, res) => {
       }
     }
 
+    /* P0 FIX 2026-05-05: lock se setea AHORA, justo antes del enqueue real.
+     * Las validaciones previas (massive, anti-spam, score, sin destinatarios)
+     * NO setean el lock — si fallan, el usuario puede reintentar al instante
+     * tras corregir el problema o confirmar el modal. Solo bloqueamos doble
+     * enqueue real al motor. */
+    sendCampaignLocks.set(campaignId, Date.now());
+    lockSet = true;
+
     const job = massMailEngine.enqueueJob({
       campaignId, /* propagar para tracking pixel + click wrap */
       name: resolved.campaign.name,
@@ -2835,10 +2848,11 @@ app.post("/api/campaigns/:id/send", (req, res) => {
   } catch (error) {
     return apiError(res, 400, error.message || "No se pudo enviar campana");
   } finally {
-    /* FIX A10 audit 2026-04-30: 5s era insuficiente con 30K destinatarios
-     * (snapshot + mutate + enqueue puede tardar > 5s). Subimos a 30s para
-     * evitar doble enqueue accidental. */
-    setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
+    /* Solo libero el lock si realmente lo seteamos (es decir, llegamos al
+     * enqueueJob). Returns tempranos por validacion ya no setean lock. */
+    if (lockSet) {
+      setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
+    }
   }
 });
 
