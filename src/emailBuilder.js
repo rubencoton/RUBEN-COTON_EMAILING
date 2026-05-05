@@ -91,7 +91,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
       </td></tr>
       <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center">
         <p style="margin:0 0 6px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px">RUBEN COTON</p>
-        <p style="margin:0 0 8px;color:#aaa;font-size:11px">Booking &amp; Management de Artistas</p>
+        <p style="margin:0 0 8px;color:#aaa;font-size:11px">DJ Profesional · Madrid</p>
         <p style="margin:0 0 6px;font-size:11px"><a href="mailto:manager@rubencoton.com" style="color:#FFB74D;text-decoration:none">manager@rubencoton.com</a></p>
         <p style="margin:0;font-size:10px"><a href="${esc(resolvedUnsubUrl)}" style="color:#777;text-decoration:underline">Darse de baja</a></p>
       </td></tr>

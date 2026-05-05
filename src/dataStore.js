@@ -325,7 +325,7 @@ const getDefaultDrafts = () => {
                 RUBEN COTON
               </p>
               <p style="margin:0 0 10px; color:#ffe8a8; font-size:11px;">
-                Booking &amp; Management de artistas
+                DJ Profesional · Madrid
               </p>
               <p style="margin:0 0 4px; font-size:12px;">
                 <a href="mailto:manager@rubencoton.com"

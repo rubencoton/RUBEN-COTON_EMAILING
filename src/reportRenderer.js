@@ -219,7 +219,7 @@ function renderCampaignReport(reportData, campaignId) {
   <tr>
     <td style="background-color:${NEGRO};padding:32px 40px;text-align:center">
       <img src="${LOGO_NEG}" alt="RUBEN COTON" style="max-width:340px;width:100%;height:auto;display:block;margin:0 auto">
-      <p style="color:${NARANJA};font-size:11pt;margin:14px 0 0;letter-spacing:5px;text-transform:uppercase;font-weight:900">DJ &middot; Booking &middot; Management</p>
+      <p style="color:${NARANJA};font-size:11pt;margin:14px 0 0;letter-spacing:5px;text-transform:uppercase;font-weight:900">DJ Profesional</p>
     </td>
   </tr>
   <tr>
@@ -432,7 +432,7 @@ ${topCat.length ? `
   <tr>
     <td style="padding:30px 28px;background-color:${NEGRO};color:${BLANCO};text-align:center">
       <img src="${LOGO_NEG}" alt="RUBEN COTON" style="width:120px;height:auto;display:block;margin:0 auto 14px">
-      <p style="color:${NARANJA};font-size:9.5pt;margin:0 0 14px;letter-spacing:3px;text-transform:uppercase;font-weight:bold">DJ &middot; Booking &middot; Management</p>
+      <p style="color:${NARANJA};font-size:9.5pt;margin:0 0 14px;letter-spacing:3px;text-transform:uppercase;font-weight:bold">DJ Profesional</p>
       <p style="font-size:10pt;margin:0;color:${BLANCO}">manager@rubencoton.com &middot; Madrid, España</p>
       <p style="font-size:8.5pt;color:#aaa;margin:14px 0 0">Informe respeta el RGPD. No se comparten datos personales (emails, teléfonos, nombres de personas físicas).</p>
       <p style="font-size:8pt;color:#888;margin:6px 0 0">Documento generado automáticamente por la plataforma de Envío Masivo de RUBEN COTON</p>

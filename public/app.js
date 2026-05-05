@@ -901,7 +901,7 @@ const renderCampaigns = (campaigns) => {
       const canCancel = ["sending", "queued", "paused"].includes(c.status);
       return `
       <tr>
-        <td style="vertical-align:middle"><strong>${esc(c.name)}</strong><br/><small class="muted">${esc(c.subject || "")}</small></td>
+        <td style="vertical-align:middle"><strong>${esc(c.name)}</strong></td>
         <td style="text-align:center;vertical-align:middle">${statusBadge(c.status, c.queuePosition)}</td>
         <td style="text-align:center;vertical-align:middle;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${total.toLocaleString("es-ES")}</td>
         <td style="vertical-align:middle">${cellMetric(sent, "sent", sent, total)}</td>
@@ -910,13 +910,13 @@ const renderCampaigns = (campaigns) => {
         <td style="vertical-align:middle">${cellMetric(clicks, "ctor", clicks, opens)}</td>
         <td style="vertical-align:middle">${cellMetric(replies, "reply", replies, sent)}</td>
         <td style="vertical-align:middle">${cellMetric(bounces, "bounce", bounces, sent)}</td>
-        <td class="td-acciones">
-          <div class="campaign-actions">
+        <td class="td-acciones" style="vertical-align:middle">
+          <div class="campaign-actions" style="display:flex;flex-direction:column;align-items:stretch;gap:6px">
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}
             ${canPause ? `<button class="mini-btn act-btn act-pause" data-pause-campaign="${esc(c.id)}" type="button" style="background:#f59e0b;color:#fff">⏸ Pausar</button>` : ""}
             ${canResume ? `<button class="mini-btn act-btn act-resume" data-resume-campaign="${esc(c.id)}" type="button" style="background:#10b981;color:#fff">▶ Reanudar</button>` : ""}
             ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar</button>` : ""}
-            <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank">📄 Informe</a>
+            <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank" style="text-align:center">📄 Informe</a>
             <button class="mini-btn act-btn act-delete" data-delete-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button">🗑 Eliminar</button>
           </div>
         </td>
