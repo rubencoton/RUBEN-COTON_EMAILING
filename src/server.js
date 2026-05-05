@@ -2367,6 +2367,60 @@ app.get("/api/reports/schedule", (_req, res) => {
 });
 
 /* Limpia archivos locales data/reports (free disk space) */
+/* P0 RESCATE 2026-05-05 (bug usuario "tras deploy desaparecen los enviados"):
+ * para campañas con stats.sent=0 pero eventos `delivered` en el store
+ * (los emails SI se enviaron, solo el contador se reseteo), reconstruye
+ * stats.sent y los `sentAt` del snapshot desde los eventos historicos.
+ * Idempotente: ejecutarlo varias veces da el mismo resultado.
+ * Devuelve cuantas campañas se repararon y cuantos sentAt rescatados. */
+app.post("/api/admin/repair-campaign-counters", (_req, res) => {
+  try {
+    const result = dataStore.mutate((store) => {
+      const out = { repaired: [], totalSentRescued: 0 };
+      const eventsByCampaign = new Map();
+      for (const ev of store.events || []) {
+        if (ev.type !== "delivered" || !ev.campaignId || !ev.email) continue;
+        if (!eventsByCampaign.has(ev.campaignId)) eventsByCampaign.set(ev.campaignId, new Map());
+        const m = eventsByCampaign.get(ev.campaignId);
+        const k = String(ev.email).toLowerCase();
+        const prev = m.get(k);
+        if (!prev || (ev.occurredAt || "") < prev) m.set(k, ev.occurredAt || new Date().toISOString());
+      }
+      for (const campaign of store.campaigns) {
+        if (campaign.status === "archived") continue;
+        const ev = eventsByCampaign.get(campaign.id);
+        if (!ev || ev.size === 0) continue;
+        const snap = Array.isArray(campaign.recipientsSnapshot) ? campaign.recipientsSnapshot : [];
+        let rescued = 0;
+        const byEmail = new Map(snap.map((r) => [String(r.email || "").toLowerCase(), r]));
+        for (const [email, occurredAt] of ev) {
+          const target = byEmail.get(email);
+          if (target && !target.sentAt) {
+            target.sentAt = occurredAt;
+            target.deliveredAt = target.deliveredAt || occurredAt;
+            if (target.status === "queued" || target.status === "queued_retry") target.status = "sent";
+            rescued += 1;
+          }
+        }
+        if (rescued > 0) {
+          const sent = snap.filter((r) => r.sentAt).length;
+          const bounced = snap.filter((r) => r.bouncedAt).length;
+          campaign.stats.sent = sent;
+          campaign.stats.bounced = bounced;
+          campaign.stats.queued = Math.max(0, snap.length - sent - bounced);
+          campaign.updatedAt = new Date().toISOString();
+          out.repaired.push({ id: campaign.id, name: campaign.name, sent, rescuedNow: rescued });
+          out.totalSentRescued += rescued;
+        }
+      }
+      return out;
+    });
+    return apiOk(res, result);
+  } catch (e) {
+    return apiError(res, 500, e.message);
+  }
+});
+
 app.post("/api/admin/cleanup-local-reports", (_req, res) => {
   try {
     const dir = path.resolve(__dirname, "..", "data", "reports");
