@@ -636,7 +636,12 @@ const createMassMailEngine = (config) => {
     if (isDailyCapReached()) {
       const waitMs = msUntilNextFreeSlot();
       const waitH = Math.round(waitMs / (60 * 60 * 1000) * 10) / 10;
-      console.warn(`[massMail] CAP DIARIO ALCANZADO (${dailyCap} emails/24h). Pausando ~${waitH}h hasta liberar slot.`);
+      /* P0 FIX 2026-05-05: el log decia siempre "1950 emails/24h" pero el
+       * cap efectivo durante warmup es menor (100/250/500/1000). Mostrar
+       * el cap REAL aplicado + dia warmup si esta activo. */
+      const eff = getEffectiveCap();
+      const wInfo = warmupEnabled ? ` warmup dia ${getWarmupDay()}` : "";
+      console.warn(`[massMail] CAP DIARIO ALCANZADO (${eff}/${dailyCap} emails/24h${wInfo}). Pausando ~${waitH}h hasta liberar slot.`);
       return;
     }
 
@@ -661,7 +666,7 @@ const createMassMailEngine = (config) => {
       recipient.bouncedAt = new Date().toISOString();
       recipient.error = "disposable_domain";
       job.failed += 1;
-      job.queued -= 1;
+      job.queued = Math.max(0, job.queued - 1);
       addHistory({ type: "bounce", jobId: job.id, email: recipient.email, error: "disposable_domain" });
       try {
         if (config.dataStoreRef) {
@@ -994,7 +999,7 @@ const createMassMailEngine = (config) => {
       recipient.error = null;
 
       job.sent += 1;
-      job.queued -= 1;
+      job.queued = Math.max(0, job.queued - 1);
 
       addHistory({
         type: "sent",
@@ -1020,7 +1025,7 @@ const createMassMailEngine = (config) => {
         /* Writeback "rebotado" en columna Merge status (fondo negro) */
         writebackForEmail(config.dataStoreRef, recipient.email, "rebotado");
         job.failed += 1;
-        job.queued -= 1;
+        job.queued = Math.max(0, job.queued - 1);
         addHistory({
           type: "bounce",
           jobId: job.id,
@@ -1065,7 +1070,7 @@ const createMassMailEngine = (config) => {
         });
       } else {
         job.failed += 1;
-        job.queued -= 1;
+        job.queued = Math.max(0, job.queued - 1);
         addHistory({
           type: "failed",
           jobId: job.id,

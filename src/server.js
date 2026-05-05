@@ -378,7 +378,9 @@ const recreateLostJob = (campaign) => {
       recipients: pendientes,
       attachments: attachments.getAttachmentsForSending(campaign.id)
     });
-    dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)));
+    /* P0 FIX 2026-05-05: preserveHistory=true para no perder los sentAt previos
+     * al recrear job tras restart del contenedor. */
+    dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)), { preserveHistory: true });
     /* Si la campana estaba paused, mantenerla paused tras recrear job. */
     if (campaign.status === "paused") {
       try { massMailEngine.pauseJob(newJob.id); } catch (_e) {}
@@ -391,7 +393,14 @@ const recreateLostJob = (campaign) => {
 };
 
 const syncCampaignsWithEngine = () => {
-  const campaigns = dataStore.listCampaigns();
+  /* P0 FIX 2026-05-05 (bug usuario "tras deploy el orden FIFO se reorganiza"):
+   * listCampaigns() devuelve por updatedAt desc (lo que cambia cada sync).
+   * Tras restart, las campañas activas se rehidratan en orden NO-FIFO.
+   * Solucion: ordenar por createdAt asc — la campaña creada primero entra
+   * primero al motor, preservando el orden cronologico original. */
+  const campaigns = dataStore.listCampaigns()
+    .slice()
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   const engineStatus = massMailEngine.getStatus();
   const queueOrder = Array.isArray(engineStatus.queueOrder) ? engineStatus.queueOrder : [];
   const posByJob = new Map();
@@ -3014,33 +3023,47 @@ app.post("/api/campaigns/:id/send", (req, res) => {
     sendCampaignLocks.set(campaignId, Date.now());
     lockSet = true;
 
-    const job = massMailEngine.enqueueJob({
-      campaignId, /* propagar para tracking pixel + click wrap */
-      name: resolved.campaign.name,
-      subject: resolved.campaign.subject,
-      html: resolved.campaign.html,
-      text: resolved.campaign.text,
-      fromName: resolved.campaign.fromName,
-      fromEmail: resolved.campaign.fromEmail,
-      replyTo: resolved.campaign.replyTo,
-      recipients: resolved.recipients.map((recipient) => recipient.email),
-      attachments: attachments.getAttachmentsForSending(campaignId)
-    });
+    let job = null;
+    try {
+      job = massMailEngine.enqueueJob({
+        campaignId, /* propagar para tracking pixel + click wrap */
+        name: resolved.campaign.name,
+        subject: resolved.campaign.subject,
+        html: resolved.campaign.html,
+        text: resolved.campaign.text,
+        fromName: resolved.campaign.fromName,
+        fromEmail: resolved.campaign.fromEmail,
+        replyTo: resolved.campaign.replyTo,
+        recipients: resolved.recipients.map((recipient) => recipient.email),
+        attachments: attachments.getAttachmentsForSending(campaignId)
+      });
 
-    const campaign = dataStore.attachCampaignJob(campaignId, job, resolved.recipients);
-
-    return apiOk(res, {
-      message: "Campana enviada a cola",
-      campaign,
-      job
-    });
+      const campaign = dataStore.attachCampaignJob(campaignId, job, resolved.recipients);
+      return apiOk(res, {
+        message: "Campana enviada a cola",
+        campaign,
+        job
+      });
+    } catch (innerError) {
+      /* P0 FIX 2026-05-05: si attachCampaignJob falla DESPUES de enqueue,
+       * limpiar el job huerfano del motor para evitar estado inconsistente
+       * (job en motor pero campaña sin jobId en store). */
+      if (job?.id) {
+        try { massMailEngine.cancelJob(job.id); } catch (_e) {}
+      }
+      throw innerError;
+    }
   } catch (error) {
     return apiError(res, 400, error.message || "No se pudo enviar campana");
   } finally {
-    /* Solo libero el lock si realmente lo seteamos (es decir, llegamos al
-     * enqueueJob). Returns tempranos por validacion ya no setean lock. */
+    /* P0 FIX 2026-05-05: si hubo error, liberar el lock inmediato (no 30s
+     * de bloqueo fantasma). Solo dejar el debounce 30s en cierre limpio. */
     if (lockSet) {
-      setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
+      if (res.statusCode >= 400) {
+        sendCampaignLocks.delete(campaignId);
+      } else {
+        setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
+      }
     }
   }
 });
@@ -3055,10 +3078,25 @@ app.get("/api/campaigns/:id/analytics", (req, res) => {
   }
 });
 
+/* P0 FIX 2026-05-05: validar `type` contra whitelist. Sin esto, un POST
+ * con type=complaint o type=unsubscribe podia suprimir contactos del store
+ * sin checks. Whitelist explicita de tipos validos. */
+const VALID_EVENT_TYPES = new Set([
+  "open", "click", "delivered", "bounce", "unsubscribe", "complaint", "reply"
+]);
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 app.post("/api/campaigns/:id/events", (req, res) => {
   try {
+    const t = String(req.body.type || "").trim().toLowerCase();
+    if (!VALID_EVENT_TYPES.has(t)) {
+      return apiError(res, 400, `Tipo de evento invalido. Validos: ${Array.from(VALID_EVENT_TYPES).join(", ")}`);
+    }
+    if (req.body.email && !EMAIL_RX.test(String(req.body.email).trim())) {
+      return apiError(res, 400, "Email invalido");
+    }
     const event = dataStore.addEvent({
-      type: req.body.type,
+      type: t,
       campaignId: req.params.id,
       email: req.body.email,
       contactId: req.body.contactId,
@@ -3075,9 +3113,18 @@ app.post("/api/campaigns/:id/events", (req, res) => {
   }
 });
 
+/* P0 FIX 2026-05-05: simulate solo permite open/click. Antes aceptaba
+ * unsubscribe/complaint/bounce que tienen efectos REALES (suprimen
+ * contacto del store), no solo simulación visual. */
+const SIMULATE_ALLOWED = new Set(["open", "click"]);
+
 app.post("/api/campaigns/:id/simulate", (req, res) => {
   try {
-    const simulation = dataStore.simulateCampaignEvent(req.params.id, req.body.type, {
+    const t = String(req.body.type || "").trim().toLowerCase();
+    if (!SIMULATE_ALLOWED.has(t)) {
+      return apiError(res, 400, "simulate solo acepta 'open' o 'click' (no destructivos)");
+    }
+    const simulation = dataStore.simulateCampaignEvent(req.params.id, t, {
       percent: req.body.percent
     });
     return apiOk(res, { simulation });
@@ -3192,7 +3239,9 @@ app.post("/api/campaigns/:id/resume", (req, res) => {
         attachments: attachments.getAttachmentsForSending(campaign.id)
       });
       /* Persistir nuevo jobId en la campana. */
-      dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)));
+      /* P0 FIX 2026-05-05: preserveHistory=true para no perder los sentAt previos
+     * al recrear job tras restart del contenedor. */
+    dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)), { preserveHistory: true });
       r = { resumed: true, recreated: true, jobId: newJob.id, pending: pendientes.length };
     }
 

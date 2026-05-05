@@ -1762,7 +1762,7 @@ class DataStore {
     };
   }
 
-  attachCampaignJob(campaignId, job, recipients) {
+  attachCampaignJob(campaignId, job, recipients, opts = {}) {
     return this.mutate((store) => {
       const campaign = store.campaigns.find((item) => item.id === campaignId);
       if (!campaign) {
@@ -1772,9 +1772,53 @@ class DataStore {
       const now = nowIso();
       campaign.jobId = job.id;
       campaign.status = "sending";
-      campaign.sentAt = now;
       campaign.updatedAt = now;
 
+      /* P0 FIX 2026-05-05 (bug usuario "tras deploy las campañas pierden los
+       * envíos hechos"): cuando recreateLostJob nos llama tras restart, NO
+       * debemos sobrescribir el snapshot historico ni resetear stats.sent.
+       * Modo `preserveHistory=true` mergea el subset de pendientes con el
+       * snapshot existente, preservando los `sentAt` previos. */
+      if (opts.preserveHistory) {
+        const existing = Array.isArray(campaign.recipientsSnapshot)
+          ? campaign.recipientsSnapshot
+          : [];
+        const byEmail = new Map(existing.map((r) => [r.email, r]));
+        recipients.forEach((recipient) => {
+          const prev = byEmail.get(recipient.email);
+          if (!prev) {
+            byEmail.set(recipient.email, {
+              contactId: recipient.contactId,
+              email: recipient.email,
+              status: "queued",
+              sentAt: null,
+              deliveredAt: null,
+              openedAt: null,
+              clickedAt: null,
+              bouncedAt: null,
+              unsubscribedAt: null,
+              complainedAt: null,
+              workflowActions: {}
+            });
+          } else if (!prev.sentAt && !prev.bouncedAt) {
+            /* Solo reseteamos status si esta pendiente (no enviado ni rebotado). */
+            prev.status = "queued";
+          }
+        });
+        campaign.recipientsSnapshot = Array.from(byEmail.values());
+        const total = campaign.recipientsSnapshot.length;
+        const sent = campaign.recipientsSnapshot.filter((r) => r.sentAt).length;
+        const bounced = campaign.recipientsSnapshot.filter((r) => r.bouncedAt).length;
+        const queued = Math.max(0, total - sent - bounced);
+        campaign.stats.total = total;
+        campaign.stats.queued = queued;
+        campaign.stats.sent = sent;
+        campaign.stats.bounced = bounced;
+        /* No tocar sentAt de la campaña: ya estaba seteado al lanzamiento original. */
+        return clone(campaign);
+      }
+
+      campaign.sentAt = now;
       campaign.recipientsSnapshot = recipients.map((recipient) => ({
         contactId: recipient.contactId,
         email: recipient.email,
