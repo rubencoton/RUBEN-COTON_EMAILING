@@ -272,7 +272,8 @@ const authRequired = (req, res, next) => {
     "/api/auth/login",
     "/api/auth/logout",
     "/unsubscribe",
-    "/manual"
+    "/manual",
+    "/preview-informe-demo.html"
   ];
   /* P0 audit 2026-05-01: rutas de informe ANTES eran públicas. Threat
    * model detectó que con campaignId predecible (CMP-YYYYMMDD-NNNN), un
