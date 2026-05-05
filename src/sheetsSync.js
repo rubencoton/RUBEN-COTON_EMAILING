@@ -159,6 +159,15 @@ const findHeader = (headers, candidates) => {
 /* ─── Skip reference tabs ─── */
 const SKIP_TABS = ["ccaa"];
 
+/* ─── Skip CRMs completos (sheets enteros) ───
+ * PETICION USUARIO 2026-05-05: la carpeta "PRUEBA HOJA DE TESTEO CRM" es
+ * una hoja de pruebas y NO debe cargarse en el sistema (no aparece en
+ * Inicio, no aparece en Crear campaña, no se sincroniza, no se hace
+ * writeback). Match por slug normalizado del título del spreadsheet. */
+const SKIP_CRM_SLUGS = new Set([
+  "prueba-hoja-de-testeo-crm"
+]);
+
 /* ─── Auth: soporta OAuth (recomendado), API Key, o Service Account ─── */
 /* P0-J refactor 2026-05-04: el modo OAuth usa el SINGLETON de googleHub.js
  * para evitar 4 instancias paralelas refrescando token simultaneamente
@@ -208,6 +217,11 @@ const readSheet = async (sheets, spreadsheetId) => {
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const title = meta.data.properties?.title || spreadsheetId;
   const crmSlug = slugify(title.replace(/^🚀\s*CRM:\s*/i, ""));
+  /* Skip CRMs marcados como hoja de pruebas (ver SKIP_CRM_SLUGS arriba). */
+  if (SKIP_CRM_SLUGS.has(crmSlug)) {
+    console.log(`[sheets-sync] skip CRM "${title}" (en SKIP_CRM_SLUGS)`);
+    return { sheetId: spreadsheetId, title, crmSlug, tabs: [], skipped: true };
+  }
   /* Mapeo nombre pestaña -> sheetId numérico (gid). Necesario para
    * sheetsWriteback: la API batchUpdate exige gid, no nombre. */
   const sheetsByName = {};

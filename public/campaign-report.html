@@ -184,16 +184,18 @@ body {
   align-items: center;
   gap: 14px;
   padding: 14px 20px;
-  background: var(--rojo-2);
+  /* PETICION USUARIO 2026-05-05: cabeceros NEGROS con letras blancas y
+   * acentos naranja para subtítulos. Estructura aprobada. */
+  background: #000;
   color: #fff;
   border-radius: 10px;
   margin-bottom: 22px;
   border-left: 6px solid var(--amarillo);
 }
-.page-header img { width: 40px; height: 40px; border-radius: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 3px; }
+.page-header img { height: 28px; width: auto; max-width: 140px; object-fit: contain; }
 .page-header .ph-title { font-size: 13pt; font-weight: 800; letter-spacing: 1px; }
-.page-header .ph-sub { font-size: 9pt; color: var(--amarillo); letter-spacing: 2px; text-transform: uppercase; }
-.page-header .ph-right { margin-left: auto; font-size: 9.5pt; opacity: 0.92; text-align: right; }
+.page-header .ph-sub { font-size: 9pt; color: var(--rojo-2); letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+.page-header .ph-right { margin-left: auto; font-size: 9.5pt; color: var(--rojo-2); font-weight: 700; text-align: right; }
 
 /* ========== ÍNDICE ========== */
 .toc {
@@ -249,24 +251,35 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 h1 {
-  color: var(--rojo);
-  font-size: 20pt;
-  margin: 0 0 20px;
-  padding-bottom: 12px;
-  border-bottom: 4px solid var(--rojo-2);
+  /* PETICION USUARIO 2026-05-05: cabecero NEGRO con letras BLANCAS para
+   * cada sección. Acento naranja en .num. Mismo lenguaje visual que la
+   * portada y page-header. */
+  background: #000;
+  color: #ffffff;
+  font-size: 18pt;
+  margin: -8px -14px 22px -14px;
+  padding: 16px 22px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  letter-spacing: 0.5px;
+  border-bottom: none;
+  padding-bottom: 16px;
+  border: none;
   display: flex; align-items: center; gap: 16px;
   font-weight: 900;
 }
 h1 .num {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg, var(--rojo-2), var(--rojo));
-  color: #fff; border-radius: 12px;
-  font-size: 16pt; font-weight: 900;
-  box-shadow: 0 4px 10px rgba(230,81,0,0.3);
+  width: 44px; height: 44px;
+  background: var(--rojo-2);
+  color: #ffffff; border-radius: 10px;
+  font-size: 15pt; font-weight: 900;
   letter-spacing: 0;
+  flex-shrink: 0;
 }
-h2 { color: var(--rojo); font-size: 14pt; margin: 22px 0 12px; padding-left: 12px; border-left: 4px solid var(--amarillo); }
+h2 { color: var(--rojo-2); font-size: 14pt; margin: 22px 0 12px; padding-left: 12px; border-left: 4px solid #000; font-weight: 800; letter-spacing: 0.3px; }
 h3 { color: #1a1a1a; font-size: 12pt; margin: 16px 0 8px; font-weight: 800; }
 p { margin: 8px 0; }
 
@@ -582,19 +595,34 @@ tr:hover td { background: var(--rojo-soft); }
   h2 { font-size: 12pt !important; }
   h3 { font-size: 11pt !important; }
 
-  /* Page-header: backgrounds, banners */
-  .page-header, .footer, .privacy-notice, .email-head {
-    background: #FF6B00 !important;
+  /* PETICION USUARIO 2026-05-05: cabeceros NEGROS también en print.
+   * Footer en blanco con chip negro embebido para el logo (ahorra tinta). */
+  .page-header {
+    background: #000 !important;
     color: #fff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
-  .page-header { page-break-after: avoid !important; break-after: avoid !important; }
+  h1 {
+    background: #000 !important;
+    color: #fff !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  h1 .num { background: #FF6B00 !important; color: #fff !important; }
+  .privacy-notice, .email-head {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
   .footer {
-    background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%) !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
     page-break-before: avoid !important;
     break-before: avoid !important;
     margin-top: 10mm !important;
+    border-top: 2px solid #000 !important;
   }
 
   /* KPIs: grid compacta, sin cortes */
@@ -668,7 +696,7 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="cover">
     <div class="cover-inner">
       <div class="cover-header">
-        <img class="cover-logo" src="/assets/logo-rubencoton-neg.png" alt="Logo RUBEN COTON">
+        <img class="cover-logo" src="/assets/logo-rrss.png" alt="Logo RUBEN COTON">
         <div class="cover-brand">
           <h1>RUBEN COTON</h1>
           <div class="tagline">Management · Booking de Artistas</div>
@@ -711,21 +739,28 @@ tr:hover td { background: var(--rojo-soft); }
   <div class="toc">
     <div class="toc-head">
       <h2>📑 Índice del informe</h2>
-      <div class="toc-meta">10 secciones</div>
+      <div class="toc-meta">9 secciones + anexo</div>
     </div>
     <div class="toc-list">
       <ol>
         <li><a href="#resumen"><span>Resumen ejecutivo</span><span class="dots"></span><span class="pg">pág. 01</span></a></li>
         <li><a href="#datos"><span>Datos de la campaña</span><span class="dots"></span><span class="pg">pág. 02</span></a></li>
         <li><a href="#email"><span>Email enviado (contenido)</span><span class="dots"></span><span class="pg">pág. 03</span></a></li>
-        <li><a href="#destinatarios"><span>Destinatarios — empresas y entidades</span><span class="dots"></span><span class="pg">pág. 04</span></a></li>
-        <li><a href="#kpis"><span>Métricas clave (KPIs)</span><span class="dots"></span><span class="pg">pág. 05</span></a></li>
-        <li><a href="#rendimiento"><span>Rendimiento vs. sector</span><span class="dots"></span><span class="pg">pág. 06</span></a></li>
-        <li><a href="#geografia"><span>Distribución geográfica</span><span class="dots"></span><span class="pg">pág. 07</span></a></li>
-        <li><a href="#categoria"><span>Análisis por categoría</span><span class="dots"></span><span class="pg">pág. 08</span></a></li>
-        <li><a href="#conclusiones"><span>Conclusiones y recomendaciones</span><span class="dots"></span><span class="pg">pág. 09</span></a></li>
-        <li><a href="#glosario"><span>Glosario de términos</span><span class="dots"></span><span class="pg">pág. 10</span></a></li>
+        <li><a href="#kpis"><span>Métricas clave (KPIs)</span><span class="dots"></span><span class="pg">pág. 04</span></a></li>
+        <li><a href="#rendimiento"><span>Rendimiento vs. sector</span><span class="dots"></span><span class="pg">pág. 05</span></a></li>
+        <li><a href="#geografia"><span>Distribución geográfica</span><span class="dots"></span><span class="pg">pág. 06</span></a></li>
+        <li><a href="#categoria"><span>Análisis por categoría</span><span class="dots"></span><span class="pg">pág. 07</span></a></li>
+        <li><a href="#conclusiones"><span>Conclusiones y recomendaciones</span><span class="dots"></span><span class="pg">pág. 08</span></a></li>
+        <li><a href="#glosario"><span>Glosario de términos</span><span class="dots"></span><span class="pg">pág. 09</span></a></li>
       </ol>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-2)">
+        <a href="#destinatarios" style="display:flex;align-items:center;text-decoration:none;color:#1a1a1a;font-weight:700">
+          <span style="background:#000;color:#fff;padding:3px 10px;border-radius:6px;font-size:9pt;letter-spacing:1px;margin-right:10px">ANEXO</span>
+          <span>Destinatarios — empresas y entidades</span>
+          <span class="dots"></span>
+          <span class="pg">final</span>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -734,7 +769,7 @@ tr:hover td { background: var(--rojo-soft); }
 
   <!-- ========= FOOTER ========= -->
   <div class="footer">
-    <img src="/assets/logo-rubencoton-neg.png" alt="RUBEN COTON" style="max-width:240px;height:auto;background:#000;padding:12px 18px;border-radius:8px">
+    <img src="/assets/logo-rrss.png" alt="RUBEN COTON" style="max-width:240px;height:auto;background:#000;padding:12px 18px;border-radius:8px">
     <p><strong>RUBEN COTON</strong></p>
     <p>Booking &amp; Management de Artistas</p>
     <p style="margin-top:8px">📧 manager@rubencoton.com <span class="sep">·</span> 📍 Madrid</p>
@@ -822,10 +857,10 @@ const grade = (val, bench, inverse) => {
 function pageHeader(title, pg) {
   return `
     <div class="page-header">
-      <img src="/assets/logo-ruben-coton.png" alt="">
+      <img src="/assets/logo-rrss.png" alt="RUBEN COTON">
       <div>
         <div class="ph-title">${esc(title)}</div>
-        <div class="ph-sub">RUBEN COTON · Informe de Campaña</div>
+        <div class="ph-sub">Informe de Campaña</div>
       </div>
       <div class="ph-right">pág. ${pg}</div>
     </div>`;
@@ -959,7 +994,7 @@ function render(d) {
       <div class="email-preview">
         <div class="email-head">
           <div class="row"><span class="tag">DE</span><span class="val">${esc(c.fromName || "RUBEN COTON")} &lt;<em>${esc(c.fromEmail || "manager@rubencoton.com")}</em>&gt;</span></div>
-          <div class="row"><span class="tag">PARA</span><span class="val">${fmt(recipients.length)} destinatarios (ver sección 4)</span></div>
+          <div class="row"><span class="tag">PARA</span><span class="val">${fmt(recipients.length)} destinatarios (ver Anexo al final)</span></div>
           <div class="row"><span class="tag">ASUNTO</span><span class="val"><strong>${esc(c.subject || "—")}</strong></span></div>
           <div class="row"><span class="tag">FECHA</span><span class="val">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente de envío"}</span></div>
         </div>
@@ -967,11 +1002,130 @@ function render(d) {
       </div>
     </div>
 
-    <!-- 4. DESTINATARIOS (prominente) -->
-    <div class="section" id="destinatarios">
-      ${pageHeader("Destinatarios de la campaña", "04")}
-      <h1><span class="num">4</span>Destinatarios (${fmt(recipients.length)})</h1>
-      <p class="intro">Relación completa de empresas, entidades, festivales, medios, influencers y colaboradores a los que se ha enviado esta campaña.</p>
+    <!-- 4. KPIs DETALLADOS (Destinatarios movido a Anexo al final) -->
+    <div class="section" id="kpis">
+      ${pageHeader("Métricas clave", "04")}
+      <h1><span class="num">4</span>Métricas clave (KPIs)</h1>
+      <p class="intro">Indicadores numéricos desglosados de la campaña.</p>
+      <div class="kpi-grid">
+        <div class="kpi neutral"><div class="kpi-icon">👥</div><div class="kpi-num">${fmt(s.total)}</div><div class="kpi-lbl">Destinatarios</div></div>
+        <div class="kpi neutral"><div class="kpi-icon">📤</div><div class="kpi-num">${fmt(s.sent)}</div><div class="kpi-lbl">Enviados</div><div class="kpi-sub">${pct(s.sent, s.total)} del total</div></div>
+        <div class="kpi ok"><div class="kpi-icon">📬</div><div class="kpi-num">${fmt(s.opened)}</div><div class="kpi-lbl">Aperturas</div><div class="kpi-sub">${pct(s.opened, s.sent)}</div></div>
+        <div class="kpi ok"><div class="kpi-icon">🎯</div><div class="kpi-num">${fmt(s.clicked)}</div><div class="kpi-lbl">Clics</div><div class="kpi-sub">${pct(s.clicked, s.sent)}</div></div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi bad"><div class="kpi-icon">↩️</div><div class="kpi-num">${fmt(s.bounced)}</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${pct(s.bounced, s.total)}</div></div>
+        <div class="kpi warn"><div class="kpi-icon">👋</div><div class="kpi-num">${fmt(s.unsubscribed)}</div><div class="kpi-lbl">Bajas</div><div class="kpi-sub">${pct(s.unsubscribed, s.sent)}</div></div>
+        <div class="kpi neutral"><div class="kpi-icon">⚡</div><div class="kpi-num">${ctor.toFixed(1)}%</div><div class="kpi-lbl">CTOR</div><div class="kpi-sub">clic / apertura</div></div>
+        <div class="kpi ok"><div class="kpi-icon">✅</div><div class="kpi-num">${deliv.toFixed(1)}%</div><div class="kpi-lbl">Entregabilidad</div></div>
+      </div>
+    </div>
+
+    <!-- 5. RENDIMIENTO -->
+    <div class="section" id="rendimiento">
+      ${pageHeader("Rendimiento vs. sector", "05")}
+      <h1><span class="num">5</span>Rendimiento vs. sector</h1>
+      <p class="intro">Comparativa frente a los benchmarks del email marketing B2B (fuente: Mailjet / HubSpot / Campaign Monitor 2024-25).</p>
+      <table>
+        <tr><th>Métrica</th><th>Campaña</th><th>Benchmark sector</th><th>Valoración</th></tr>
+        <tr><td><strong>Tasa de apertura</strong></td><td>${openPct.toFixed(1)}%</td><td>22% media · 35% top</td><td><span class="status-pill status-${gOpen.cls === 'ok' ? 'clic' : gOpen.cls === 'warn' ? 'abierto' : 'rebote'}">${gOpen.label}</span></td></tr>
+        <tr><td><strong>Tasa de clic</strong></td><td>${clickPct.toFixed(2)}%</td><td>3% media · 7% top</td><td><span class="status-pill status-${gClick.cls === 'ok' ? 'clic' : gClick.cls === 'warn' ? 'abierto' : 'rebote'}">${gClick.label}</span></td></tr>
+        <tr><td><strong>Rebotes</strong></td><td>${bouncePct.toFixed(2)}%</td><td>≤ 2% (bueno)</td><td><span class="status-pill status-${gBounce.cls === 'ok' ? 'clic' : gBounce.cls === 'warn' ? 'abierto' : 'rebote'}">${gBounce.label}</span></td></tr>
+        <tr><td><strong>Bajas</strong></td><td>${unsubPct.toFixed(2)}%</td><td>≤ 0,5% (sano)</td><td><span class="status-pill status-${gUnsub.cls === 'ok' ? 'clic' : gUnsub.cls === 'warn' ? 'abierto' : 'rebote'}">${gUnsub.label}</span></td></tr>
+      </table>
+      <div class="callout tip">
+        <strong>ℹ️ Interpretación:</strong> las campañas B2B del sector cultural y booking suelen tener aperturas más altas (25-30%) pero clics moderados (2-4%) porque el contenido es informativo, no de compra directa.
+      </div>
+    </div>
+
+    <!-- 6. GEOGRAFÍA -->
+    <div class="section" id="geografia">
+      ${pageHeader("Distribución geográfica", "06")}
+      <h1><span class="num">6</span>Distribución geográfica</h1>
+      <p class="intro">Reparto territorial de los destinatarios impactados.</p>
+      <h2>Top Comunidades Autónomas</h2>
+      ${topCCAA.length ? barList(topCCAA, maxCCAA) : '<p style="color:#888">Sin datos geográficos.</p>'}
+      <h2>Top 15 Provincias</h2>
+      ${topProv.length ? barList(topProv, maxProv) : '<p style="color:#888">Sin datos de provincia.</p>'}
+    </div>
+
+    <!-- 7. CATEGORÍA -->
+    <div class="section" id="categoria">
+      ${pageHeader("Análisis por categoría", "07")}
+      <h1><span class="num">7</span>Análisis por categoría</h1>
+      <p class="intro">Segmentación del envío según la lista de origen en los CRMs.</p>
+      ${topCat.length ? barList(topCat, maxCat) : '<p style="color:#888">Sin datos de categoría.</p>'}
+      <h2>Estado de entrega</h2>
+      <table>
+        <tr><th>Estado</th><th>Cantidad</th><th>% sobre total</th></tr>
+        ${Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+          <tr>
+            <td><span class="status-pill status-${esc(k.replace(/ /g,"-"))}">${esc(k)}</span></td>
+            <td><strong>${fmt(v)}</strong></td>
+            <td>${pct(v, recipients.length)}</td>
+          </tr>
+        `).join("") || '<tr><td colspan="3" style="text-align:center;color:#888">—</td></tr>'}
+      </table>
+    </div>
+
+    <!-- 8. CONCLUSIONES -->
+    <div class="section" id="conclusiones">
+      ${pageHeader("Conclusiones y recomendaciones", "08")}
+      <h1><span class="num">8</span>Conclusiones y recomendaciones</h1>
+      <h2>Hallazgos principales</h2>
+      <ul style="margin-left:24px">
+        <li>La campaña alcanzó a <strong>${fmt(s.sent)}</strong> destinatarios efectivos sobre ${fmt(s.total)} programados.</li>
+        <li>Tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> (benchmark sector: 22%).</li>
+        <li>Tasa de clic del <strong>${clickPct.toFixed(2)}%</strong> (benchmark sector: 3%).</li>
+        <li>Cobertura geográfica: <strong>${Object.keys(byCCAA).length}</strong> CCAA y <strong>${Object.keys(byProv).length}</strong> provincias.</li>
+        <li>Categorías profesionales impactadas: <strong>${Object.keys(byCat).length}</strong>.</li>
+      </ul>
+      <h2>Recomendaciones estratégicas</h2>
+      <div class="callout warn">
+        ${recos.map(r => `<p style="margin:8px 0">${r}</p>`).join("")}
+      </div>
+    </div>
+
+    <!-- 9. GLOSARIO -->
+    <div class="section" id="glosario">
+      ${pageHeader("Glosario", "09")}
+      <h1><span class="num">9</span>Glosario de términos</h1>
+      <dl class="glossary">
+        <dt>Tasa de apertura (Open Rate)</dt>
+        <dd>Porcentaje de destinatarios que abrieron el email al menos una vez, sobre emails entregados.</dd>
+        <dt>Tasa de clic (CTR)</dt>
+        <dd>Porcentaje de destinatarios que hicieron clic en algún enlace del email, sobre emails entregados.</dd>
+        <dt>CTOR (Click-to-Open Ratio)</dt>
+        <dd>Porcentaje de los que abrieron que además clicaron. Mide la calidad del contenido del email.</dd>
+        <dt>Rebote (Bounce)</dt>
+        <dd>Email que no pudo entregarse. Puede ser soft (temporal) o hard (permanente, dirección no existe).</dd>
+        <dt>Baja (Unsubscribe)</dt>
+        <dd>Destinatario que pide dejar de recibir emails mediante el enlace del pie del correo.</dd>
+        <dt>Entregabilidad</dt>
+        <dd>Porcentaje de emails que llegaron correctamente a bandeja, sin rebotar.</dd>
+        <dt>Benchmark</dt>
+        <dd>Valor de referencia del sector. Permite comparar una campaña con el promedio del mercado.</dd>
+        <dt>CCAA</dt>
+        <dd>Comunidad Autónoma. Región administrativa de España.</dd>
+        <dt>DKIM / SPF / DMARC</dt>
+        <dd>Protocolos de autenticación del remitente. Evitan que el email caiga en spam.</dd>
+        <dt>RGPD</dt>
+        <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales.</dd>
+      </dl>
+    </div>
+
+    <!-- ANEXO: DESTINATARIOS — al final del informe (movido desde sección 4
+         por petición usuario 2026-05-05: el listado completo hace que el
+         informe sea muy "angoroso" en mitad del documento. Como anexo al
+         final no rompe la lectura ejecutiva del cuerpo principal). -->
+    <div class="section" id="destinatarios" style="page-break-before:always;break-before:page">
+      <div style="background:#000;color:#fff;padding:18px 28px;border-radius:12px;margin-bottom:24px;display:flex;align-items:center;gap:14px">
+        <span style="background:#fff;color:#000;padding:4px 12px;border-radius:6px;font-size:10pt;letter-spacing:2px;font-weight:900">ANEXO</span>
+        <span style="font-size:18pt;font-weight:900;letter-spacing:1px">Destinatarios — empresas y entidades</span>
+      </div>
+      <p class="intro" style="border-left:4px solid var(--rojo-2);padding-left:14px">
+        Relación completa de <strong>${fmt(recipients.length)} entidades</strong> (empresas, festivales, ayuntamientos, medios, influencers y colaboradores) a las que se ha enviado esta campaña.
+      </p>
 
       <div class="privacy-notice">
         <span class="ic">🔒</span>
@@ -996,118 +1150,6 @@ function render(d) {
         </thead>
         <tbody>${recRows || '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:20px">Sin destinatarios todavía</td></tr>'}</tbody>
       </table>
-    </div>
-
-    <!-- 5. KPIs DETALLADOS -->
-    <div class="section" id="kpis">
-      ${pageHeader("Métricas clave", "05")}
-      <h1><span class="num">5</span>Métricas clave (KPIs)</h1>
-      <p class="intro">Indicadores numéricos desglosados de la campaña.</p>
-      <div class="kpi-grid">
-        <div class="kpi neutral"><div class="kpi-icon">👥</div><div class="kpi-num">${fmt(s.total)}</div><div class="kpi-lbl">Destinatarios</div></div>
-        <div class="kpi neutral"><div class="kpi-icon">📤</div><div class="kpi-num">${fmt(s.sent)}</div><div class="kpi-lbl">Enviados</div><div class="kpi-sub">${pct(s.sent, s.total)} del total</div></div>
-        <div class="kpi ok"><div class="kpi-icon">📬</div><div class="kpi-num">${fmt(s.opened)}</div><div class="kpi-lbl">Aperturas</div><div class="kpi-sub">${pct(s.opened, s.sent)}</div></div>
-        <div class="kpi ok"><div class="kpi-icon">🎯</div><div class="kpi-num">${fmt(s.clicked)}</div><div class="kpi-lbl">Clics</div><div class="kpi-sub">${pct(s.clicked, s.sent)}</div></div>
-      </div>
-      <div class="kpi-grid">
-        <div class="kpi bad"><div class="kpi-icon">↩️</div><div class="kpi-num">${fmt(s.bounced)}</div><div class="kpi-lbl">Rebotes</div><div class="kpi-sub">${pct(s.bounced, s.total)}</div></div>
-        <div class="kpi warn"><div class="kpi-icon">👋</div><div class="kpi-num">${fmt(s.unsubscribed)}</div><div class="kpi-lbl">Bajas</div><div class="kpi-sub">${pct(s.unsubscribed, s.sent)}</div></div>
-        <div class="kpi neutral"><div class="kpi-icon">⚡</div><div class="kpi-num">${ctor.toFixed(1)}%</div><div class="kpi-lbl">CTOR</div><div class="kpi-sub">clic / apertura</div></div>
-        <div class="kpi ok"><div class="kpi-icon">✅</div><div class="kpi-num">${deliv.toFixed(1)}%</div><div class="kpi-lbl">Entregabilidad</div></div>
-      </div>
-    </div>
-
-    <!-- 6. RENDIMIENTO -->
-    <div class="section" id="rendimiento">
-      ${pageHeader("Rendimiento vs. sector", "06")}
-      <h1><span class="num">6</span>Rendimiento vs. sector</h1>
-      <p class="intro">Comparativa frente a los benchmarks del email marketing B2B (fuente: Mailjet / HubSpot / Campaign Monitor 2024-25).</p>
-      <table>
-        <tr><th>Métrica</th><th>Campaña</th><th>Benchmark sector</th><th>Valoración</th></tr>
-        <tr><td><strong>Tasa de apertura</strong></td><td>${openPct.toFixed(1)}%</td><td>22% media · 35% top</td><td><span class="status-pill status-${gOpen.cls === 'ok' ? 'clic' : gOpen.cls === 'warn' ? 'abierto' : 'rebote'}">${gOpen.label}</span></td></tr>
-        <tr><td><strong>Tasa de clic</strong></td><td>${clickPct.toFixed(2)}%</td><td>3% media · 7% top</td><td><span class="status-pill status-${gClick.cls === 'ok' ? 'clic' : gClick.cls === 'warn' ? 'abierto' : 'rebote'}">${gClick.label}</span></td></tr>
-        <tr><td><strong>Rebotes</strong></td><td>${bouncePct.toFixed(2)}%</td><td>≤ 2% (bueno)</td><td><span class="status-pill status-${gBounce.cls === 'ok' ? 'clic' : gBounce.cls === 'warn' ? 'abierto' : 'rebote'}">${gBounce.label}</span></td></tr>
-        <tr><td><strong>Bajas</strong></td><td>${unsubPct.toFixed(2)}%</td><td>≤ 0,5% (sano)</td><td><span class="status-pill status-${gUnsub.cls === 'ok' ? 'clic' : gUnsub.cls === 'warn' ? 'abierto' : 'rebote'}">${gUnsub.label}</span></td></tr>
-      </table>
-      <div class="callout tip">
-        <strong>ℹ️ Interpretación:</strong> las campañas B2B del sector cultural y booking suelen tener aperturas más altas (25-30%) pero clics moderados (2-4%) porque el contenido es informativo, no de compra directa.
-      </div>
-    </div>
-
-    <!-- 7. GEOGRAFÍA -->
-    <div class="section" id="geografia">
-      ${pageHeader("Distribución geográfica", "07")}
-      <h1><span class="num">7</span>Distribución geográfica</h1>
-      <p class="intro">Reparto territorial de los destinatarios impactados.</p>
-      <h2>Top Comunidades Autónomas</h2>
-      ${topCCAA.length ? barList(topCCAA, maxCCAA) : '<p style="color:#888">Sin datos geográficos.</p>'}
-      <h2>Top 15 Provincias</h2>
-      ${topProv.length ? barList(topProv, maxProv) : '<p style="color:#888">Sin datos de provincia.</p>'}
-    </div>
-
-    <!-- 8. CATEGORÍA -->
-    <div class="section" id="categoria">
-      ${pageHeader("Análisis por categoría", "08")}
-      <h1><span class="num">8</span>Análisis por categoría</h1>
-      <p class="intro">Segmentación del envío según la lista de origen en los CRMs.</p>
-      ${topCat.length ? barList(topCat, maxCat) : '<p style="color:#888">Sin datos de categoría.</p>'}
-      <h2>Estado de entrega</h2>
-      <table>
-        <tr><th>Estado</th><th>Cantidad</th><th>% sobre total</th></tr>
-        ${Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
-          <tr>
-            <td><span class="status-pill status-${esc(k.replace(/ /g,"-"))}">${esc(k)}</span></td>
-            <td><strong>${fmt(v)}</strong></td>
-            <td>${pct(v, recipients.length)}</td>
-          </tr>
-        `).join("") || '<tr><td colspan="3" style="text-align:center;color:#888">—</td></tr>'}
-      </table>
-    </div>
-
-    <!-- 9. CONCLUSIONES -->
-    <div class="section" id="conclusiones">
-      ${pageHeader("Conclusiones y recomendaciones", "09")}
-      <h1><span class="num">9</span>Conclusiones y recomendaciones</h1>
-      <h2>Hallazgos principales</h2>
-      <ul style="margin-left:24px">
-        <li>La campaña alcanzó a <strong>${fmt(s.sent)}</strong> destinatarios efectivos sobre ${fmt(s.total)} programados.</li>
-        <li>Tasa de apertura del <strong>${openPct.toFixed(1)}%</strong> (benchmark sector: 22%).</li>
-        <li>Tasa de clic del <strong>${clickPct.toFixed(2)}%</strong> (benchmark sector: 3%).</li>
-        <li>Cobertura geográfica: <strong>${Object.keys(byCCAA).length}</strong> CCAA y <strong>${Object.keys(byProv).length}</strong> provincias.</li>
-        <li>Categorías profesionales impactadas: <strong>${Object.keys(byCat).length}</strong>.</li>
-      </ul>
-      <h2>Recomendaciones estratégicas</h2>
-      <div class="callout warn">
-        ${recos.map(r => `<p style="margin:8px 0">${r}</p>`).join("")}
-      </div>
-    </div>
-
-    <!-- 10. GLOSARIO -->
-    <div class="section" id="glosario">
-      ${pageHeader("Glosario", "10")}
-      <h1><span class="num">10</span>Glosario de términos</h1>
-      <dl class="glossary">
-        <dt>Tasa de apertura (Open Rate)</dt>
-        <dd>Porcentaje de destinatarios que abrieron el email al menos una vez, sobre emails entregados.</dd>
-        <dt>Tasa de clic (CTR)</dt>
-        <dd>Porcentaje de destinatarios que hicieron clic en algún enlace del email, sobre emails entregados.</dd>
-        <dt>CTOR (Click-to-Open Ratio)</dt>
-        <dd>Porcentaje de los que abrieron que además clicaron. Mide la calidad del contenido del email.</dd>
-        <dt>Rebote (Bounce)</dt>
-        <dd>Email que no pudo entregarse. Puede ser soft (temporal) o hard (permanente, dirección no existe).</dd>
-        <dt>Baja (Unsubscribe)</dt>
-        <dd>Destinatario que pide dejar de recibir emails mediante el enlace del pie del correo.</dd>
-        <dt>Entregabilidad</dt>
-        <dd>Porcentaje de emails que llegaron correctamente a bandeja, sin rebotar.</dd>
-        <dt>Benchmark</dt>
-        <dd>Valor de referencia del sector. Permite comparar una campaña con el promedio del mercado.</dd>
-        <dt>CCAA</dt>
-        <dd>Comunidad Autónoma. Región administrativa de España.</dd>
-        <dt>DKIM / SPF / DMARC</dt>
-        <dd>Protocolos de autenticación del remitente. Evitan que el email caiga en spam.</dd>
-        <dt>RGPD</dt>
-        <dd>Reglamento General de Protección de Datos (UE 2016/679). Marco legal que protege los datos personales.</dd>
-      </dl>
     </div>
   `;
 }

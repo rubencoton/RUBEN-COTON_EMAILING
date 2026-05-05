@@ -6,6 +6,48 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Informe rediseño armónico + skip CRM testeo
+
+### Añadido
+
+- **`SKIP_CRM_SLUGS`** en `src/sheetsSync.js`: lista de slugs de CRMs que se omiten enteros del sync. La hoja **"CRM: PRUEBA HOJA DE TESTEO CRM"** queda excluida — no aparece en Inicio, no aparece en Crear campaña, no se sincroniza, no se hace writeback. El usuario la usaba como sandbox y no debe contaminar producción.
+- **ANEXO de Destinatarios** al final del informe `campaign-report.html`. Bloque negro con etiqueta `ANEXO` en chip blanco + título en letras blancas. Salto de página antes del anexo (`page-break-before:always`) para que arranque limpio en PDF.
+
+### Cambiado
+
+- **Estructura visual del informe `campaign-report.html` reformulada (validada por usuario):**
+  - **Cabeceros NEGROS con letras BLANCAS** en portada, `page-header` de cada sección y `<h1>` de sección. Misma identidad visual en pantalla y en PDF.
+  - **Subtítulos en NARANJA** (`var(--rojo-2)` = `#FF6B00`): `<h2>`, ph-sub, ph-right, número de la sección (chip `.num` en h1).
+  - **Cuerpo del informe BLANCO** — ahorra tóner en impresión a PDF.
+  - **`<h1>` de sección** ahora es un bloque negro de ancho completo dentro del card (margen lateral negativo) con chip naranja `.num` y título blanco. Antes era texto naranja con borde inferior naranja.
+  - **`<h2>` de subtítulo:** color naranja, borde izquierdo NEGRO (antes amarillo), peso 800 + tracking ligero.
+  - **`.page-header` de cada página:** fondo negro, logo a la izquierda, título en blanco, sub-tag en naranja, paginación en naranja.
+  - **Logo en `pageHeader()` y portada y footer:** `/assets/logo-rrss.png` (logo de redes sociales — buenas dimensiones, blanco sobre negro). Antes usábamos `logo-rubencoton-neg.png` y `logo-ruben-coton.png` mezclados.
+  - **Secciones renumeradas:** Destinatarios sale de la posición 4 y queda como ANEXO. Las secciones siguientes suben un puesto (KPIs `5→4`, Rendimiento `6→5`, Geografía `7→6`, Categoría `8→7`, Conclusiones `9→8`, Glosario `10→9`).
+  - **Índice del informe:** 9 secciones numeradas + entrada "ANEXO · Destinatarios" separada por línea de puntos al final del TOC, con chip negro "ANEXO".
+  - **Print stylesheet:** cabeceros pintados de negro (no naranja). Footer print pasa de gradient naranja a blanco con borde superior negro de 2px.
+  - **Datos de campaña:** la línea "PARA: N destinatarios (ver sección 4)" ahora dice "(ver Anexo al final)".
+- **`sheetsWriteback.js` `WRITEBACK_FLUSH_MS`** default 30000 → 1500 (Merge Status casi tiempo real).
+- **README.md:** variable `WRITEBACK_FLUSH_MS` actualizada a 1500ms.
+
+### Justificación
+
+Petición usuario 2026-05-05 en varias iteraciones:
+- Merge Status: "tiene que ir en tiempo real, o sea, cuando estamos enviando se envía y se hace esto" → 1.5s.
+- Informes: "el informe blanco es una m*** … quiero que el informe tenga armonía visual, que utilices el logo letras, el de redes sociales" → logo `logo-rrss.png`.
+- Validación visual: "fondo blanco con cabeceros negros y letras blancas dentro me mola mucho y es muy armónico, subtítulos en naranja para distinciones" → estructura adoptada.
+- Destinatarios: "el apartado 4, empresas y destinatarios, quiero que hagas un anexo que se ponga al final porque si no el informe queda angoroso" → movido a ANEXO con salto de página.
+- Imprimible: "lo más importante es que se pueda imprimir en PDF sin dar error" → @media print actualizado en consonancia.
+- Skip CRM testeo: "esa carpeta con esa lista no la cargamos" → `SKIP_CRM_SLUGS`.
+
+### Rollback
+
+- Para volver al informe en blanco/naranja anterior: revertir el commit que toca `public/campaign-report.html`.
+- Para reactivar el CRM de testeo: vaciar `SKIP_CRM_SLUGS` en `src/sheetsSync.js`.
+- Merge Status: `WRITEBACK_FLUSH_MS=30000` en variables de entorno Coolify.
+
+---
+
 ## [2026-05-05] — Merge Status casi tiempo real + informe con logo NEG_RRSS
 
 ### Cambiado
