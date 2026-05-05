@@ -6,6 +6,34 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Executive Report rediseño armónico
+
+### Cambiado
+
+- **`public/executive-report.html`** alineado con la pauta visual aprobada para `campaign-report.html`:
+  - **Portada:** fondo blanco + cabecera negra con logo `logo-rrss.png` + cuerpo blanco. Antes era gradient naranja con emoji `🎧` como logo.
+  - **Cover-brand:** "RUBEN COTON" amarillo → "Informe Ejecutivo" en naranja (consistencia con campaign-report).
+  - **`h2.section-title`:** bloque NEGRO sólido con letras blancas + acento naranja a la izquierda. Antes era gradient naranja con borde amarillo.
+  - **`h3.block-title`:** color naranja con borde izquierdo NEGRO (antes borde amarillo bajo).
+  - **`thead th` (tablas):** fondo NEGRO con letras blancas y borde inferior naranja.
+  - **`.footer`:** blanco con borde superior negro de 3px (antes gradient naranja).
+  - **`.print-hint`:** negro sólido (antes gradient naranja).
+  - **`@media print`** propagado: cover, header, h2, footer, thead todos en negro/blanco/naranja sin gradients (mejor renderizado en PDF).
+
+### Justificación
+
+Petición usuario 2026-05-05 reiterada: "fondo blanco con cabeceros negros y letras blancas dentro me mola mucho y es muy armónico, subtítulos en naranja para distinciones". Consistencia visual entre los 2 informes accesibles desde la app:
+- `/campaigns/:id/report` → `campaign-report.html` (informe individual de campaña)
+- `/campaigns/report/executive` → `executive-report.html` (informe ejecutivo agregado de TODAS las campañas)
+
+### Pendiente coordinado
+
+- `src/reportRenderer.js` (genera PDF via Drive Docs en `/api/campaigns/:id/report.pdf`) sigue en DARK MODE puro. Decisión: dejar como está hasta que el usuario lo solicite explícitamente, porque:
+  1. Drive Docs HTML→PDF tiene restricciones (no flex/grid/gradient/rgba) → un refactor a la pauta nueva requiere replanteamiento.
+  2. El path principal de PDF que usa el usuario es el `window.print()` desde `campaign-report.html` (ya alineado).
+
+---
+
 ## [2026-05-05] — Anti-spam P0/P1/P2 audit hardening
 
 ### Añadido

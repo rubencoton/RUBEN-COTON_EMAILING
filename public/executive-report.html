@@ -32,105 +32,92 @@
     margin: 0 auto;
     padding: 24px;
   }
-  /* PORTADA */
+  /* PORTADA — PETICION USUARIO 2026-05-05: estructura aprobada
+   * fondo blanco + cabeceros negros con letras blancas + acentos naranjas. */
   .cover {
-    background: linear-gradient(145deg, var(--rojo) 0%, var(--rojo-2) 55%, var(--rojo-3) 100%);
-    color: #fff;
-    padding: 48px 44px;
+    background: #ffffff;
+    color: #1a1a1a;
+    padding: 0;
     border-radius: 14px;
     margin-bottom: 28px;
     page-break-after: always;
     break-after: page;
-    position: relative;
     overflow: hidden;
     min-height: calc(100vh - 80px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    border: 1px solid var(--gris-2);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.08);
   }
-  .cover::before {
-    content: "";
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 220px; height: 220px;
-    background: var(--amarillo);
-    border-radius: 50%;
-    opacity: 0.18;
-  }
-  .cover::after {
-    content: "";
-    position: absolute;
-    bottom: -60px; left: -60px;
-    width: 260px; height: 260px;
-    background: var(--amarillo);
-    border-radius: 50%;
-    opacity: 0.12;
-  }
-  .cover-logo {
-    width: 92px; height: 92px;
-    background: var(--amarillo);
-    border-radius: 18px;
+  .cover-header {
+    background: #000000;
+    padding: 32px 44px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 50px;
-    margin-bottom: 28px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-    position: relative;
-    z-index: 1;
+    gap: 24px;
+  }
+  .cover-logo {
+    height: 64px;
+    width: auto;
+    max-width: 240px;
+    object-fit: contain;
+    margin-bottom: 0;
   }
   .cover-brand {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 3px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 4px;
     text-transform: uppercase;
-    color: var(--amarillo);
-    margin-bottom: 10px;
-    position: relative; z-index: 1;
+    color: var(--rojo);
+    margin: 0;
   }
+  .cover-body { padding: 48px 44px; }
   .cover h1 {
-    font-size: 54px;
+    font-size: 48px;
     font-weight: 900;
-    line-height: 1;
+    line-height: 1.1;
     margin: 0 0 18px 0;
     letter-spacing: -1px;
-    position: relative; z-index: 1;
+    color: #1a1a1a;
   }
   .cover .subtitle {
-    font-size: 20px;
-    opacity: 0.95;
+    font-size: 18px;
+    color: var(--rojo-2);
     margin-bottom: 28px;
-    position: relative; z-index: 1;
+    font-weight: 600;
+    border-left: 4px solid var(--rojo);
+    padding-left: 14px;
   }
   .cover .meta {
     display: inline-block;
-    background: rgba(255,255,255,0.15);
-    border-left: 4px solid var(--amarillo);
+    background: #f9fafb;
+    border-left: 4px solid var(--rojo);
     padding: 14px 20px;
     border-radius: 6px;
     font-size: 15px;
-    position: relative; z-index: 1;
+    color: #1a1a1a;
   }
-  .cover .meta strong { color: var(--amarillo); }
+  .cover .meta strong { color: var(--rojo-2); }
 
-  /* HEADER secciones */
+  /* HEADER secciones — bloques NEGROS con letras BLANCAS y chip NARANJA */
   h2.section-title {
-    font-size: 28px;
-    font-weight: 800;
-    margin: 40px 0 18px 0;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
-    color: #fff;
-    border-radius: 8px;
-    border-left: 6px solid var(--amarillo);
+    font-size: 22px;
+    font-weight: 900;
+    margin: 36px 0 18px 0;
+    padding: 16px 22px;
+    background: #000000;
+    color: #ffffff;
+    border-radius: 10px;
+    border-left: 6px solid var(--rojo);
+    letter-spacing: 0.5px;
   }
   h3.block-title {
-    font-size: 19px;
-    font-weight: 700;
-    margin: 20px 0 12px 0;
+    font-size: 17px;
+    font-weight: 800;
+    margin: 22px 0 12px 0;
     color: var(--rojo-2);
-    padding-bottom: 6px;
-    border-bottom: 2px solid var(--amarillo);
+    padding-left: 12px;
+    padding-bottom: 4px;
+    border-left: 4px solid #000;
+    letter-spacing: 0.3px;
   }
 
   /* KPIS grid */
@@ -232,7 +219,7 @@
     font-size: 13px;
   }
   thead th {
-    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    background: #000;
     color: #fff;
     text-align: left;
     padding: 12px 14px;
@@ -240,6 +227,7 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--rojo);
     border-bottom: 3px solid var(--amarillo);
   }
   tbody td {
@@ -371,21 +359,23 @@
     text-transform: uppercase;
   }
 
-  /* FOOTER */
+  /* FOOTER — blanco con borde negro coherente con cabeceros */
   .footer {
-    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
-    color: #fff;
+    background: #ffffff;
+    color: #1a1a1a;
     padding: 24px 28px;
     border-radius: 10px;
     margin-top: 40px;
     text-align: center;
     font-size: 13px;
+    border: 1px solid var(--gris-2);
+    border-top: 3px solid #000;
   }
-  .footer strong { color: var(--amarillo); }
+  .footer strong { color: var(--rojo-2); }
 
   /* PRINT controls (se ocultan al imprimir) */
   .print-hint {
-    background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%);
+    background: #000;
     color: #fff;
     padding: 14px 20px;
     border-radius: 8px;
@@ -469,28 +459,33 @@
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      background: linear-gradient(145deg, var(--rojo) 0%, var(--rojo-2) 55%, var(--rojo-3) 100%) !important;
-      color: #fff !important;
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: space-between !important;
+      /* PETICION USUARIO 2026-05-05: portada blanca con cabecera negra,
+       * letras blancas en cabecera y subtítulos naranja. */
+      background: #ffffff !important;
+      color: #1a1a1a !important;
     }
-    .cover h1 { font-size: 36pt !important; margin: 0 0 10px !important; line-height: 1.05 !important; }
-    .cover .subtitle { font-size: 13pt !important; margin-bottom: 20px !important; }
-    .cover-logo { width: 72px !important; height: 72px !important; font-size: 42px !important; margin-bottom: 24px !important; }
-    .cover-brand { font-size: 11pt !important; }
-    .cover .meta { font-size: 10.5pt !important; padding: 12px 16px !important; }
+    .cover-header {
+      background: #000 !important;
+      color: #fff !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+    .cover h1 { font-size: 32pt !important; margin: 0 0 10px !important; line-height: 1.05 !important; color: #1a1a1a !important; }
+    .cover .subtitle { font-size: 13pt !important; margin-bottom: 20px !important; color: var(--rojo-2) !important; }
+    .cover-logo { height: 56px !important; width: auto !important; max-width: 220px !important; margin-bottom: 0 !important; }
+    .cover-brand { font-size: 10.5pt !important; color: var(--rojo) !important; }
+    .cover .meta { font-size: 10.5pt !important; padding: 12px 16px !important; background: #f9fafb !important; color: #1a1a1a !important; }
 
-    /* === Secciones === títulos unidos a su contenido */
+    /* === Secciones === bloques NEGROS con letras BLANCAS también en print */
     h2.section-title {
       page-break-after: avoid !important; break-after: avoid !important;
       page-break-inside: avoid !important; break-inside: avoid !important;
       margin: 8mm 0 4mm !important;
       padding: 10px 14px !important;
       font-size: 14pt !important;
-      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
+      background: #000 !important;
       color: #fff !important;
-      border-left: 5px solid var(--amarillo) !important;
+      border-left: 5px solid var(--rojo) !important;
     }
     h3.block-title {
       page-break-after: avoid !important; break-after: avoid !important;
@@ -518,9 +513,9 @@
     tfoot { display: table-footer-group !important; }
     tr { page-break-inside: avoid !important; break-inside: avoid !important; }
     thead th {
-      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
+      background: #000 !important;
       color: #fff !important;
-      border-bottom: 2px solid var(--amarillo) !important;
+      border-bottom: 2px solid var(--rojo) !important;
       padding: 8px 10px !important;
       font-weight: 700 !important;
     }
@@ -531,14 +526,16 @@
     /* === Chart === altura sensata y no se corta */
     .chart { height: 100px !important; overflow: hidden !important; page-break-inside: avoid !important; break-inside: avoid !important; }
 
-    /* === Footer === siempre pegado al final, nunca solo */
+    /* === Footer === en print: blanco con borde negro superior, chip negro
+     * con logo embebido. Coherente con campaign-report.html. */
     .footer {
       page-break-inside: avoid !important; break-inside: avoid !important;
       page-break-before: avoid !important; break-before: avoid !important;
       margin-top: 10mm !important;
       padding: 14px 18px !important;
-      background: linear-gradient(135deg, var(--rojo-2) 0%, var(--rojo) 100%) !important;
-      color: #fff !important;
+      background: #ffffff !important;
+      color: #1a1a1a !important;
+      border-top: 2px solid #000 !important;
     }
   }
 
@@ -642,13 +639,17 @@
     const periodTxt = meta.periodLabel ? ' &nbsp;·&nbsp; <strong>Periodo:</strong> ' + esc(meta.periodLabel) : '';
 
     const html = [
-      // PORTADA
+      // PORTADA — bloque negro con logo NEG_RRSS + cuerpo blanco
       '<div class="cover">',
-      '  <div class="cover-logo">🎧</div>',
-      '  <div class="cover-brand">RUBEN COTON</div>',
-      '  <h1>' + esc(scopeLabel) + '</h1>',
-      '  <div class="subtitle">' + esc(scopeSubtitle) + '</div>',
-      '  <div class="meta"><strong>Emitido:</strong> ' + esc(fecha) + periodTxt + ' &nbsp;·&nbsp; <strong>Campañas analizadas:</strong> ' + fmt(t.campaigns) + '</div>',
+      '  <div class="cover-header">',
+      '    <img class="cover-logo" src="/assets/logo-rrss.png" alt="RUBEN COTON">',
+      '    <div class="cover-brand">Informe Ejecutivo</div>',
+      '  </div>',
+      '  <div class="cover-body">',
+      '    <h1>' + esc(scopeLabel) + '</h1>',
+      '    <div class="subtitle">' + esc(scopeSubtitle) + '</div>',
+      '    <div class="meta"><strong>Emitido:</strong> ' + esc(fecha) + periodTxt + ' &nbsp;·&nbsp; <strong>Campañas analizadas:</strong> ' + fmt(t.campaigns) + '</div>',
+      '  </div>',
       '</div>',
 
       // RESUMEN
