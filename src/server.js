@@ -2393,7 +2393,7 @@ app.get("/api/reports/schedule", (_req, res) => {
 app.post("/api/admin/repair-campaign-counters", (_req, res) => {
   try {
     const result = dataStore.mutate((store) => {
-      const out = { repaired: [], totalSentRescued: 0 };
+      const out = { repaired: [], totalSentRescued: 0, totalAddedBack: 0 };
       const eventsByCampaign = new Map();
       for (const ev of store.events || []) {
         if (ev.type !== "delivered" || !ev.campaignId || !ev.email) continue;
@@ -2409,25 +2409,61 @@ app.post("/api/admin/repair-campaign-counters", (_req, res) => {
         if (!ev || ev.size === 0) continue;
         const snap = Array.isArray(campaign.recipientsSnapshot) ? campaign.recipientsSnapshot : [];
         let rescued = 0;
+        let addedBack = 0;
         const byEmail = new Map(snap.map((r) => [String(r.email || "").toLowerCase(), r]));
         for (const [email, occurredAt] of ev) {
           const target = byEmail.get(email);
-          if (target && !target.sentAt) {
-            target.sentAt = occurredAt;
-            target.deliveredAt = target.deliveredAt || occurredAt;
-            if (target.status === "queued" || target.status === "queued_retry") target.status = "sent";
-            rescued += 1;
+          if (target) {
+            if (!target.sentAt) {
+              target.sentAt = occurredAt;
+              target.deliveredAt = target.deliveredAt || occurredAt;
+              if (target.status !== "sent" && target.status !== "bounced") target.status = "sent";
+              rescued += 1;
+            }
+          } else {
+            /* P0 RESCATE 2026-05-05: el email aparece en eventos `delivered`
+             * pero ya no esta en el snapshot (se filtro en un attachCampaignJob
+             * antiguo que reseteo el snapshot). Lo añadimos de vuelta como
+             * recipient enviado, para que el contador y el historial sea
+             * realista. */
+            const recovered = {
+              email,
+              status: "sent",
+              sentAt: occurredAt,
+              deliveredAt: occurredAt,
+              openedAt: null,
+              clickedAt: null,
+              bouncedAt: null,
+              unsubscribedAt: null,
+              complainedAt: null,
+              workflowActions: {},
+              _recoveredFromEvents: true
+            };
+            byEmail.set(email, recovered);
+            snap.push(recovered);
+            addedBack += 1;
           }
         }
-        if (rescued > 0) {
-          const sent = snap.filter((r) => r.sentAt).length;
-          const bounced = snap.filter((r) => r.bouncedAt).length;
+        if (rescued > 0 || addedBack > 0) {
+          campaign.recipientsSnapshot = Array.from(byEmail.values());
+          const finalSnap = campaign.recipientsSnapshot;
+          const sent = finalSnap.filter((r) => r.sentAt).length;
+          const bounced = finalSnap.filter((r) => r.bouncedAt).length;
+          campaign.stats.total = finalSnap.length;
           campaign.stats.sent = sent;
           campaign.stats.bounced = bounced;
-          campaign.stats.queued = Math.max(0, snap.length - sent - bounced);
+          campaign.stats.queued = Math.max(0, finalSnap.length - sent - bounced);
           campaign.updatedAt = new Date().toISOString();
-          out.repaired.push({ id: campaign.id, name: campaign.name, sent, rescuedNow: rescued });
+          out.repaired.push({
+            id: campaign.id,
+            name: campaign.name,
+            sent,
+            total: finalSnap.length,
+            rescuedNow: rescued,
+            addedBackFromEvents: addedBack
+          });
           out.totalSentRescued += rescued;
+          out.totalAddedBack += addedBack;
         }
       }
       return out;
