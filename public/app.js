@@ -1784,12 +1784,39 @@ campaignForm?.addEventListener("submit", async (event) => {
         } catch (err) {
           const msg = String(err && err.message || "");
           if (/SIN segmento/i.test(msg) || /confirmSendAll/i.test(msg) || /threshold/i.test(msg)) {
+            /* UX 2026-05-05: reescrito modal con lenguaje claro para
+             * usuario sin contexto tecnico. Antes mostraba mensaje crudo
+             * del servidor con jerga ({"confirmSendAll":true}, "umbral").
+             * Extraemos el numero de destinatarios y construimos un texto
+             * humano que explique el proceso completo. */
+            const numMatch = msg.match(/(\d+)\s*destinatarios/i);
+            const totalEnvios = numMatch ? Number(numMatch[1]) : 0;
+            const totalFmt = totalEnvios.toLocaleString("es-ES");
+            const dias = Math.ceil(totalEnvios / 1950);
             const ok = await rubenCotonConfirm({
-              title: "Envío masivo detectado",
-              icon: "⚠️",
-              body: `${esc(msg)}<br><br><strong>¿Confirmas que quieres enviar de todas formas?</strong>`,
-              confirmText: "Sí, enviar",
-              cancelText: "Cancelar"
+              title: "Vas a enviar una campaña grande",
+              icon: "📨",
+              body: `
+                <div style="font-size:15px;line-height:1.55;color:#1f2937">
+                  <p style="margin:0 0 14px"><strong>Total a enviar:</strong> <span style="color:#FF6B00;font-weight:800;font-size:18px">${totalFmt} personas</span></p>
+
+                  <div style="background:#f3f4f6;border-left:4px solid #FF6B00;padding:12px 14px;border-radius:6px;margin:0 0 14px">
+                    <strong style="display:block;margin-bottom:6px;color:#111">Cómo se enviarán:</strong>
+                    <ul style="margin:0;padding-left:18px;color:#374151">
+                      <li>Máximo <strong>1.950 al día</strong> (límite seguro Gmail)</li>
+                      <li>Solo entre <strong>8:00 y 20:00</strong> (Madrid)</li>
+                      <li>Ritmo lento: <strong>1 cada 15-25 segundos</strong> (parece humano)</li>
+                      <li>El sistema pausa solo si llega al límite del día</li>
+                    </ul>
+                  </div>
+
+                  <p style="margin:0 0 8px"><strong>Tiempo estimado total:</strong> ~${dias} ${dias === 1 ? "día" : "días"} repartidos automáticamente</p>
+
+                  <p style="margin:0;color:#dc2626;font-weight:600">⚠ No se puede deshacer una vez lanzada (sí se puede pausar).</p>
+                </div>
+              `,
+              confirmText: "Sí, lanzar la campaña",
+              cancelText: "No, cancelar"
             });
             if (!ok) {
               campaignResult.innerHTML = `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 16px;color:#78350f;font-weight:600">⚠ Campaña guardada pero NO lanzada. Lanzamiento cancelado.</div>`;
