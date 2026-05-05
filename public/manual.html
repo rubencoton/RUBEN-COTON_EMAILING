@@ -316,18 +316,62 @@ code {
 }
 
 /* ---------- IMPRESIÓN ---------- */
+/* PETICION USUARIO 2026-05-05: imprimibilidad A4 robusta + pauta visual
+ * negro/blanco/naranja también en print. */
 @media print {
-  body { padding: 0; font-size: 10pt; background: #fff; }
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm 16mm 12mm;
+    @bottom-right { content: "Página " counter(page); font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #FF6B00; }
+    @bottom-left  { content: "RUBEN COTON · Manual de uso"; font-family: Inter, Arial, sans-serif; font-size: 9pt; color: #999; }
+  }
+  @page :first {
+    margin: 0;
+    @bottom-right { content: ""; }
+    @bottom-left  { content: ""; }
+  }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  html, body { padding: 0 !important; margin: 0 !important; font-size: 10.5pt !important; background: #fff !important; line-height: 1.45 !important; }
   .print-btn, .print-hint { display: none !important; }
-  .container { max-width: 100%; }
-  .cover { page-break-after: always; box-shadow: none; }
-  h1 { page-break-after: avoid; }
-  h2, h3 { page-break-after: avoid; }
-  .step, .alert, .tip, .info, .feature { page-break-inside: avoid; }
-  table { page-break-inside: avoid; }
-  .toc { page-break-after: always; }
+  .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+
+  /* Portada A4 completa, sin márgenes @page (usa @page :first) */
+  .cover {
+    page-break-after: always !important; break-after: page !important;
+    page-break-inside: avoid !important; break-inside: avoid !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    height: 297mm !important; width: 210mm !important;
+    padding: 60mm 24mm !important;
+    background: #000 !important;
+    color: #fff !important;
+    border-bottom: 6px solid #FF6B00 !important;
+  }
+  .cover h1 { color: #fff !important; font-size: 32pt !important; }
+  .cover .subtitle { color: #FF6B00 !important; }
+
+  /* Índice en página propia */
+  .toc { page-break-after: always !important; break-after: page !important; box-shadow: none !important; border: 1px solid #ddd !important; }
+
+  /* Cada sección en página nueva → paginación coherente */
+  h1 {
+    page-break-before: always !important; break-before: page !important;
+    page-break-after: avoid !important; break-after: avoid !important;
+    background: #000 !important; color: #fff !important;
+    margin: 0 0 16px !important;
+    padding: 14px 18px !important;
+    border-radius: 10px !important;
+    font-size: 16pt !important;
+  }
+  h1 .icon { background: #FF6B00 !important; color: #fff !important; }
+  h2 { page-break-after: avoid !important; break-after: avoid !important; color: #FF6B00 !important; border-left-color: #000 !important; }
+  h3 { page-break-after: avoid !important; break-after: avoid !important; }
+
+  /* Bloques que no se cortan a mitad */
+  .step, .alert, .tip, .info, .feature, table, ul, ol { page-break-inside: avoid !important; break-inside: avoid !important; }
   .features { grid-template-columns: repeat(2, 1fr); }
-  .feature { box-shadow: none; }
+  .feature { box-shadow: none !important; border: 1px solid #ddd !important; }
 }
 </style>
 </head>
