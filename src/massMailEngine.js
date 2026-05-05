@@ -4,20 +4,38 @@ const nodemailer = require("nodemailer");
 const sheetsWriteback = require("./sheetsWriteback");
 const trackingSign = require("./trackingSign");
 
-/* Helper para extraer _sheetMeta de un contacto y enviarlo a writeback. */
+/* Helper para extraer _sheetMeta de un contacto y enviarlo a writeback.
+ *
+ * P0 FIX 2026-05-05: usar getContactByEmail (existe y es O(1) hash lookup)
+ * en lugar de listContacts({search}) que recorria 56K contactos por cada
+ * envio Y ademas el filtro q-vs-search no aplicaba. Ahora directo. */
 const writebackForEmail = (dataStoreRef, email, status) => {
   if (!dataStoreRef) return;
   try {
-    const all = dataStoreRef.listContacts({ search: email });
-    const c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email).toLowerCase());
-    if (!c) return;
+    let c = null;
+    if (typeof dataStoreRef.getContactByEmail === "function") {
+      c = dataStoreRef.getContactByEmail(email);
+    } else {
+      /* Fallback: listContacts SIN filter (todos) y find por igualdad. */
+      const all = dataStoreRef.listContacts({});
+      c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email).toLowerCase());
+    }
+    if (!c) {
+      console.warn(`[writeback] contacto no encontrado: ${email}`);
+      return;
+    }
     let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
     if (typeof meta === "string") {
       try { meta = JSON.parse(meta); } catch (_e) { meta = null; }
     }
-    if (!meta) return;
+    if (!meta) {
+      console.warn(`[writeback] sin _sheetMeta: ${email}`);
+      return;
+    }
     sheetsWriteback.enqueue(meta, status, email);
-  } catch (e) { /* nunca fallar el envio por writeback */ }
+  } catch (e) {
+    console.warn(`[writeback] excepcion ${email}: ${e.message}`);
+  }
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

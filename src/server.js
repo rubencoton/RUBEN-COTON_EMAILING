@@ -1330,11 +1330,36 @@ function buildCampaignReportData(campaign) {
   const byEmail = new Map();
   for (const c of allContacts) byEmail.set((c.email || "").toLowerCase(), c);
 
+  /* P0 FIX 2026-05-05: bugs auditoria informe destinatarios:
+   * 1. Datos en customFields, no en custom (campos quedaban vacios).
+   * 2. categoria cogia el PRIMER tag seg-* del contacto, no el de la
+   *    campana actual. Un contacto en multiples pestanas (festejos +
+   *    infantil + cultura) mostraba INFANTIL en una campana de FESTEJOS.
+   *    Ahora usa el filtro de la campana (listFilter.tag) si existe.
+   * 3. empresa: si company esta vacio o es de otra pestana, fallback
+   *    a 'Ayuntamiento de [municipio]' (mas relevante para festejos). */
+  const campaignSegTag = String(campaign.listFilter?.tag || "").trim();
+  const campaignSegLabel = campaignSegTag
+    ? campaignSegTag.replace(/^seg-?/, "").replace(/-/g, " ").toUpperCase()
+    : null;
+
   const recipientsSnapshot = campaign.recipientsSnapshot || [];
   const recipients = recipientsSnapshot.map((r) => {
     const c = byEmail.get((r.email || "").toLowerCase()) || {};
-    const segTag = (c.tags || []).find((t) => t.startsWith("seg"));
-    const crmTag = (c.tags || []).find((t) => t.startsWith("crm"));
+    /* fields estan en customFields (sheets sync) o custom (legacy import). */
+    const cf = c.customFields || c.custom || {};
+    const tags = c.tags || [];
+    /* Si la campana filtro por tag, mostrar ESE como categoria. Sino, el
+     * primer tag seg-* del contacto. */
+    const categoria = campaignSegLabel
+      || (tags.find((t) => t.startsWith("seg")) || "").replace(/^seg-?/, "").replace(/-/g, " ").toUpperCase()
+      || "—";
+    const crmTag = tags.find((t) => t.startsWith("crm"));
+    const municipio = cf.municipio || "—";
+    /* Empresa: company > 'Ayuntamiento de X' (si tiene municipio) > '—' */
+    const empresa = c.company
+      || (municipio !== "—" ? `Ayuntamiento de ${municipio}` : "—");
+
     let status = "en cola";
     if (r.clickedAt) status = "clic";
     else if (r.openedAt) status = "abierto";
@@ -1342,11 +1367,11 @@ function buildCampaignReportData(campaign) {
     else if (r.unsubscribedAt) status = "baja";
     else if (r.deliveredAt || r.sentAt) status = "enviado";
     return {
-      empresa: c.company || "—",
-      municipio: c.custom?.municipio || "—",
-      provincia: c.custom?.provincia || "—",
-      ccaa: c.custom?.ccaa || "—",
-      categoria: segTag ? segTag.replace(/^seg-?/, "").replace(/-/g, " ").toUpperCase() : "—",
+      empresa,
+      municipio,
+      provincia: cf.provincia || "—",
+      ccaa: cf.ccaa || "—",
+      categoria,
       fuente: crmTag ? crmTag.replace(/^crm-?/, "").replace(/-/g, " ").toUpperCase() : "—",
       status
     };
