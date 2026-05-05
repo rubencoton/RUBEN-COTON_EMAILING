@@ -190,7 +190,7 @@ function renderCampaignReport(reportData, campaignId) {
   };
 
   const kpiCell = (num, label, sub, accent) => `
-    <td style="padding:18px 14px;background-color:${BLANCO};border:1px solid ${NEGRO_BORDER};border-top:5px solid ${accent};text-align:center;width:25%">
+    <td style="padding:18px 14px;background-color:${NEGRO_CARD};border:1px solid ${NEGRO_BORDER};border-top:5px solid ${accent};text-align:center;width:25%">
       <div style="font-size:24pt;font-weight:900;color:${accent};line-height:1.05;letter-spacing:-1px">${num}</div>
       <div style="font-size:9pt;color:${GRIS_TXT};text-transform:uppercase;font-weight:bold;letter-spacing:1px;margin-top:8px">${label}</div>
       ${sub ? `<div style="font-size:8.5pt;color:#9ca3af;margin-top:4px;font-weight:600">${sub}</div>` : ""}
@@ -202,7 +202,7 @@ function renderCampaignReport(reportData, campaignId) {
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 14px">
       <tr>
         <td style="background-color:${NARANJA};color:${BLANCO};padding:8px 14px;font-weight:900;font-size:14pt;letter-spacing:1px;width:48px;text-align:center">${num}</td>
-        <td style="background-color:${BLANCO};color:${BLANCO};padding:8px 18px;font-weight:bold;font-size:13pt;letter-spacing:0.5px">${esc(title)}</td>
+        <td style="background-color:${NEGRO_CARD};color:${BLANCO};padding:8px 18px;font-weight:bold;font-size:13pt;letter-spacing:0.5px">${esc(title)}</td>
       </tr>
     </table>`;
 
@@ -212,12 +212,12 @@ function renderCampaignReport(reportData, campaignId) {
 <meta charset="UTF-8">
 <title>Informe ${esc(c.name)} | RUBEN COTON</title>
 </head>
-<body style="font-family:Arial,Helvetica,sans-serif;color:${BLANCO};background-color:${BLANCO};margin:0;padding:0;font-size:11pt;line-height:1.55">
+<body style="font-family:Arial,Helvetica,sans-serif;color:${BLANCO};background-color:${NEGRO};margin:0;padding:0;font-size:11pt;line-height:1.55">
 
 <!-- ╔════ PORTADA ════╗ -->
 <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:30px">
   <tr>
-    <td style="background-color:${BLANCO};padding:32px 40px;text-align:center">
+    <td style="background-color:${NEGRO};padding:32px 40px;text-align:center">
       <img src="${LOGO_NEG}" alt="RUBEN COTON" style="max-width:340px;width:100%;height:auto;display:block;margin:0 auto">
       <p style="color:${NARANJA};font-size:11pt;margin:14px 0 0;letter-spacing:5px;text-transform:uppercase;font-weight:900">DJ &middot; Booking &middot; Management</p>
     </td>
@@ -228,13 +228,13 @@ function renderCampaignReport(reportData, campaignId) {
     </td>
   </tr>
   <tr>
-    <td style="padding:36px 40px 20px;background-color:${BLANCO}">
+    <td style="padding:36px 40px 20px;background-color:${NEGRO}">
       <h1 style="color:${BLANCO};font-size:26pt;margin:0;font-weight:900;line-height:1.15;letter-spacing:-0.3px">${esc(c.name || "Campaña sin nombre")}</h1>
       <p style="color:${NARANJA_OSC};font-size:12pt;margin:14px 0 0;font-style:italic;border-left:4px solid ${NARANJA};padding-left:14px;font-weight:500">"${esc(c.subject || "—")}"</p>
     </td>
   </tr>
   <tr>
-    <td style="padding:14px 40px 30px;background-color:${BLANCO}">
+    <td style="padding:14px 40px 30px;background-color:${NEGRO}">
       <table cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="padding:14px 16px;background-color:${NEGRO_CARD};border-left:4px solid ${NARANJA};width:24%">
@@ -261,7 +261,7 @@ function renderCampaignReport(reportData, campaignId) {
     </td>
   </tr>
   <tr>
-    <td style="padding:14px 40px;background-color:${BLANCO};color:${BLANCO};font-size:9pt">
+    <td style="padding:14px 40px;background-color:${NEGRO};color:${BLANCO};font-size:9pt">
       <table cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td>Madrid, España &middot; <span style="color:${NARANJA}">manager@rubencoton.com</span></td>
@@ -337,7 +337,7 @@ function renderCampaignReport(reportData, campaignId) {
 <div style="padding:8px 32px 22px">
   ${sectionHeader("04", "Rendimiento vs. sector B2B")}
   <table cellpadding="0" cellspacing="0" border="1" width="100%" style="border-collapse:collapse;border-color:${NEGRO_BORDER}">
-    <tr style="background-color:${BLANCO};color:${BLANCO}">
+    <tr style="background-color:${NEGRO};color:${BLANCO}">
       <th style="padding:11px 14px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid ${NEGRO}">Métrica</th>
       <th style="padding:11px 14px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid ${NEGRO}">Campaña</th>
       <th style="padding:11px 14px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid ${NEGRO}">Benchmark</th>
@@ -354,10 +354,10 @@ function renderCampaignReport(reportData, campaignId) {
 <div style="padding:8px 32px 22px">
   ${sectionHeader("05", "Email enviado")}
   <table cellpadding="0" cellspacing="0" border="1" width="100%" style="border-collapse:collapse;border-color:${NEGRO_BORDER}">
-    <tr><td style="padding:10px 14px;background-color:${BLANCO};color:${NARANJA};font-weight:bold;width:25%;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">DE</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${esc(c.fromName || "RUBEN COTON")} &lt;${esc(c.fromEmail || "manager@rubencoton.com")}&gt;</td></tr>
-    <tr><td style="padding:10px 14px;background-color:${BLANCO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">PARA</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${fmt(recipients.length)} destinatarios</td></tr>
-    <tr><td style="padding:10px 14px;background-color:${BLANCO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">ASUNTO</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}"><strong>${esc(c.subject || "—")}</strong></td></tr>
-    <tr><td style="padding:10px 14px;background-color:${BLANCO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">FECHA</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</td></tr>
+    <tr><td style="padding:10px 14px;background-color:${NEGRO};color:${NARANJA};font-weight:bold;width:25%;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">DE</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${esc(c.fromName || "RUBEN COTON")} &lt;${esc(c.fromEmail || "manager@rubencoton.com")}&gt;</td></tr>
+    <tr><td style="padding:10px 14px;background-color:${NEGRO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">PARA</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${fmt(recipients.length)} destinatarios</td></tr>
+    <tr><td style="padding:10px 14px;background-color:${NEGRO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">ASUNTO</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}"><strong>${esc(c.subject || "—")}</strong></td></tr>
+    <tr><td style="padding:10px 14px;background-color:${NEGRO};color:${NARANJA};font-weight:bold;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;border:1px solid ${NEGRO}">FECHA</td><td style="padding:10px 14px;border:1px solid ${NEGRO_BORDER}">${c.sentAt ? new Date(c.sentAt).toLocaleString("es-ES") : "Pendiente"}</td></tr>
   </table>
   <p style="margin:18px 0 8px;font-weight:bold;color:${GRIS_TXT};font-size:9.5pt;text-transform:uppercase;letter-spacing:1.5px">Cuerpo del email (texto)</p>
   <div style="background-color:${NEGRO_CARD};border-left:4px solid ${NARANJA};padding:16px 20px;font-size:10.5pt;color:${BLANCO};white-space:pre-wrap">${esc(emailPlain) || "Email sin contenido textual."}</div>
@@ -366,9 +366,9 @@ function renderCampaignReport(reportData, campaignId) {
 <!-- 6. DESTINATARIOS -->
 <div style="padding:8px 32px 22px">
   ${sectionHeader("06", "Destinatarios (" + fmt(recipients.length) + ")")}
-  <p style="background-color:${BLANCO};color:${BLANCO};padding:12px 16px;margin:0 0 14px;font-size:10pt;border-left:4px solid ${NARANJA}"><strong style="color:${NARANJA}">Confidencialidad &amp; RGPD:</strong> sólo se muestra el nombre público de cada empresa/entidad y su localización. No incluimos emails, teléfonos ni nombres de personas físicas.</p>
+  <p style="background-color:${NEGRO};color:${BLANCO};padding:12px 16px;margin:0 0 14px;font-size:10pt;border-left:4px solid ${NARANJA}"><strong style="color:${NARANJA}">Confidencialidad &amp; RGPD:</strong> sólo se muestra el nombre público de cada empresa/entidad y su localización. No incluimos emails, teléfonos ni nombres de personas físicas.</p>
   <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">
-    <tr style="background-color:${BLANCO};color:${NARANJA}">
+    <tr style="background-color:${NEGRO};color:${NARANJA}">
       <th style="padding:9px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px;width:40px">#</th>
       <th style="padding:9px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Empresa / Entidad</th>
       <th style="padding:9px 8px;text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.8px">Municipio</th>
@@ -430,7 +430,7 @@ ${topCat.length ? `
 <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:0">
   <tr><td style="background-color:${NARANJA};height:8px"></td></tr>
   <tr>
-    <td style="padding:30px 28px;background-color:${BLANCO};color:${BLANCO};text-align:center">
+    <td style="padding:30px 28px;background-color:${NEGRO};color:${BLANCO};text-align:center">
       <img src="${LOGO_NEG}" alt="RUBEN COTON" style="width:120px;height:auto;display:block;margin:0 auto 14px">
       <p style="color:${NARANJA};font-size:9.5pt;margin:0 0 14px;letter-spacing:3px;text-transform:uppercase;font-weight:bold">DJ &middot; Booking &middot; Management</p>
       <p style="font-size:10pt;margin:0;color:${BLANCO}">manager@rubencoton.com &middot; Madrid, España</p>
