@@ -916,10 +916,7 @@ const renderCampaigns = (campaigns) => {
             ${canPause ? `<button class="mini-btn act-btn act-pause" data-pause-campaign="${esc(c.id)}" type="button" style="background:#f59e0b;color:#fff">⏸ Pausar</button>` : ""}
             ${canResume ? `<button class="mini-btn act-btn act-resume" data-resume-campaign="${esc(c.id)}" type="button" style="background:#10b981;color:#fff">▶ Reanudar</button>` : ""}
             ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar</button>` : ""}
-            <a class="mini-btn act-btn act-view" href="/campaigns/${esc(c.id)}/preview" target="_blank">👁 Ver email</a>
             <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank">📄 Informe</a>
-            <a class="mini-btn act-btn act-pdf" href="/api/campaigns/${esc(c.id)}/report.pdf" target="_blank">⬇ PDF</a>
-            ${c.drive && c.drive.folderLink ? `<a class="mini-btn act-btn act-drive-view" href="${esc(c.drive.folderLink)}" target="_blank">📁 Ver Drive</a>` : ""}
             <button class="mini-btn act-btn act-delete" data-delete-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button">🗑 Eliminar</button>
           </div>
         </td>
