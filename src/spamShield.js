@@ -244,10 +244,16 @@ const validateContent = (html, text) => {
     score += 5;
   }
 
-  /* Texto blanco sobre blanco (truco spam) */
-  if (/color:\s*#?fff(fff)?[^a-f0-9]/i.test(htmlStr)
-      && /background-color:\s*#?fff(fff)?[^a-f0-9]/i.test(htmlStr)) {
-    errors.push("Posible texto oculto (blanco sobre blanco).");
+  /* Texto blanco sobre blanco (truco spam).
+   * P0 FIX 2026-05-05: la regla anterior daba falso positivo en cualquier
+   * email con texto blanco en footer negro Y fondo blanco en secciones de
+   * contenido (legitimo). Ahora exige que ambos estilos esten en la MISMA
+   * declaracion CSS inline (mismo elemento o style block proximo, ventana
+   * de 80 caracteres). Solo asi es realmente texto invisible spam. */
+  const whiteOnWhitePattern = /style\s*=\s*["'][^"']{0,80}color:\s*#?fff(fff)?[^a-f0-9][^"']{0,80}background(-color)?:\s*#?fff(fff)?[^a-f0-9][^"']*["']/i;
+  const whiteOnWhitePatternRev = /style\s*=\s*["'][^"']{0,80}background(-color)?:\s*#?fff(fff)?[^a-f0-9][^"']{0,80}color:\s*#?fff(fff)?[^a-f0-9][^"']*["']/i;
+  if (whiteOnWhitePattern.test(htmlStr) || whiteOnWhitePatternRev.test(htmlStr)) {
+    errors.push("Texto invisible: blanco sobre fondo blanco en el mismo elemento.");
     score += 60;
   }
 
