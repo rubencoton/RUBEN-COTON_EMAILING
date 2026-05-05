@@ -286,7 +286,7 @@ function renderCampaignReport(reportData, campaignId) {
       ${sep}
       ${kpiCell(bouncePct.toFixed(1) + "%", "Rebotes", gBounce, gradeColor(gBounce))}
       ${sep}
-      ${kpiCell(replied, "Respuestas", "contestaciones", NEGRO)}
+      ${kpiCell(replied, "Respuestas", "contestaciones", NARANJA)}
     </tr>
   </table>
 </div>
