@@ -6,6 +6,19 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Tabla Inicio: alineación columnar perfecta (2ª iter)
+
+### Cambiado
+
+- **Tabla individual del dashboard de Inicio** (`public/app.js` `cellMetric` interno): aplicado el mismo patrón de alturas fijas (16/18/20px) que ya usa la pestaña "Estado campañas". Cada celda métrica usa flexbox vertical con `gap:4px`, y cada bloque (número, porcentaje, etiqueta) tiene altura fija independiente del contenido. Esto garantiza que entre filas todos los números estén a la misma altura, todos los porcentajes a la misma altura y todas las etiquetas (`INICIANDO`, `POR MEJORAR`, `EXCELENTE`...) a la misma altura — **incluso cuando la celda "Campaña" lleva texto multilínea** (nombre + subject).
+- **Celda "Campaña" y celda "Estado"** con `vertical-align:middle` para que el contenido quede centrado verticalmente respecto a las celdas métricas.
+
+### Justificación
+
+Petición usuario 2026-05-05 (2ª iteración tras ver captura): "quiero que en la misma fila aparezca el número, en la misma fila aparezca el porcentaje y en la misma fila aparezca el estado". La 1ª iteración del bloque de Inicio (commit `3a81462`) no tenía alturas fijas → al haber 1 sola fila visible no se notaba pero al haber varias campañas se desalineaba.
+
+---
+
 ## [2026-05-05] — Hardening P0 pre-lanzamiento + informes depurados
 
 ### Añadido (Backend)

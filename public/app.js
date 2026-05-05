@@ -1228,15 +1228,22 @@ const refreshPanel = async () => {
       </div>
     `;
 
-    /* ---- 2) TABLA INDIVIDUAL CON PORCENTAJES + ETIQUETAS ---- */
+    /* ---- 2) TABLA INDIVIDUAL CON PORCENTAJES + ETIQUETAS ----
+     * PETICION USUARIO 2026-05-05 (segunda iteración): alturas fijas en
+     * cada bloque (16/26/20px) para alinear horizontalmente entre filas
+     * (igual patrón que en la pestaña "Estado campañas"). Aunque la celda
+     * "Campaña" tenga texto multilínea, los números, porcentajes y
+     * etiquetas siempre están a la misma altura. */
     const cellMetric = (kind, num, base) => {
       const pct = pctOf(num, base);
       const e = evalRate(kind, pct);
       return `
-        <td style="padding:10px 6px;text-align:center;line-height:1.25">
-          <div style="font-size:14px;font-weight:800;color:#111">${fmt(num)}</div>
-          <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px">${fmtPct(pct)}</div>
-          <div style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:0.4px;padding:2px 8px;border-radius:10px;margin-top:4px;${badgeStyle(e.cls)}">${e.label}</div>
+        <td style="padding:10px 6px;vertical-align:middle">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;line-height:1.1;gap:4px">
+            <div style="height:16px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#111">${fmt(num)}</div>
+            <div style="height:18px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#475569">${fmtPct(pct)}</div>
+            <div style="height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;letter-spacing:0.4px;padding:0 8px;border-radius:10px;${badgeStyle(e.cls)}">${e.label}</div>
+          </div>
         </td>`;
     };
 
@@ -1264,12 +1271,12 @@ const refreshPanel = async () => {
             const bounced = s.bounced || 0;
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
-                <td style="padding:10px 6px">
+                <td style="padding:10px 6px;vertical-align:middle">
                   <strong>${esc(c.name || "(sin nombre)")}</strong>
                   ${c.subject ? `<div class="muted" style="font-size:11px">${esc(c.subject).slice(0,60)}</div>` : ""}
                 </td>
-                <td style="padding:10px 6px;text-align:center">
-                  <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase">
+                <td style="padding:10px 6px;text-align:center;vertical-align:middle">
+                  <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block">
                     ${statusLabel(c.status)}
                   </span>
                 </td>
