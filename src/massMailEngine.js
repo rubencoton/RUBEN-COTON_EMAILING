@@ -348,6 +348,31 @@ const createMassMailEngine = (config) => {
     "emailondeck.com", "fakemailgenerator.com", "mvrht.net",
     "trashmail.com", "throwam.com", "dropmail.me", "tempmailo.com"
   ]);
+  /* P2 audit anti-spam 2026-05-05: cargar lista externa opcional de
+   * dominios desechables desde data/disposable-domains.txt (uno por línea,
+   * comentarios con #). Se fusiona con los hardcoded. Lista comunidad
+   * recomendada: github.com/disposable-email-domains/disposable-email-domains
+   * (~3500 dominios). No bloquea el arranque si el archivo no existe. */
+  try {
+    const path = require("path");
+    const fs = require("fs");
+    const extPath = path.resolve(__dirname, "..", "data", "disposable-domains.txt");
+    if (fs.existsSync(extPath)) {
+      const lines = fs.readFileSync(extPath, "utf8").split(/\r?\n/);
+      let added = 0;
+      for (const raw of lines) {
+        const line = String(raw || "").trim().toLowerCase();
+        if (!line || line.startsWith("#")) continue;
+        if (!DISPOSABLE_DOMAINS.has(line)) {
+          DISPOSABLE_DOMAINS.add(line);
+          added++;
+        }
+      }
+      if (added > 0) console.log(`[mass-mail] disposable-domains.txt: +${added} dominios cargados (total: ${DISPOSABLE_DOMAINS.size})`);
+    }
+  } catch (e) {
+    console.warn(`[mass-mail] No se pudo cargar disposable-domains.txt: ${e.message}`);
+  }
   const isDisposableDomain = (email) => {
     const d = extractDomainFromEmail(email);
     return DISPOSABLE_DOMAINS.has(d);
@@ -790,14 +815,19 @@ const createMassMailEngine = (config) => {
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "campana";
         perRecipientHeaders["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+        /* P1 audit anti-spam 2026-05-05: Feedback-ID SIEMPRE activo.
+         * Lo lee Google Postmaster Tools (no el clasificador de tabs Gmail),
+         * por lo que NO penaliza bandeja principal y SÍ desagrega reputación
+         * por campaña — única señal early-warning antes de entrar en lista
+         * gris. Sin él, Postmaster solo ve un agregado sin granularidad. */
+        perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:rubencoton:rubencoton.com`;
         /* P0 BANDEJA PRINCIPAL 2026-05-04: Gmail clasifica como Promociones
-         * cuando ve estos 4 headers (señales "newsletter masivo bulk").
+         * cuando ve estos 3 headers (señales "newsletter masivo bulk").
          * Si MAIL_DELIVER_TO_PRIMARY=true (default), los OMITIMOS para que
          * vaya a bandeja principal Inbox. Mantener List-Unsubscribe RFC 8058
          * que NO causa Promociones y demuestra cumplimiento legal. */
         if (String(process.env.MAIL_DELIVER_TO_PRIMARY || "true").toLowerCase() === "false") {
           perRecipientHeaders["List-Id"] = `<${listIdSafe}.rubencoton.com>`;
-          perRecipientHeaders["Feedback-ID"] = `${job.id.replace(/[^a-zA-Z0-9]/g,"_")}:${listIdSafe}:rubencoton:rubencoton.com`;
           perRecipientHeaders["Precedence"] = "bulk";
           perRecipientHeaders["Auto-Submitted"] = "auto-generated";
         }

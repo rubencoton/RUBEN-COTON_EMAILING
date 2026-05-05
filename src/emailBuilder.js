@@ -21,8 +21,25 @@ const esc = (s) => String(s == null ? "" : s)
 
 const markdownToHtml = (s) => String(s || "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
-/* Plantilla HTML email RUBEN COTON (header negro + barra roja + footer) */
+/* Plantilla HTML email RUBEN COTON (header negro + barra roja + footer)
+ *
+ * P1 audit anti-spam 2026-05-05: `unsubUrl` ahora es OBLIGATORIO. Si no
+ * se pasa explícito, intentamos `MAIL_UNSUBSCRIBE_BASE_URL` de env. Si
+ * tampoco existe, lanzamos error. Sin enlace de baja visible:
+ *   - Viola CAN-SPAM Act (§ 5(a)(5)) y RGPD Art. 21.
+ *   - Dispara quejas manuales (mark-as-spam) que SÍ bajan reputación
+ *     aunque el FBL no esté conectado.
+ *   - `spamShield.validateContent()` suma +10 al score sin bloquear,
+ *     pero el daño en deliverability ya estaba hecho. */
 const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubUrl }) => {
+  const resolvedUnsubUrl = String(unsubUrl || process.env.MAIL_UNSUBSCRIBE_BASE_URL || "").trim();
+  if (!resolvedUnsubUrl) {
+    throw new Error(
+      "[emailBuilder] unsubUrl obligatorio. Pásalo en opts o define " +
+      "MAIL_UNSUBSCRIBE_BASE_URL en variables de entorno. Sin enlace " +
+      "de baja visible se viola CAN-SPAM/RGPD y se penaliza reputación."
+    );
+  }
   const videoBlock = videoId ? `
     <tr><td style="padding:0 40px 24px;text-align:center">
       <a href="https://www.youtube.com/watch?v=${esc(videoId)}" target="_blank" style="display:inline-block;position:relative">
@@ -76,7 +93,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
         <p style="margin:0 0 6px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px">RUBEN COTON</p>
         <p style="margin:0 0 8px;color:#aaa;font-size:11px">Booking &amp; Management de Artistas</p>
         <p style="margin:0 0 6px;font-size:11px"><a href="mailto:manager@rubencoton.com" style="color:#FFB74D;text-decoration:none">manager@rubencoton.com</a></p>
-        ${unsubUrl ? `<p style="margin:0;font-size:10px"><a href="${esc(unsubUrl)}" style="color:#777;text-decoration:underline">Darse de baja</a></p>` : ""}
+        <p style="margin:0;font-size:10px"><a href="${esc(resolvedUnsubUrl)}" style="color:#777;text-decoration:underline">Darse de baja</a></p>
       </td></tr>
     </table>
   </td></tr>
@@ -91,7 +108,7 @@ const buildHtml = ({ asunto, saludo, intro, body, cta, photoUrl, videoId, unsubU
  * @returns {Promise<{subject, html, text, provider, providerName}>}
  */
 const generateEmail = async (opts = {}) => {
-  const { audience, objective, offer = "", photoUrl, videoId, tone = "profesional cercano" } = opts;
+  const { audience, objective, offer = "", photoUrl, videoId, tone = "profesional cercano", unsubUrl } = opts;
   if (!audience || !objective) throw new Error("Faltan audience u objective");
 
   /* System prompt experto: equipo de 4 senior + credenciales completas
@@ -185,7 +202,7 @@ Genera el JSON ahora.`;
     throw new Error("La IA no devolvio JSON valido: " + String(r.text || "").slice(0, 200));
   }
 
-  const html = buildHtml({ asunto: subject, saludo, intro, body, cta, photoUrl, videoId });
+  const html = buildHtml({ asunto: subject, saludo, intro, body, cta, photoUrl, videoId, unsubUrl });
   const text = `${saludo},\n\n${intro.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${body.replace(/\*\*(.+?)\*\*/g, "$1")}\n\n${cta}\n\n—\nRUBEN COTON\nmanager@rubencoton.com\nhttps://wa.me/34613009336`;
 
   return {

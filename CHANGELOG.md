@@ -6,6 +6,41 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-05] — Anti-spam P0/P1/P2 audit hardening
+
+### Añadido
+
+- **`unsubUrl` obligatorio en `emailBuilder.buildHtml()`** (P1 audit). Si no se pasa explícito, fallback a `MAIL_UNSUBSCRIBE_BASE_URL` de env. Si tampoco existe → lanza error claro. Antes el HTML se generaba sin enlace de baja silenciosamente, violando CAN-SPAM/RGPD y disparando quejas manuales que penalizan reputación. Verificado con tests: sin url lanza error, con url o env genera HTML con link "Darse de baja".
+- **Carga de lista externa `data/disposable-domains.txt`** en `massMailEngine.js` (P2 audit). Se fusiona con los 22 dominios hardcoded. Recomendado: lista comunitaria de `disposable-email-domains/disposable-email-domains` (~3500). No bloquea arranque si el archivo no existe; log informa cuántos se añadieron.
+- **`.env.example` ampliado** con sección **ANTI-SPAM / DELIVERABILITY**: `TRACKING_SECRET`, `TRACKING_REQUIRE_HMAC`, `WRITEBACK_FLUSH_MS`, `MAIL_DELIVER_TO_PRIMARY`. Bloque DNS requerido (SPF, DKIM, DMARC) con valores recomendados y comando `dig` de verificación.
+
+### Cambiado
+
+- **`Feedback-ID` ahora SIEMPRE activo** en `massMailEngine.js` (P1 audit). Antes se omitía cuando `MAIL_DELIVER_TO_PRIMARY=true` (default) por miedo a Promociones. Confirmado en audit: `Feedback-ID` lo lee Google Postmaster Tools, NO el clasificador de tabs Gmail. No penaliza bandeja principal y SÍ desagrega reputación por campaña — única señal early-warning antes de lista gris. `List-Id`, `Precedence`, `Auto-Submitted` siguen condicionados a `MAIL_DELIVER_TO_PRIMARY=false` porque esos sí afectan tabs.
+- **`emailBuilder.generateEmail()`** acepta `unsubUrl` en opts y lo pasa a `buildHtml`. Default sigue siendo env.
+
+### Documentado (acción requerida fuera del código)
+
+- **DMARC en `_dmarc.rubencoton.com`** debe estar en `p=quarantine` (no `none`). Verificar con `dig TXT _dmarc.rubencoton.com`. Sin esto, spoofing del dominio pasa libre y la reputación cae lentamente. P0 — no es código, es un cambio en la zona DNS de Hostinger / proveedor.
+- **`TRACKING_SECRET` y `TRACKING_REQUIRE_HMAC=1` en Coolify**: setear en variables de entorno de la app `RUBEN-COTON_EMAILING`. Generar el secret con `openssl rand -hex 32`. P0 — sin esto, cada reinicio invalida tracking histórico.
+
+### Justificación
+
+Audit anti-spam 2026-05-05 (subagente Explore). Los puntos aplicados son los P0/P1/P2 con código-actionable. Los P0 de DNS y env vars necesitan acción manual del usuario (publicación documentada).
+
+### Test
+
+- `node --check` en `emailBuilder.js`, `massMailEngine.js`, `sheetsWriteback.js`, `sheetsSync.js`, `trackingSign.js` → OK
+- `node -e` test funcional `buildHtml` sin unsubUrl → error correcto. Con unsubUrl o env → HTML genera enlace "Darse de baja".
+
+### Rollback
+
+- `unsubUrl`: si rompe consumidor existente, el throw se puede degradar a `console.warn` en `emailBuilder.js`.
+- `Feedback-ID` siempre: si Gmail empieza a clasificar como Promociones (improbable), envolver de nuevo en el `if MAIL_DELIVER_TO_PRIMARY=false`.
+- Lista disposable externa: borrar `data/disposable-domains.txt` para volver al hardcoded.
+
+---
+
 ## [2026-05-05] — Informe rediseño armónico + skip CRM testeo
 
 ### Añadido
