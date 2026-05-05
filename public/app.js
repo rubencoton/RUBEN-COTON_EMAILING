@@ -254,18 +254,41 @@ const checklistToText = (payload) => {
   return lines.join("\n");
 };
 
-const api = async (url, options = {}) => {
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
+/* P0 UX 2026-05-05: retry automatico para cold start tras deploy.
+ * Si fetch falla por network (cold start, container arrancando), reintenta
+ * 3 veces con backoff exponencial (1s, 2s, 4s). El usuario no ve el error
+ * - solo espera un poco en lugar de ver "Error de API". */
+const api = async (url, options = {}, retryCount = 0) => {
+  const MAX_RETRIES = 3;
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
+  } catch (networkErr) {
+    /* Fetch fallo por red (timeout, conexion rota, cold start). Reintentar. */
+    if (retryCount < MAX_RETRIES) {
+      const delayMs = 1000 * Math.pow(2, retryCount); /* 1s, 2s, 4s */
+      await new Promise((r) => setTimeout(r, delayMs));
+      return api(url, options, retryCount + 1);
+    }
+    throw new Error("Sin conexion. Verifica tu Wi-Fi y reintenta.");
+  }
 
   if (response.status === 401) {
     window.location.href = "/login";
     throw new Error("No autorizado");
+  }
+
+  /* Cold start del backend devuelve 502/503/504 mientras arranca. Reintentar. */
+  if ([502, 503, 504].includes(response.status) && retryCount < MAX_RETRIES) {
+    const delayMs = 1500 * Math.pow(2, retryCount);
+    await new Promise((r) => setTimeout(r, delayMs));
+    return api(url, options, retryCount + 1);
   }
 
   const data = await response.json().catch(() => ({}));
