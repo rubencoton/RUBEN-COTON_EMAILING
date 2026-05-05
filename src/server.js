@@ -481,6 +481,23 @@ const syncCampaignsWithEngine = () => {
   if (recreated.length > 0) {
     console.log(`[sync] ${recreated.length} jobs recreados auto tras restart:`, JSON.stringify(recreated.slice(0, 5)));
   }
+
+  /* P0 BLINDAJE 2026-05-05 (bug usuario "tras deploy el orden de envio se altera"):
+   * tras cada sync, fuerza el orden FIFO cronologico (campañas creadas
+   * antes -> primero en la cola). Idempotente y barato: solo reordena el
+   * array `queue` interno del motor. Garantiza que aunque la cola se haya
+   * desorganizado por restarts, retries o throttles, vuelve a su estado
+   * canonico FIFO. */
+  try {
+    const desiredOrder = campaigns
+      .filter((c) => c.jobId && (c.status === "sending" || c.status === "queued" || c.status === "paused"))
+      .map((c) => c.jobId);
+    if (typeof massMailEngine.reorderQueue === "function" && desiredOrder.length > 0) {
+      massMailEngine.reorderQueue(desiredOrder);
+    }
+  } catch (e) {
+    console.warn(`[sync] reorderQueue fallo: ${e.message}`);
+  }
 };
 
 const buildRuntimeStatus = async () => {
@@ -2416,6 +2433,29 @@ app.post("/api/admin/repair-campaign-counters", (_req, res) => {
       return out;
     });
     return apiOk(res, result);
+  } catch (e) {
+    return apiError(res, 500, e.message);
+  }
+});
+
+/* P0 BLINDAJE 2026-05-05: forzar reorden FIFO de la cola del motor.
+ * Llamado manualmente cuando el orden se ha alterado tras un deploy.
+ * Internamente dispara syncCampaignsWithEngine que ya hace el reorder.
+ * Devuelve el orden resultante para verificacion. */
+app.post("/api/admin/reorder-queue-fifo", (_req, res) => {
+  try {
+    syncCampaignsWithEngine();
+    const status = massMailEngine.getStatus();
+    return apiOk(res, {
+      reorderedTo: status.queueOrder,
+      jobsActive: (status.jobs || []).map((j) => ({
+        position: j.queuePosition,
+        name: j.name,
+        status: j.status,
+        sent: j.sent,
+        total: j.total
+      }))
+    });
   } catch (e) {
     return apiError(res, 500, e.message);
   }

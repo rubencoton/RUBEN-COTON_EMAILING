@@ -1525,6 +1525,32 @@ const createMassMailEngine = (config) => {
     return { cleared: count };
   };
 
+  /* P0 BLINDAJE 2026-05-05 (bug usuario "tras deploy el orden FIFO cambia"):
+   * reordena la cola interna `queue` segun el orden de jobIds dado. Stable:
+   * mantiene orden relativo dentro de cada job (los items del mismo job
+   * NO se reordenan entre si; solo cambia la posicion del job en la cola).
+   * Idempotente: llamarlo varias veces da el mismo resultado.
+   * Llamado desde syncCampaignsWithEngine para garantizar FIFO cronologico
+   * incluso si la cola se desorganizo por re-encolados de retries/throttles. */
+  const reorderQueue = (jobIdOrder) => {
+    if (!Array.isArray(jobIdOrder) || jobIdOrder.length === 0) return;
+    const orderMap = new Map();
+    jobIdOrder.forEach((id, idx) => orderMap.set(id, idx));
+    /* Sort estable: usar .sort de JS moderno (estable desde ES2019). Items
+     * con job desconocido van al final (rank=Infinity). */
+    const ranked = queue.map((item, originalIdx) => ({
+      item,
+      originalIdx,
+      rank: orderMap.has(item.jobId) ? orderMap.get(item.jobId) : Number.MAX_SAFE_INTEGER
+    }));
+    ranked.sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.originalIdx - b.originalIdx;
+    });
+    queue.length = 0;
+    for (const r of ranked) queue.push(r.item);
+  };
+
   return {
     start,
     stop,
@@ -1539,6 +1565,7 @@ const createMassMailEngine = (config) => {
     pauseJob,
     resumeJob,
     isJobPaused,
+    reorderQueue,
     /* Blindaje cap diario */
     getDailyCapStatus,
     getDailyUsed,
