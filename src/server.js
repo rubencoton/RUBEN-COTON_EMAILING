@@ -2483,6 +2483,34 @@ app.post("/api/admin/repair-campaign-counters", (_req, res) => {
   }
 });
 
+/* P0 FEATURE 2026-05-05: asignar numeros incrementales a campañas existentes
+ * que no los tengan. Orden por createdAt asc (la primera creada -> 0001).
+ * Idempotente: ya asignados se mantienen. */
+app.post("/api/admin/assign-campaign-numbers", (_req, res) => {
+  try {
+    const result = dataStore.mutate((store) => {
+      let maxAssigned = store.campaigns.reduce((max, c) => {
+        const n = Number(c.number) || 0;
+        return n > max ? n : max;
+      }, 0);
+      const sinNumero = store.campaigns
+        .filter((c) => !c.number || isNaN(Number(c.number)))
+        .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      const assigned = [];
+      for (const c of sinNumero) {
+        maxAssigned += 1;
+        c.number = maxAssigned;
+        c.updatedAt = new Date().toISOString();
+        assigned.push({ id: c.id, name: c.name, number: maxAssigned });
+      }
+      return { totalAssigned: assigned.length, assigned };
+    });
+    return apiOk(res, result);
+  } catch (e) {
+    return apiError(res, 500, e.message);
+  }
+});
+
 /* P0 BLINDAJE 2026-05-05: forzar reorden FIFO de la cola del motor.
  * Llamado manualmente cuando el orden se ha alterado tras un deploy.
  * Internamente dispara syncCampaignsWithEngine que ya hace el reorder.

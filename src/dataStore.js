@@ -1495,8 +1495,19 @@ class DataStore {
         }
       }
 
+      /* P0 FEATURE 2026-05-05 (peticion usuario): numeracion incremental
+       * de campañas (0001, 0002, ...) para organizacion visual. Se asigna
+       * el siguiente disponible al crear. Las campañas archived/eliminadas
+       * NO liberan su numero (son inmutables historicos). */
+      const maxNumber = store.campaigns.reduce((max, c) => {
+        const n = Number(c.number) || 0;
+        return n > max ? n : max;
+      }, 0);
+      const nextNumber = maxNumber + 1;
+
       const campaign = {
         id: createId("cmp"),
+        number: nextNumber,
         name,
         subject,
         previewText: String(input.previewText || "").trim(),
@@ -1930,9 +1941,12 @@ class DataStore {
       }
       if (jobDetail.status === "completed" || jobDetail.status === "completed_with_errors") {
         campaign.status = "sent";
+        /* PETICION USUARIO 2026-05-05: registrar fecha-hora de finalizacion. */
+        if (!campaign.completedAt) campaign.completedAt = nowIso();
       }
       if (jobDetail.status === "failed") {
         campaign.status = "failed";
+        if (!campaign.completedAt) campaign.completedAt = nowIso();
       }
 
       campaign.updatedAt = nowIso();

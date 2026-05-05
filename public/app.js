@@ -830,6 +830,7 @@ const campaignSortValue = (c, key) => {
   const replies = st.replied || 0;
   const bounces = st.bounced || 0;
   switch (key) {
+    case "number": return Number(c.number) || 0;
     case "name": return String(c.name || "").toLowerCase();
     case "status": return String(c.status || "").toLowerCase();
     case "total": return total;
@@ -841,6 +842,12 @@ const campaignSortValue = (c, key) => {
     case "bounces": return sent > 0 ? bounces / sent : 0;
     default: return 0;
   }
+};
+/* Helper para formatear número de campaña: 1 -> "0001", 42 -> "0042". */
+const fmtCampaignNumber = (n) => {
+  const num = Number(n) || 0;
+  if (num <= 0) return "—";
+  return String(num).padStart(4, "0");
 };
 const initCampaignSortListener = () => {
   if (window.__campaignsSortInit) return;
@@ -983,9 +990,36 @@ const renderCampaigns = (campaigns) => {
       const canPause = c.status === "sending" || c.status === "queued";
       const canResume = c.status === "paused";
       const canCancel = ["sending", "queued", "paused"].includes(c.status);
+      /* PETICION USUARIO 2026-05-05: numero + fecha inicio + fecha fin.
+       * Inicio = sentAt (cuando se lanzo la campaña). Fin = completedAt (cuando
+       * se acabo de enviar). Si aun esta sending, mostrar "en curso". */
+      const numLabel = fmtCampaignNumber(c.number);
+      const fmtFecha = (iso) => {
+        if (!iso) return "—";
+        try {
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return "—";
+          const dia = d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" });
+          const hora = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false });
+          return `${dia} ${hora}`;
+        } catch (_e) { return "—"; }
+      };
+      const inicioStr = fmtFecha(c.sentAt);
+      let finStr;
+      if (c.completedAt) finStr = fmtFecha(c.completedAt);
+      else if (c.status === "sending" || c.status === "queued" || c.status === "paused") finStr = "<span style='color:#FF6B00;font-weight:700'>en curso</span>";
+      else finStr = "—";
       return `
       <tr>
-        <td style="vertical-align:middle"><strong>${esc(c.name)}</strong></td>
+        <td style="text-align:center;vertical-align:middle;font-weight:900;color:#FF6B00;letter-spacing:0.5px;font-size:13px">#${numLabel}</td>
+        <td style="vertical-align:middle">
+          <strong>${esc(c.name)}</strong>
+          <div style="font-size:10.5px;color:#64748b;margin-top:3px;line-height:1.4">
+            <span title="Fecha y hora de lanzamiento">▶ ${inicioStr}</span>
+            &nbsp;·&nbsp;
+            <span title="Fecha y hora de finalizacion">■ ${finStr}</span>
+          </div>
+        </td>
         <td style="text-align:center;vertical-align:middle">${statusBadge(c.status, c.queuePosition)}</td>
         <td style="text-align:center;vertical-align:middle;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${total.toLocaleString("es-ES")}</td>
         <td style="vertical-align:middle">${cellMetric(sent, "sent", sent, total)}</td>
@@ -1358,11 +1392,23 @@ const refreshPanel = async () => {
             const clicked = s.clickedUnique || s.clicked || 0;
             const replied = s.replied || 0;
             const bounced = s.bounced || 0;
+            const numLabelI = fmtCampaignNumber(c.number);
+            const fmtFechaI = (iso) => {
+              if (!iso) return "—";
+              try {
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return "—";
+                return d.toLocaleDateString("es-ES", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit", hour12:false });
+              } catch (_e) { return "—"; }
+            };
+            const inicioI = fmtFechaI(c.sentAt);
+            const finI = c.completedAt ? fmtFechaI(c.completedAt) : (["sending","queued","paused"].includes(c.status) ? "en curso" : "—");
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
                 <td style="padding:10px 6px;vertical-align:middle">
+                  <span style="display:inline-block;background:#FF6B00;color:#fff;font-weight:900;font-size:10.5px;padding:2px 7px;border-radius:6px;letter-spacing:0.5px;margin-right:6px;vertical-align:middle">#${numLabelI}</span>
                   <strong>${esc(c.name || "(sin nombre)")}</strong>
-                  ${c.subject ? `<div class="muted" style="font-size:11px">${esc(c.subject).slice(0,60)}</div>` : ""}
+                  <div class="muted" style="font-size:10.5px;margin-top:3px;line-height:1.4">▶ ${inicioI} · ■ ${finI}</div>
                 </td>
                 <td style="padding:10px 6px;text-align:center;vertical-align:middle">
                   <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block">
