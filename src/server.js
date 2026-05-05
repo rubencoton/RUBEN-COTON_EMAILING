@@ -1735,9 +1735,13 @@ app.get("/api/drive/status", async (_req, res) => {
   }
 });
 
-/* Sube una campaña al Drive */
+/* Sube una campaña al Drive
+ * DESACTIVADO 2026-05-05 (peticion usuario): los informes se ven en la app. */
 app.post("/api/campaigns/:id/upload-to-drive", async (req, res) => {
   try {
+    if (String(process.env.DRIVE_ARCHIVE_ENABLED || "false").toLowerCase() !== "true") {
+      return apiError(res, 410, "Funcion deshabilitada. Los informes se ven directamente en la aplicacion.");
+    }
     syncCampaignsWithEngine();
     const campaign = dataStore.getCampaign(req.params.id);
     if (!campaign) return apiError(res, 404, "Campaña no encontrada");
@@ -1963,9 +1967,13 @@ app.post("/api/drive/restore-store", async (req, res) => {
   } catch (e) { return apiError(res, 500, e.message); }
 });
 
-/* Sincroniza TODAS las campañas al Drive */
+/* Sincroniza TODAS las campañas al Drive
+ * DESACTIVADO 2026-05-05 (peticion usuario): los informes se ven en la app. */
 app.post("/api/campaigns/sync-all-to-drive", async (_req, res) => {
   try {
+    if (String(process.env.DRIVE_ARCHIVE_ENABLED || "false").toLowerCase() !== "true") {
+      return apiError(res, 410, "Funcion deshabilitada. Los informes se ven directamente en la aplicacion.");
+    }
     if (!googleHub.isGoogleReady()) return apiError(res, 503, "Google Drive no configurado en este servidor.");
     syncCampaignsWithEngine();
     const campaigns = dataStore.listCampaigns().slice().sort((a, b) => {
@@ -3845,17 +3853,24 @@ const startServer = async () => {
         } catch (e) {
           console.error("[replyTracker] no se pudo arrancar:", e.message);
         }
-        /* Drive scheduler: actualiza informes PDF a 1h/2h/3h/4h/5h/6h,
-         * dias 1-7 y despues semanal hasta MAX_TRACKING_DAYS. */
-        try {
-          driveScheduler.setRefs({
-            dataStore,
-            driveArchive,
-            serverHelpers: { calcCampaignSeq, buildCampaignPackForDrive }
-          });
-          driveScheduler.start();
-        } catch (e) {
-          console.error("[driveScheduler] no se pudo arrancar:", e.message);
+        /* Drive scheduler: DESACTIVADO 2026-05-05 (peticion usuario).
+         * Los informes se ven directamente desde la app, no se crean
+         * carpetas en Drive con HTML+PDF. Para reactivar, set
+         * DRIVE_ARCHIVE_ENABLED=true. Backup del store sigue activo. */
+        const driveArchiveEnabled = String(process.env.DRIVE_ARCHIVE_ENABLED || "false").toLowerCase() === "true";
+        if (driveArchiveEnabled) {
+          try {
+            driveScheduler.setRefs({
+              dataStore,
+              driveArchive,
+              serverHelpers: { calcCampaignSeq, buildCampaignPackForDrive }
+            });
+            driveScheduler.start();
+          } catch (e) {
+            console.error("[driveScheduler] no se pudo arrancar:", e.message);
+          }
+        } else {
+          console.log("[driveScheduler] DESACTIVADO (DRIVE_ARCHIVE_ENABLED=false). Informes se ven en la app.");
         }
         /* Backup auto store.json a Drive cada hora.
          * Sustituye al PostgreSQL como recovery layer (refactor 2026-04-25).
