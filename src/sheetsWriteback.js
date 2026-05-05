@@ -9,9 +9,9 @@
  * (sent/bounce/open/click/reply), pushear a una cola en memoria. Cada 30s,
  * agrupar por sheetId y hacer batchUpdate con todos los cambios pendientes.
  *
- * Color por estado (peticion usuario):
+ * Color por estado (peticion usuario, actualizado 2026-05-04):
  *   enviado     -> sin color de fondo (texto "enviado")
- *   rebotado    -> fondo NEGRO + texto blanco
+ *   rebotado    -> fondo ROJO + texto blanco (cambio user 2026-05-04)
  *   abierto     -> fondo VERDE CLARO
  *   clicado     -> fondo VERDE MEDIO + texto blanco
  *   respondido  -> fondo VERDE OSCURO + texto blanco
@@ -40,7 +40,8 @@ const STATUS_PRIORITY = {
 
 const STATUS_COLOR = {
   enviado:    { bg: { red: 1,    green: 1,    blue: 1    }, fg: { red: 0, green: 0, blue: 0 } },
-  rebotado:   { bg: { red: 0,    green: 0,    blue: 0    }, fg: { red: 1, green: 1, blue: 1 } },
+  /* P0 user 2026-05-04: rebotado pasa de NEGRO a ROJO (#dc2626) */
+  rebotado:   { bg: { red: 0.86, green: 0.15, blue: 0.15 }, fg: { red: 1, green: 1, blue: 1 } },
   abierto:    { bg: { red: 0.72, green: 0.88, blue: 0.80 }, fg: { red: 0, green: 0, blue: 0 } },
   clicado:    { bg: { red: 0.34, green: 0.73, blue: 0.54 }, fg: { red: 1, green: 1, blue: 1 } },
   respondido: { bg: { red: 0.18, green: 0.49, blue: 0.20 }, fg: { red: 1, green: 1, blue: 1 } }
