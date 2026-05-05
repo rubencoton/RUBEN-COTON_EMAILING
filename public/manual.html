@@ -44,6 +44,13 @@ body {
   border: none;
   padding: 0;
   font-weight: 900;
+  /* Sobrescribir el display:flex del h1 general para que el titulo de
+   * portada quede CENTRADO (no alineado a la izquierda con un icon-chip). */
+  background: transparent !important;
+  display: block !important;
+  text-align: center !important;
+  border-radius: 0 !important;
+  gap: 0 !important;
 }
 .cover .subtitle {
   font-size: 13pt;
@@ -348,7 +355,20 @@ code {
     color: #fff !important;
     border-bottom: 6px solid #FF6B00 !important;
   }
-  .cover h1 { color: #fff !important; font-size: 32pt !important; }
+  /* En print, el h1 de portada también centrado (sobrescribe el bloque
+   * negro general). */
+  .cover h1 {
+    color: #fff !important;
+    font-size: 32pt !important;
+    background: transparent !important;
+    display: block !important;
+    text-align: center !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 0 10px !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
   .cover .subtitle { color: #FF6B00 !important; }
 
   /* Índice en página propia */
