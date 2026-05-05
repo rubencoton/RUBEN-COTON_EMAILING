@@ -51,6 +51,67 @@ function rubenCotonConfirm({ title = "Confirmar", subtitle = "", body = "", icon
   });
 }
 
+/* =========================================================
+ * Modal alert visual (reemplaza window.alert feo del navegador)
+ * Usa el mismo estilo que rubenCotonConfirm pero solo 1 boton.
+ * ========================================================= */
+function rubenCotonAlert({ title = "Aviso", body = "", icon = "ℹ️", okText = "Entendido", tone = "info" } = {}) {
+  return new Promise((resolve) => {
+    const colors = {
+      info:    { bar: "#FFB74D", grad1: "#E65100", grad2: "#FF6B00" },
+      success: { bar: "#22c55e", grad1: "#16a34a", grad2: "#22c55e" },
+      error:   { bar: "#fca5a5", grad1: "#dc2626", grad2: "#ef4444" },
+      warn:    { bar: "#fcd34d", grad1: "#d97706", grad2: "#f59e0b" }
+    };
+    const c = colors[tone] || colors.info;
+    const existing = document.getElementById("abAlertModal");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "abAlertModal";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:10000;animation:abFadeIn 0.18s ease-out;backdrop-filter:blur(3px);padding:20px";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.45);animation:abSlideUp 0.22s ease-out;border-top:6px solid ${c.bar}">
+        <div style="background:linear-gradient(135deg,${c.grad1} 0%,${c.grad2} 100%);color:#fff;padding:22px 28px">
+          <div style="font-size:40px;line-height:1;margin-bottom:6px">${esc(icon)}</div>
+          <h2 style="margin:0;font-size:20px;font-weight:800;letter-spacing:0.3px">${esc(title)}</h2>
+        </div>
+        <div style="padding:22px 28px;color:#333;font-size:15px;line-height:1.55">${body}</div>
+        <div style="padding:0 28px 22px;display:flex;justify-content:flex-end">
+          <button type="button" id="abOkBtn" style="background:linear-gradient(135deg,${c.grad1},${c.grad2});color:#fff;border:0;padding:11px 26px;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.15)">${esc(okText)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const cleanup = () => { overlay.remove(); document.removeEventListener("keydown", onKey); resolve(); };
+    const onKey = (e) => { if (e.key === "Escape" || e.key === "Enter") cleanup(); };
+    document.addEventListener("keydown", onKey);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) cleanup(); });
+    overlay.querySelector("#abOkBtn").addEventListener("click", cleanup);
+    setTimeout(() => overlay.querySelector("#abOkBtn")?.focus(), 50);
+  });
+}
+
+/* =========================================================
+ * humanizeError: convierte mensajes tecnicos crudos en
+ * espanol humano legible para usuarios sin contexto tecnico.
+ * ========================================================= */
+function humanizeError(err) {
+  const raw = (err && (err.message || err.error || err)) || "";
+  const m = String(raw).toLowerCase();
+  if (/401|no autorizado|unauth/.test(m)) return "Tu sesion ha caducado. Vuelve a entrar.";
+  if (/403|forbidden|prohibid/.test(m)) return "No tienes permiso para hacer esto.";
+  if (/404|no encontrad|not found/.test(m)) return "No se encontro lo que buscabas.";
+  if (/410|deshabilitada|disabled/.test(m)) return "Esta funcion esta desactivada.";
+  if (/429|rate|quota|limit/.test(m)) return "Has alcanzado el limite. Espera unos minutos.";
+  if (/500|internal/.test(m)) return "Algo fallo en el servidor. Intenta de nuevo en un momento.";
+  if (/503|unavailable/.test(m)) return "Servicio no disponible. Reintenta en 1 minuto.";
+  if (/timeout|etimedout/.test(m)) return "Demasiado lento. Verifica tu conexion y reintenta.";
+  if (/network|fetch failed|econnrefused/.test(m)) return "Sin conexion. Verifica tu Wi-Fi y reintenta.";
+  if (/json|parse|unexpected token/.test(m)) return "Respuesta no esperada del servidor. Avisa al admin.";
+  /* Si nada matchea: limpia el mensaje (sin codigos HTTP, sin stack) */
+  const clean = String(raw).replace(/HTTP\s*\d+/gi, "").replace(/Error:\s*/i, "").trim();
+  return clean || "Algo no salio bien. Intenta de nuevo.";
+}
+
 const appStatusEl = qs("#appStatus");
 const dbStatusEl = qs("#dbStatus");
 const kpiContactsEl = qs("#kpiContacts");
@@ -343,14 +404,14 @@ window.tplValidate = async (id) => {
   try {
     await api(`/api/templates/${id}/validate`, { method: "PATCH" });
     await refreshSyncAndRender();
-  } catch (e) { alert("Error al validar: " + e.message); }
+  } catch (e) { rubenCotonAlert({ title: "No se pudo validar", body: humanizeError(e), icon: "❌", tone: "error" }); }
 };
 
 window.tplUnvalidate = async (id) => {
   try {
     await api(`/api/templates/${id}/unvalidate`, { method: "PATCH" });
     await refreshSyncAndRender();
-  } catch (e) { alert("Error al desvalidar: " + e.message); }
+  } catch (e) { rubenCotonAlert({ title: "No se pudo desvalidar", body: humanizeError(e), icon: "❌", tone: "error" }); }
 };
 
 window.tplPreview = async (id) => {
@@ -379,7 +440,7 @@ window.tplPreview = async (id) => {
     frame.srcdoc = t.html || "<p style='padding:40px;font-family:sans-serif;color:#999;text-align:center'>Este borrador no tiene HTML. Solo texto plano.</p>";
     modal.style.display = "flex";
   } catch (e) {
-    alert("Error al previsualizar: " + e.message);
+    rubenCotonAlert({ title: "No se pudo previsualizar", body: humanizeError(e), icon: "❌", tone: "error" });
   }
 };
 
@@ -405,7 +466,7 @@ window.tplDelete = async (id, name) => {
   try {
     await api(`/api/templates/${id}`, { method: "DELETE" });
     await refreshSyncAndRender();
-  } catch (e) { alert("Error al borrar: " + e.message); }
+  } catch (e) { rubenCotonAlert({ title: "No se pudo borrar", body: humanizeError(e), icon: "❌", tone: "error" }); }
 };
 
 window.tplEdit = async (id) => {
@@ -440,7 +501,7 @@ window.tplEdit = async (id) => {
     /* Actualizar preview si hay cualquier binding */
     tplHtmlEditor?.dispatchEvent(new Event("input"));
   } catch (e) {
-    alert("Error al cargar borrador: " + e.message);
+    rubenCotonAlert({ title: "No se pudo cargar el borrador", body: humanizeError(e), icon: "❌", tone: "error" });
   }
 };
 
@@ -801,7 +862,7 @@ const renderCampaigns = (campaigns) => {
         await api(`/api/campaigns/${id}`, { method: "DELETE" });
         await refreshCampaigns();
       } catch (e) {
-        alert("Error: " + e.message);
+        rubenCotonAlert({ title: "Algo salio mal", body: humanizeError(e), icon: "❌", tone: "error" });
         button.disabled = false;
       }
     });
@@ -816,7 +877,7 @@ const renderCampaigns = (campaigns) => {
         await api(`/api/campaigns/${id}/pause`, { method: "POST" });
         await refreshCampaigns();
       } catch (e) {
-        alert("Error pausando: " + e.message);
+        rubenCotonAlert({ title: "No se pudo pausar", body: humanizeError(e), icon: "❌", tone: "error" });
         button.disabled = false;
       }
     });
@@ -830,7 +891,7 @@ const renderCampaigns = (campaigns) => {
         await api(`/api/campaigns/${id}/resume`, { method: "POST" });
         await refreshCampaigns();
       } catch (e) {
-        alert("Error reanudando: " + e.message);
+        rubenCotonAlert({ title: "No se pudo reanudar", body: humanizeError(e), icon: "❌", tone: "error" });
         button.disabled = false;
       }
     });
@@ -844,10 +905,10 @@ const renderCampaigns = (campaigns) => {
       button.disabled = true;
       try {
         const r = await api(`/api/campaigns/${id}/cancel`, { method: "POST" });
-        alert(`Cancelado. Eliminados de cola: ${r.removedFromQueue || 0}`);
+        rubenCotonAlert({ title: "Campaña cancelada", body: `Se quitaron de la cola <strong>${r.removedFromQueue || 0}</strong> envíos pendientes.`, icon: "✅", tone: "success" });
         await refreshCampaigns();
       } catch (e) {
-        alert("Error cancelando: " + e.message);
+        rubenCotonAlert({ title: "No se pudo cancelar", body: humanizeError(e), icon: "❌", tone: "error" });
         button.disabled = false;
       }
     });
@@ -2182,7 +2243,7 @@ qs("#campAttachInput")?.addEventListener("change", async (e) => {
     const totalBytes = window.__pendingAttachments.reduce((s, f) => s + f.size, 0) +
       files.reduce((s, f) => s + f.size, 0);
     if (totalBytes > 10 * 1024 * 1024) {
-      alert(`Límite 10 MB superado (${(totalBytes/1024/1024).toFixed(1)} MB). Quita algún archivo.`);
+      rubenCotonAlert({ title: "Demasiado peso", body: `El total supera <strong>10 MB</strong> (${(totalBytes/1024/1024).toFixed(1)} MB). Quita algún archivo.`, icon: "⚠️", tone: "warn" });
       return;
     }
     for (const f of files) window.__pendingAttachments.push(f);
@@ -2199,7 +2260,7 @@ qs("#campAttachInput")?.addEventListener("change", async (e) => {
       const res = await fetch(`/api/campaigns/${id}/attachments`, { method: "POST", body: fd });
       const d = await res.json();
       if (!res.ok) throw new Error(d.message || "error");
-    } catch (err) { alert(`Error subiendo ${file.name}: ${err.message}`); break; }
+    } catch (err) { rubenCotonAlert({ title: `No se pudo subir ${file.name}`, body: humanizeError(err), icon: "❌", tone: "error" }); break; }
   }
   refreshAttachList();
 });
@@ -2666,7 +2727,7 @@ const refreshSheetsList = async () => {
         try {
           await api(`/api/sheets/ids/${encodeURIComponent(b.dataset.delSheet)}`, { method: "DELETE" });
           await refreshSheetsList();
-        } catch (e) { alert("Error: " + e.message); }
+        } catch (e) { rubenCotonAlert({ title: "Algo salio mal", body: humanizeError(e), icon: "❌", tone: "error" }); }
       });
     });
   } catch (e) {
@@ -2686,7 +2747,7 @@ document.getElementById("addSheetBtn")?.addEventListener("click", async () => {
     });
     if (inp) inp.value = "";
     await refreshSheetsList();
-  } catch (e) { alert("Error: " + e.message); }
+  } catch (e) { rubenCotonAlert({ title: "Algo salio mal", body: humanizeError(e), icon: "❌", tone: "error" }); }
 });
 
 /* Cargar lista al abrir configuración */
@@ -2806,7 +2867,7 @@ document.addEventListener("click", async (e) => {
       if (typeof refreshCampaigns === "function") setTimeout(refreshCampaigns, 600);
     } catch (err) {
       btnDrive.textContent = "❌ Error";
-      alert("No se pudo subir al Drive:\n" + err.message);
+      rubenCotonAlert({ title: "No se pudo subir al Drive", body: humanizeError(err), icon: "❌", tone: "error" });
     } finally {
       setTimeout(() => { btnDrive.disabled = false; btnDrive.textContent = orig; }, 1800);
     }
@@ -2824,10 +2885,10 @@ qs("#btn-sync-drive")?.addEventListener("click", async (e) => {
     const r = await fetch("/api/campaigns/sync-all-to-drive", { method: "POST", credentials: "include" });
     const j = await r.json();
     if (!r.ok || j.status !== "ok") throw new Error(j.message || "Error");
-    alert(`Sincronización completada.\nSubidas: ${j.uploaded || 0} de ${j.total || 0}\nCarpeta raíz: ${j.rootFolderLink || "(ver Drive)"}`);
+    rubenCotonAlert({ title: "Sincronización completada", body: `Subidas: <strong>${j.uploaded || 0}</strong> de ${j.total || 0}.<br>Carpeta: ${j.rootFolderLink || "(ver Drive)"}`, icon: "✅", tone: "success" });
     if (typeof refreshCampaigns === "function") refreshCampaigns();
   } catch (err) {
-    alert("Error sincronizando:\n" + err.message);
+    rubenCotonAlert({ title: "No se pudo sincronizar", body: humanizeError(err), icon: "❌", tone: "error" });
   } finally {
     btn.disabled = false;
     btn.textContent = orig;
@@ -2843,9 +2904,9 @@ qs("#btn-report-weekly")?.addEventListener("click", async (e) => {
     const r = await fetch("/api/reports/weekly/run-now", { method: "POST", credentials: "include" });
     const j = await r.json();
     if (!r.ok || j.status !== "ok") throw new Error(j.message || "Error");
-    alert(`Informe semanal generado.\n${j.drive ? "Subido al Drive: " + j.drive.folderLink : "Drive no configurado; guardado localmente."}`);
+    rubenCotonAlert({ title: "Informe semanal listo", body: j.drive ? `Subido al Drive:<br><a href="${j.drive.folderLink}" target="_blank" style="color:#FF6B00">Ver carpeta</a>` : "Guardado en el servidor.", icon: "📅", tone: "success" });
   } catch (err) {
-    alert("Error generando informe semanal:\n" + err.message);
+    rubenCotonAlert({ title: "No se pudo generar el informe semanal", body: humanizeError(err), icon: "❌", tone: "error" });
   } finally {
     btn.disabled = false;
     btn.textContent = orig;
@@ -2861,9 +2922,9 @@ qs("#btn-report-monthly")?.addEventListener("click", async (e) => {
     const r = await fetch("/api/reports/monthly/run-now", { method: "POST", credentials: "include" });
     const j = await r.json();
     if (!r.ok || j.status !== "ok") throw new Error(j.message || "Error");
-    alert(`Informe mensual generado.\n${j.drive ? "Subido al Drive: " + j.drive.folderLink : "Drive no configurado; guardado localmente."}`);
+    rubenCotonAlert({ title: "Informe mensual listo", body: j.drive ? `Subido al Drive:<br><a href="${j.drive.folderLink}" target="_blank" style="color:#FF6B00">Ver carpeta</a>` : "Guardado en el servidor.", icon: "🗓", tone: "success" });
   } catch (err) {
-    alert("Error generando informe mensual:\n" + err.message);
+    rubenCotonAlert({ title: "No se pudo generar el informe mensual", body: humanizeError(err), icon: "❌", tone: "error" });
   } finally {
     btn.disabled = false;
     btn.textContent = orig;

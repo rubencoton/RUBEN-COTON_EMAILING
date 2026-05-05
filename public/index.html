@@ -20,19 +20,19 @@
         </div>
 
         <nav class="side-tabs" id="tabs">
-          <button data-tab="dashboard" class="tab is-active" type="button">
+          <button data-tab="dashboard" class="tab is-active" type="button" title="Resumen general: estado de la app, motor, contactos y campañas activas">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Inicio
           </button>
-          <button data-tab="folders" class="tab" type="button">
+          <button data-tab="folders" class="tab" type="button" title="Tus carpetas de contactos sincronizadas con Google Sheets. Cada CRM agrupa varias listas.">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             CRM
           </button>
-          <button data-tab="campaigns" class="tab" type="button">
+          <button data-tab="campaigns" class="tab" type="button" title="Crear y enviar una nueva campaña de email a una lista de contactos">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             Crear campaña
           </button>
-          <button data-tab="campaignStatus" class="tab" type="button">
+          <button data-tab="campaignStatus" class="tab" type="button" title="Ver el estado de tus campañas en curso: enviados, aperturas, clics. Pausar/reanudar/cancelar.">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Estado campañas
           </button>
@@ -73,27 +73,27 @@
         </section>
 
         <section class="grid" id="kpiGrid">
-          <article class="card">
+          <article class="card" title="Indica si la aplicación está funcionando correctamente">
             <h2>Estado de app</h2>
             <p id="appStatus" class="value">Cargando...</p>
           </article>
-          <article class="card">
+          <article class="card" title="Dónde se guardan tus contactos y campañas. 'En VPS' = en el servidor (todo seguro).">
             <h2>Base de datos</h2>
             <p id="dbStatus" class="value">Cargando...</p>
           </article>
-          <article class="card">
+          <article class="card" title="Total de contactos cargados de todos tus CRMs">
             <h2>Contactos</h2>
             <p id="kpiContacts" class="value">--</p>
           </article>
-          <article class="card">
+          <article class="card" title="Total de campañas creadas (incluyendo borradores)">
             <h2>Campañas</h2>
             <p id="kpiCampaigns" class="value">--</p>
           </article>
-          <article class="card">
+          <article class="card" title="Sistema de envío. ACTIVO = listo para enviar. Modo: GMAIL API (vía manager@rubencoton.com).">
             <h2>Motor</h2>
             <p id="engineStatus" class="value">--</p>
           </article>
-          <article class="card">
+          <article class="card" title="Cuántos emails sale por minuto y cuántos quedan en cola pendientes. Ventana 8-20h Madrid: solo se envía en ese horario para parecer humano.">
             <h2>Ritmo / cola</h2>
             <p id="engineQueue" class="value">--</p>
           </article>
