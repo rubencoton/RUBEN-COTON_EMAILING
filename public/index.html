@@ -60,43 +60,44 @@
       </aside>
 
       <section class="app-content">
+        <!-- HEADER PERSISTENTE: titulo + KPIs compactos en 1 linea + cerrar sesion.
+             Visible desde cualquier pestaña (no esta dentro de tab-panel). -->
         <section class="hero">
           <div class="hero-top">
             <div>
               <h1>Envío Masivo</h1>
-              <p class="subtitle">
-                Crea campañas. Envía a tus CRMs. Mira aperturas y clics.
-              </p>
+              <p class="subtitle">Crea campañas. Envía a tus CRMs. Mira aperturas y clics.</p>
             </div>
             <button id="logoutButton" class="logout-btn" type="button">Cerrar sesión</button>
           </div>
-        </section>
-
-        <section class="grid" id="kpiGrid">
-          <article class="card" title="Indica si la aplicación está funcionando correctamente">
-            <h2>Estado de app</h2>
-            <p id="appStatus" class="value">Cargando...</p>
-          </article>
-          <article class="card" title="Dónde se guardan tus contactos y campañas. 'En VPS' = en el servidor (todo seguro).">
-            <h2>Base de datos</h2>
-            <p id="dbStatus" class="value">Cargando...</p>
-          </article>
-          <article class="card" title="Total de contactos cargados de todos tus CRMs">
-            <h2>Contactos</h2>
-            <p id="kpiContacts" class="value">--</p>
-          </article>
-          <article class="card" title="Total de campañas creadas (incluyendo borradores)">
-            <h2>Campañas</h2>
-            <p id="kpiCampaigns" class="value">--</p>
-          </article>
-          <article class="card" title="Sistema de envío. ACTIVO = listo para enviar. Modo: GMAIL API (vía manager@rubencoton.com).">
-            <h2>Motor</h2>
-            <p id="engineStatus" class="value">--</p>
-          </article>
-          <article class="card" title="Cuántos emails sale por minuto y cuántos quedan en cola pendientes. Ventana 8-20h Madrid: solo se envía en ese horario para parecer humano.">
-            <h2>Ritmo / cola</h2>
-            <p id="engineQueue" class="value">--</p>
-          </article>
+          <!-- KPI chips compactos en 1 linea integrados en el header.
+               Colores semánticos: verde=OK / naranja=atención / rojo=error. -->
+          <div class="kpi-strip" id="kpiGrid">
+            <span class="chip" title="Indica si la aplicación está funcionando correctamente">
+              <span class="chip-label">App</span>
+              <span id="appStatus" class="chip-value">…</span>
+            </span>
+            <span class="chip" title="Dónde se guardan tus contactos y campañas. 'En VPS' = en el servidor (todo seguro).">
+              <span class="chip-label">Base de datos</span>
+              <span id="dbStatus" class="chip-value">…</span>
+            </span>
+            <span class="chip" title="Total de contactos cargados de todos tus CRMs">
+              <span class="chip-label">Contactos</span>
+              <span id="kpiContacts" class="chip-value">--</span>
+            </span>
+            <span class="chip" title="Total de campañas creadas (incluyendo borradores)">
+              <span class="chip-label">Campañas</span>
+              <span id="kpiCampaigns" class="chip-value">--</span>
+            </span>
+            <span class="chip" title="Sistema de envío. ACTIVO = listo para enviar. Modo: GMAIL API.">
+              <span class="chip-label">Motor</span>
+              <span id="engineStatus" class="chip-value">--</span>
+            </span>
+            <span class="chip" title="Cuántos emails salen por minuto y cuántos quedan en cola. Ventana 8-20h Madrid.">
+              <span class="chip-label">Ritmo / cola</span>
+              <span id="engineQueue" class="chip-value">--</span>
+            </span>
+          </div>
         </section>
 
         <section class="tab-panel is-active" data-panel="dashboard">

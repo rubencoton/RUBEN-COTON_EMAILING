@@ -1050,7 +1050,9 @@ const refreshPanel = async () => {
           : "ERROR";
 
   setStatusStyle(appStatusEl, data.status);
-  setStatusStyle(dbStatusEl, dbVisualStatus);
+  /* PETICION USUARIO 2026-05-05: 'EN VPS' es buena cosa (VPS = servidor
+   * funcionando, datos seguros). Pintar en verde en vez de naranja. */
+  setStatusStyle(dbStatusEl, dbIsFallbackMode ? "ok" : dbVisualStatus);
 
   kpiContactsEl.textContent = data.dashboard?.contacts?.total ?? "--";
   kpiCampaignsEl.textContent = data.dashboard?.campaigns?.total ?? "--";
@@ -1084,14 +1086,18 @@ const refreshPanel = async () => {
       <div style="font-weight:900;line-height:1.1">${stateLabel}</div>
       <div style="font-size:10px;color:#888;font-weight:700;margin-top:6px;letter-spacing:0.5px">${modeLabel}</div>
     `;
-    /* Armonia visual 2026-05-05: cifra grande + info secundaria en lineas
-     * separadas (antes era todo en una linea muy saturado). */
+    /* Compacto para chip 2026-05-05: ritmo principal + cola + ventana. */
     engineQueueEl.innerHTML = `
-      <div style="font-size:24px;font-weight:900;color:#FF6B00;line-height:1.1">${data.massMail.ratePerMinute}/min</div>
-      <div style="font-size:11px;color:#666;font-weight:600;margin-top:6px">Cola: ${data.massMail.queueSize}</div>
-      ${win ? `<div style="font-size:10px;color:${winOpen ? "#10b981" : "#f59e0b"};font-weight:700;margin-top:4px;letter-spacing:0.3px">${winOpen ? "●" : "○"} Ventana ${win.startHour}-${win.endHour}h</div>` : ""}
+      <div>${data.massMail.ratePerMinute}/min</div>
+      <div>Cola ${data.massMail.queueSize} · ${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
     `;
     setStatusStyle(engineStatusEl, data.massMail.paused ? "error" : (winOpen ? "ok" : "warn"));
+    /* PETICION USUARIO 2026-05-05: ritmo dentro del cap (rate>=1) y dentro
+     * de la ventana = verde (todo OK). Fuera de ventana = naranja
+     * (operación pausada por horario). Si rate=0 = rojo (motor caído). */
+    setStatusStyle(engineQueueEl,
+      data.massMail.ratePerMinute < 1 ? "error" :
+      (winOpen ? "ok" : "warn"));
   } else {
     engineStatusEl.textContent = "NO CONFIGURADO";
     engineQueueEl.textContent = "Configura canal de envío";

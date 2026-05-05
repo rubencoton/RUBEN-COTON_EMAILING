@@ -237,7 +237,7 @@ body {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 18px 22px;
   box-shadow: var(--shadow-sm);
   border-left: 4px solid var(--brand-red);
 }
@@ -247,6 +247,52 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 12px;
+}
+
+/* PETICION USUARIO 2026-05-05: KPIs compactos en 1 línea integrados con
+ * el header. Colores semánticos (verde=OK, naranja=atención, rojo=error). */
+.kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.kpi-strip .chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  border-left: 3px solid var(--brand-red);
+  min-width: 100px;
+  flex: 0 1 auto;
+}
+.kpi-strip .chip-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.kpi-strip .chip-value {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.kpi-strip .chip-value.ok    { color: #10b981; }
+.kpi-strip .chip-value.warn  { color: #f59e0b; }
+.kpi-strip .chip-value.error { color: #dc2626; }
+.kpi-strip .chip:has(.chip-value.ok)    { border-left-color: #10b981; background: #ecfdf5; }
+.kpi-strip .chip:has(.chip-value.warn)  { border-left-color: #f59e0b; background: #fffbeb; }
+.kpi-strip .chip:has(.chip-value.error) { border-left-color: #dc2626; background: #fef2f2; }
+.kpi-strip .chip-value > div:first-child { font-size: 15px; font-weight: 900; }
+.kpi-strip .chip-value > div:not(:first-child) { font-size: 9.5px; font-weight: 600; color: var(--ink-soft); }
+@media (max-width: 768px) {
+  .kpi-strip .chip { flex: 1 1 calc(50% - 4px); min-width: 0; }
 }
 
 h1 {
