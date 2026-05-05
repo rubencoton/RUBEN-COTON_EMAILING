@@ -3028,8 +3028,38 @@ app.post("/api/campaigns/:id/resume", (req, res) => {
     const campaign = dataStore.getCampaign(req.params.id);
     if (!campaign) return apiError(res, 404, "Campaña no encontrada");
     if (!campaign.jobId) return apiError(res, 400, "Campaña sin job activo");
-    const r = massMailEngine.resumeJob(campaign.jobId);
-    if (!r) return apiError(res, 404, "Job no encontrado en motor");
+
+    /* P0 FIX 2026-05-05: si el job se perdio del motor (typical tras
+     * reinicios container Coolify), RECREAR con los recipients pendientes
+     * en lugar de devolver 404. UX para el usuario: solo importa que se
+     * reanude el envio. */
+    let r = massMailEngine.resumeJob(campaign.jobId);
+    if (!r) {
+      /* Reconstruir cola con recipients que NO esten ya enviados/rebotados. */
+      const snapshot = campaign.recipientsSnapshot || [];
+      const pendientes = snapshot
+        .filter((rcp) => !rcp.sentAt && !rcp.bouncedAt && rcp.status !== "sent" && rcp.status !== "bounced")
+        .map((rcp) => rcp.email);
+      if (!pendientes.length) {
+        return apiError(res, 400, "No hay destinatarios pendientes en esta campana.");
+      }
+      const newJob = massMailEngine.enqueueJob({
+        campaignId: campaign.id,
+        name: campaign.name,
+        subject: campaign.subject,
+        html: campaign.html,
+        text: campaign.text,
+        fromName: campaign.fromName,
+        fromEmail: campaign.fromEmail,
+        replyTo: campaign.replyTo,
+        recipients: pendientes,
+        attachments: attachments.getAttachmentsForSending(campaign.id)
+      });
+      /* Persistir nuevo jobId en la campana. */
+      dataStore.attachCampaignJob(campaign.id, newJob, snapshot.filter((rcp) => pendientes.includes(rcp.email)));
+      r = { resumed: true, recreated: true, jobId: newJob.id, pending: pendientes.length };
+    }
+
     dataStore.mutate((store) => {
       const c = store.campaigns.find((x) => x.id === req.params.id);
       if (c) {
