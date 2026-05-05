@@ -392,7 +392,22 @@ const recreateLostJob = (campaign) => {
   }
 };
 
+/* P0 FIX 2026-05-05 (auditoria): guard de reentrancia. syncCampaignsWithEngine
+ * se llama en cada API request relevante; si dos requests entran al mismo
+ * tiempo, el sync correria en paralelo y podria recrear el mismo job 2 veces.
+ * Bandera + early-return previene la doble ejecucion. Como JS es single-thread,
+ * la bandera siempre se libera al terminar la funcion sincrona. */
+let _syncInProgress = false;
 const syncCampaignsWithEngine = () => {
+  if (_syncInProgress) return;
+  _syncInProgress = true;
+  try {
+    return _syncCampaignsWithEngineInner();
+  } finally {
+    _syncInProgress = false;
+  }
+};
+const _syncCampaignsWithEngineInner = () => {
   /* P0 FIX 2026-05-05 (bug usuario "tras deploy el orden FIFO se reorganiza"):
    * listCampaigns() devuelve por updatedAt desc (lo que cambia cada sync).
    * Tras restart, las campañas activas se rehidratan en orden NO-FIFO.

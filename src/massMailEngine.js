@@ -684,8 +684,16 @@ const createMassMailEngine = (config) => {
      * igualmente. */
     if (config.dataStoreRef) {
       try {
-        const allCs = config.dataStoreRef.listContacts({ search: recipient.email });
-        const live = (allCs || []).find((c) => String(c.email || "").toLowerCase() === String(recipient.email || "").toLowerCase());
+        /* P0 FIX 2026-05-05 (auditoria): usar getContactByEmail O(1) en
+         * vez de listContacts O(N) que escaneaba 56k contactos por cada
+         * envio. Mismo patron que el writeback (linea 16). */
+        let live = null;
+        if (typeof config.dataStoreRef.getContactByEmail === "function") {
+          live = config.dataStoreRef.getContactByEmail(recipient.email);
+        } else {
+          const allCs = config.dataStoreRef.listContacts({ search: recipient.email });
+          live = (allCs || []).find((c) => String(c.email || "").toLowerCase() === String(recipient.email || "").toLowerCase());
+        }
         if (live && (live.status === "unsubscribed" || live.status === "bounced" || live.status === "complained")) {
           recipient.status = "skipped";
           recipient.skippedReason = `contact_${live.status}_at_send_time`;
@@ -1157,10 +1165,6 @@ const createMassMailEngine = (config) => {
       return;
     }
     clearTimeout(ticker);
-    ticker = null;
-    return;
-    /* legacy: ya no se usa setInterval */
-    clearInterval(ticker);
     ticker = null;
   };
 

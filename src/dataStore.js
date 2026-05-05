@@ -1498,12 +1498,22 @@ class DataStore {
       /* P0 FEATURE 2026-05-05 (peticion usuario): numeracion incremental
        * de campañas (0001, 0002, ...) para organizacion visual. Se asigna
        * el siguiente disponible al crear. Las campañas archived/eliminadas
-       * NO liberan su numero (son inmutables historicos). */
-      const maxNumber = store.campaigns.reduce((max, c) => {
-        const n = Number(c.number) || 0;
-        return n > max ? n : max;
-      }, 0);
-      const nextNumber = maxNumber + 1;
+       * NO liberan su numero (son inmutables historicos).
+       *
+       * P0 FIX 2026-05-05 (auditoria): contador atomico en `store._nextCampaignNumber`
+       * para evitar race condition con dos POST concurrentes. Ambos verian el
+       * mismo maxNumber sin contador y asignarian numeros duplicados.
+       * El mutate envuelve read+write en una sola transaccion sincrona, asi
+       * el incremento es atomico desde el punto de vista del JSON store. */
+      if (typeof store._nextCampaignNumber !== "number") {
+        const maxExisting = store.campaigns.reduce((max, c) => {
+          const n = Number(c.number) || 0;
+          return n > max ? n : max;
+        }, 0);
+        store._nextCampaignNumber = maxExisting + 1;
+      }
+      const nextNumber = store._nextCampaignNumber;
+      store._nextCampaignNumber += 1;
 
       const campaign = {
         id: createId("cmp"),
