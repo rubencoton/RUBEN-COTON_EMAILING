@@ -1432,19 +1432,23 @@ const refreshPanel = async () => {
         </td>`;
     };
 
+    /* PETICION USUARIO 2026-05-06: cabeceros STICKY al hacer scroll para
+     * que siempre se vea que es cada columna. position:sticky top:0 con
+     * z-index alto y fondo blanco solido para que no se mezcle con
+     * filas debajo. */
     const tableBlock = `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
-            <th style="padding:8px 6px;text-align:center">#</th>
-            <th style="padding:8px 6px;text-align:left">Campaña</th>
-            <th style="padding:8px 6px;text-align:center">Estado</th>
-            <th style="padding:8px 6px;text-align:center">Enviados</th>
-            <th style="padding:8px 6px;text-align:center">Aperturas</th>
-            <th style="padding:8px 6px;text-align:center">Clics</th>
-            <th style="padding:8px 6px;text-align:center">CTOR</th>
-            <th style="padding:8px 6px;text-align:center">Respuestas</th>
-            <th style="padding:8px 6px;text-align:center">Rebotes</th>
+        <thead style="position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.06)">
+          <tr style="color:#64748b;border-bottom:2px solid #e2e8f0;background:#fff">
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">#</th>
+            <th style="padding:10px 6px;text-align:left;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Campaña</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Estado</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Enviados</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Aperturas</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Clics</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">CTOR</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Respuestas</th>
+            <th style="padding:10px 6px;text-align:center;background:#fff;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;font-size:11px">Rebotes</th>
           </tr>
         </thead>
         <tbody>
