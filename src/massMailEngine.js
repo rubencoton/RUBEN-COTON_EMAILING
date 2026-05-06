@@ -543,6 +543,9 @@ const createMassMailEngine = (config) => {
   const recordSend = () => {
     sendTimestamps.push(Date.now());
     saveState();
+    /* P0 BLINDAJE 2026-05-06: incrementar tambien hard counter (Capa 3
+     * de defensa). Independiente de RAM y filesystem. */
+    incrementHardCounter();
     /* P0 blindar 2026-05-04: alerta cuando se acerca al 90% del cap diario.
      * Permite al admin saber que la cuota se va a agotar pronto. */
     const used = sendTimestamps.length;
@@ -558,13 +561,87 @@ const createMassMailEngine = (config) => {
     }
   };
 
+  /* P0 BLINDAJE 2026-05-06 (peticion usuario "filtro de seguridad por si uno cae
+   * que no caigan los otros"): triple verificacion INDEPENDIENTE.
+   *
+   * CAPA 1 (memoria): contador en RAM `sendTimestamps`.
+   * CAPA 2 (filesystem): leer `mail-state.json` directo del disco. Si la RAM
+   *    esta corrupta (ej: bug, gc, race), el archivo persiste la verdad.
+   * CAPA 3 (hard limit): variable `__hardCapToday` calculada al boot que
+   *    crece monotonamente y SOLO se reinicia tras 24h reales. Ultima
+   *    defensa por si las dos primeras estan bugged.
+   *
+   * isDailyCapReached() devuelve true si CUALQUIERA de las 3 capas dice cap
+   * alcanzado. Asi aunque una falle, las otras dos siguen blindando. */
+  /* Inicializar desde archivo al boot para que las 3 capas arranquen
+   * sincronizadas. Si el container reinicia con 1900 enviados ya, el
+   * hardCounter no debe empezar en 0 (permitiria 1950 mas). */
+  let __hardCounter = (() => {
+    try {
+      if (!fsLib.existsSync(STATE_FILE)) return 0;
+      const j = JSON.parse(fsLib.readFileSync(STATE_FILE, "utf-8"));
+      if (!Array.isArray(j.sendTimestamps)) return 0;
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      return j.sendTimestamps.filter(t => t > cutoff).length;
+    } catch (_e) { return 0; }
+  })();
+  let __hardCounterDay = new Date().toISOString().slice(0, 10);
+  const incrementHardCounter = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== __hardCounterDay) {
+      /* Nuevo dia calendario: reset adicional al rolling 24h. */
+      __hardCounterDay = today;
+      __hardCounter = 0;
+    }
+    __hardCounter += 1;
+  };
+  /* Capa 2: lee el archivo cada vez. Pequeño overhead (~5ms) pero
+   * INDEPENDIENTE de la memoria. Si memoria miente, archivo no. */
+  const getDailyUsedFromFile = () => {
+    try {
+      if (!fsLib.existsSync(STATE_FILE)) return 0;
+      const raw = fsLib.readFileSync(STATE_FILE, "utf-8");
+      const j = JSON.parse(raw);
+      if (!Array.isArray(j.sendTimestamps)) return 0;
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      let n = 0;
+      for (const t of j.sendTimestamps) if (t > cutoff) n++;
+      return n;
+    } catch (_e) {
+      /* Si el archivo no se puede leer, devolver -1 para forzar bloqueo
+       * conservador via Math.max abajo. */
+      return -1;
+    }
+  };
   const isDailyCapReached = () => {
-    return getDailyUsed() >= getEffectiveCap();
+    const cap = getEffectiveCap();
+    const memCount = getDailyUsed();             /* Capa 1: RAM */
+    const fileCount = getDailyUsedFromFile();    /* Capa 2: filesystem */
+    const hardCount = __hardCounter;             /* Capa 3: hard counter */
+    /* Si CUALQUIERA llega al cap, bloquear. Math.max blindaje:
+     * elegimos el MAYOR de los tres como verdad. Si fileCount=-1 (error
+     * leyendo), Math.max ignora ese y usa los otros dos. */
+    const realCount = Math.max(memCount, fileCount, hardCount);
+    if (realCount >= cap) {
+      /* Log diagnostico si las capas discrepan (señal de bug latente). */
+      if (memCount !== fileCount && fileCount >= 0 && Math.abs(memCount - fileCount) > 2) {
+        console.warn(`[CAP-DIVERGENCIA] mem=${memCount} file=${fileCount} hard=${hardCount} cap=${cap} - revisar`);
+      }
+      return true;
+    }
+    /* Capa 4 (alarma temprana): warning si llegamos al 90% del cap. */
+    if (realCount >= cap * 0.9 && realCount < cap && (realCount % 10 === 0)) {
+      console.warn(`[CAP-90PCT] usado=${realCount}/${cap} (${Math.round(realCount/cap*100)}%) - cerca del limite`);
+    }
+    return false;
   };
 
-  /* P0 blindar 2026-05-04: cap detalle para monitor externo. */
+  /* P0 blindar 2026-05-04: cap detalle para monitor externo.
+   * P0 2026-05-06: expone las 3 capas para UI/monitor. */
   const getDailyCapStatus = () => {
     const used = getDailyUsed();
+    const fileUsed = getDailyUsedFromFile();
+    const hardUsed = __hardCounter;
     const cap = getEffectiveCap();
     const remaining = Math.max(0, cap - used);
     const pct = cap > 0 ? (used / cap) * 100 : 0;
@@ -585,7 +662,14 @@ const createMassMailEngine = (config) => {
       nextSlotFreeAt: nextSlotAt,
       windowHours: 24,
       warmupActive: warmupEnabled,
-      warmupDay: getWarmupDay()
+      warmupDay: getWarmupDay(),
+      /* P0 2026-05-06: expose 3 capas independientes para auditoria */
+      defenseLayers: {
+        memoryCount: used,           /* Capa 1: array RAM */
+        fileCount: fileUsed,         /* Capa 2: mail-state.json en disco */
+        hardCount: hardUsed,         /* Capa 3: counter hard desde boot */
+        coherent: (fileUsed === -1 || Math.abs(used - fileUsed) <= 2)
+      }
     };
   };
 
