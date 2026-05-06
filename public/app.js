@@ -1278,6 +1278,13 @@ const refreshPanel = async () => {
         if (pct >= 2) return { label: "NORMAL", cls: "warn" };
         return { label: "POR MEJORAR", cls: "bad" };
       }
+      if (kind === "ctor") {
+        /* CTOR (clic÷apertura): mide si quienes abren interactuan. */
+        if (pct >= 25) return { label: "EXCELENTE", cls: "ok" };
+        if (pct >= 15) return { label: "BUENO", cls: "ok" };
+        if (pct >= 10) return { label: "NORMAL", cls: "warn" };
+        return { label: "POR MEJORAR", cls: "bad" };
+      }
       if (kind === "reply") {
         if (pct >= 2) return { label: "EXCELENTE", cls: "ok" };
         if (pct >= 1) return { label: "BUENO", cls: "ok" };
