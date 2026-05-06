@@ -170,6 +170,16 @@ const createMassMailEngine = (config) => {
   const transportMode = normalizeTransportMode(config.transportMode);
   const ratePerMinute = Number(config.ratePerMinute || 5);
   const rateDelayMs = Math.max(1000, Math.ceil(60000 / Math.max(ratePerMinute, 1)));
+  /* PETICION USUARIO 2026-05-06: doble ventana horaria con rates distintos.
+   * Peak 8-14h (mañana, mas aperturas en horario laboral): ritmo agresivo.
+   * Off-peak 14-20h: ritmo conservador. Defaults ajustados para llenar
+   * ~90% del cap diario sin riesgo Gmail. */
+  const peakStart = Number(config.peakStart != null ? config.peakStart : (process.env.MAIL_RATE_PEAK_START != null ? process.env.MAIL_RATE_PEAK_START : 8));
+  const peakEnd = Number(config.peakEnd != null ? config.peakEnd : (process.env.MAIL_RATE_PEAK_END != null ? process.env.MAIL_RATE_PEAK_END : 14));
+  const peakRatePerMinute = Number(config.peakRatePerMinute || process.env.MAIL_RATE_PEAK_PER_MIN || 5);
+  const offPeakRatePerMinute = Number(config.offPeakRatePerMinute || process.env.MAIL_RATE_OFFPEAK_PER_MIN || 2);
+  const peakRateDelayMs = Math.max(1000, Math.ceil(60000 / Math.max(peakRatePerMinute, 1)));
+  const offPeakRateDelayMs = Math.max(1000, Math.ceil(60000 / Math.max(offPeakRatePerMinute, 1)));
   const maxRetries = Number(config.maxRetries || 1);
   const historyLimit = Number(config.historyLimit || 100);
   const fromEmailConfig = normalizeEmail(config.fromEmail);
@@ -319,6 +329,22 @@ const createMassMailEngine = (config) => {
     } catch (_e) {
       return true; /* fail-open: si la TZ falla, no bloqueamos. */
     }
+  };
+
+  /* PETICION USUARIO 2026-05-06: peak hours dentro de la ventana. */
+  const isInPeakHours = () => {
+    try {
+      const now = new Date();
+      const local = new Date(now.toLocaleString("en-US", { timeZone: sendTz }));
+      const hour = local.getHours();
+      return hour >= peakStart && hour < peakEnd;
+    } catch (_e) {
+      return false;
+    }
+  };
+  /* Devuelve el rate efectivo segun la franja actual. */
+  const getCurrentRateDelayMs = () => {
+    return isInPeakHours() ? peakRateDelayMs : offPeakRateDelayMs;
   };
 
   /* Minutos restantes hasta el cierre de la ventana (para ratio adaptativo) */
@@ -1139,13 +1165,16 @@ const createMassMailEngine = (config) => {
            * El usuario las configura para SU pacing. La "distribución
            * orgánica" anterior las ignoraba y espaciaba más, dando 30x
            * más lento de lo configurado. */
-          const baseDelay = rateDelayMs;
+          /* PETICION USUARIO 2026-05-06: rate dinamico segun franja horaria.
+           * Peak (8-14h): rapido. Off-peak (14-20h): lento.
+           * Mejora apertura concentrando en horario laboral. */
+          const baseDelay = getCurrentRateDelayMs();
           /* Jitter ±25% (suficiente para no parecer bot, sin grandes desvíos). */
           const jitter = 0.75 + Math.random() * 0.5;
           nextDelay = Math.round(baseDelay * jitter);
         }
       } catch (_e) {
-        nextDelay = rateDelayMs;
+        nextDelay = getCurrentRateDelayMs();
       }
       processNext().then((wasSent) => {
         if (wasSent) sentSinceLastBreak += 1;
@@ -1157,7 +1186,7 @@ const createMassMailEngine = (config) => {
       });
       ticker = setTimeout(tickWithJitter, nextDelay);
     };
-    ticker = setTimeout(tickWithJitter, rateDelayMs);
+    ticker = setTimeout(tickWithJitter, getCurrentRateDelayMs());
   };
 
   const stop = () => {
@@ -1344,6 +1373,13 @@ const createMassMailEngine = (config) => {
     paused,
     ratePerMinute,
     rateDelayMs,
+    /* PETICION USUARIO 2026-05-06: doble ventana horaria con rates distintos. */
+    ratePeakPerMinute: peakRatePerMinute,
+    rateOffPeakPerMinute: offPeakRatePerMinute,
+    peakStartHour: peakStart,
+    peakEndHour: peakEnd,
+    inPeakHours: isInPeakHours(),
+    currentRatePerMinute: isInPeakHours() ? peakRatePerMinute : offPeakRatePerMinute,
     maxRetries,
     queueSize: queue.length,
     queueOrder,
