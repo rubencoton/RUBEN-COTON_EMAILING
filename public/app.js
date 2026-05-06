@@ -1263,7 +1263,9 @@ const refreshPanel = async () => {
     engineQueueEl.innerHTML = `
       <div style="font-weight:900" title="${esc(scheduleTooltip)}">${rateLabel}</div>
       ${rateSubLabel ? `<div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:2px" title="${esc(scheduleTooltip)}">${rateSubLabel}</div>` : ""}
-      <div style="margin-top:4px;font-size:11px"><b style="color:#FF6B00">${used}</b>/${cap} hoy (${usedPct}%) · Cola ${mm.queueSize}</div>
+      <div style="margin-top:4px;font-size:11px" title="El cap es rolling: cuenta los envios de las ULTIMAS 24h, no del dia calendario. Asi lo mide Gmail.">
+        <b style="color:#FF6B00">${used}</b>/${cap} <span style="color:#94a3b8">últimas 24h</span> (${usedPct}%) · Cola ${mm.queueSize}
+      </div>
       <div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px">${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
     `;
     setStatusStyle(engineStatusEl, mm.paused ? "error" : (winOpen ? "ok" : "warn"));
