@@ -915,10 +915,11 @@ const renderCampaigns = (campaigns) => {
       </div>`;
     }
     if (s === "queued" && typeof qp === "number" && qp >= 1) {
-      const posLabel = qp === 1 ? "Siguiente" : `Posición ${qp + 1}`;
+      /* PETICION USUARIO 2026-05-06: la siguiente que enviara cuando
+       * termine la activa es Pos. 1 (no Pos. 2). qp=1 -> "Pos. 1". */
       return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
         <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block;border:1px solid #fcd34d">⏳ EN COLA</span>
-        <span style="font-size:9.5px;color:#92400e;font-weight:800">${posLabel}</span>
+        <span style="font-size:9.5px;color:#92400e;font-weight:800">Pos. ${qp}${qp === 1 ? " (siguiente)" : ""}</span>
       </div>`;
     }
     if (s === "paused") {
@@ -1456,7 +1457,8 @@ const refreshPanel = async () => {
                       return `<span style="background:#16a34a;color:#fff;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;letter-spacing:0.4px;display:inline-block;box-shadow:0 0 0 2px rgba(22,163,74,0.18)">▶ ENVIANDO AHORA</span>`;
                     }
                     if (c.status === "queued" && typeof qp === "number" && qp >= 1) {
-                      const posLabel = qp === 1 ? "Siguiente" : `Pos. ${qp + 1}`;
+                      /* PETICION USUARIO 2026-05-06: Pos. 1 = siguiente. */
+                      const posLabel = `Pos. ${qp}${qp === 1 ? " (siguiente)" : ""}`;
                       return `<span style="background:#fef3c7;color:#92400e;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;letter-spacing:0.4px;display:inline-block;border:1px solid #fcd34d">⏳ EN COLA · ${posLabel}</span>`;
                     }
                     if (c.status === "paused") {
