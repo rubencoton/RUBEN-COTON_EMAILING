@@ -1200,11 +1200,17 @@ const createMassMailEngine = (config) => {
            * gastar CPU. */
           nextDelay = 5 * 60 * 1000;
         } else if (__throttleHit && queue.length > 0) {
-          /* P0-FIX 2026-05-01: el último tick rebotó por per-domain throttle.
-           * Re-tick rápido (delay perdomain + 200ms) en vez de 90s adaptive.
-           * Esto evita que envíos a dominio único (caso test) sean 30x más
-           * lentos de lo que la config dice. */
-          nextDelay = PER_DOMAIN_DELAY_MS + 200;
+          /* P0-FIX 2026-05-06 (bug usuario "ritmo real <<< rate configurado"):
+           * el comportamiento anterior esperaba PER_DOMAIN_DELAY_MS (60s)
+           * tras CADA throttle hit, aunque el siguiente item de la cola
+           * podria ser de DISTINTO dominio. Eso bajaba ritmo real a 2/min
+           * en lugar de 6/min cuando habia diversidad de dominios.
+           *
+           * Fix: re-tick RAPIDO (max 2s) tras throttle. El siguiente item
+           * de la cola puede ser de otro dominio y enviarse de inmediato.
+           * Solo si TODOS los siguientes items rebotan, el delay acumulado
+           * dara los 60s necesarios para el dominio congestionado. */
+          nextDelay = 2000;
           __throttleHit = false;
         } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
           /* Pausa humana ~3-8 min */
