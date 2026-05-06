@@ -645,7 +645,12 @@ class DataStore {
     try {
       snapshot.meta = snapshot.meta || {};
       snapshot.meta.updatedAt = nowIso();
-      const tmp = `${DATA_FILE}.tmp-${process.pid}`;
+      /* P0 FIX 2026-05-06 (bug usuario "ritmo real bajo, errores ENOENT en logs"):
+       * el nombre tmp era predecible (.tmp-PID), si dos flushes se solapan
+       * (pese al flag _flushing) el segundo escribia el mismo archivo y
+       * el primero rename fallaba con ENOENT. Ahora nombre unico con
+       * timestamp+random para garantizar zero colision. */
+      const tmp = `${DATA_FILE}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
       const json = JSON.stringify(snapshot, null, 2);
       await fs.promises.writeFile(tmp, json, "utf8");
       try {
