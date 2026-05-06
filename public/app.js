@@ -3204,18 +3204,33 @@ refreshSheetsList();
 if (!window.__rubencotonInitDone) {
   window.__rubencotonInitDone = true;
   init();
-  const REFRESH_INTERVAL_MS = 30000;
+  /* PETICION USUARIO 2026-05-06: actualizar KPIs en tiempo real sin
+   * tener que refrescar la pagina. Antes era cada 30s, ahora cada 8s
+   * para refresh casi instantaneo. Solo se ejecuta si la pestaña esta
+   * visible (evita carga innecesaria si usuario esta en otra app). */
+  const REFRESH_INTERVAL_MS = 8000;
+  /* Refresh ligero (solo KPIs barra superior + cola) — corre rapido */
+  const QUICK_REFRESH_INTERVAL_MS = 8000;
+  /* Refresh pesado (campañas + setup) — cada 30s suficiente */
+  const HEAVY_REFRESH_INTERVAL_MS = 30000;
+  let _heavyRefreshAt = 0;
   setInterval(async () => {
     /* BLINDAJE: no refrescar si la pestaña está oculta (ahorra red/CPU). */
     if (typeof document !== "undefined" && document.hidden) return;
     try {
+      /* Quick refresh: KPIs (incluye cap.used, currentRate, queueSize, dashboard) */
       await refreshPanel();
-      await refreshCampaigns();
-      await refreshSetupChecklist();
+      /* Heavy refresh solo cada 30s (lista campañas, setup) */
+      const now = Date.now();
+      if (now - _heavyRefreshAt >= HEAVY_REFRESH_INTERVAL_MS) {
+        _heavyRefreshAt = now;
+        await refreshCampaigns();
+        await refreshSetupChecklist();
+      }
     } catch (_error) {
       // no-op
     }
-  }, REFRESH_INTERVAL_MS);
+  }, QUICK_REFRESH_INTERVAL_MS);
 
   /* BLINDAJE: prevenir que el navegador navegue a file:// si el usuario
    * arrastra un archivo fuera del dropzone (destruiría el estado en memoria
