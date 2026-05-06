@@ -160,6 +160,29 @@ async function scanReplies() {
 
         if (!looksLikeReply && !matchedCampaigns.length) continue;
 
+        /* P0 FIX 2026-05-06 (peticion usuario "indicador respuestas no es certero"):
+         * filtro anti-auto-reply. Out-of-office, vacaciones, "fuera de la oficina"
+         * NO son respuestas reales. Detectamos por:
+         *   - Header Auto-Submitted: auto-replied (RFC 3834)
+         *   - X-Autorespond, X-Autoreply, Precedence: bulk/auto
+         *   - Subject con patrones de ausencia
+         * Si es auto-reply: skip (no se cuenta como reply). */
+        const arAutoSub = String(headers["auto-submitted"] || "").toLowerCase();
+        const arXAutoresp = String(headers["x-autorespond"] || "");
+        const arXAutoreply = String(headers["x-autoreply"] || "");
+        const arPrecedence = String(headers["precedence"] || "").toLowerCase();
+        const isAutoReplyHeader = arAutoSub.includes("auto-replied") ||
+                                  arAutoSub.includes("auto-generated") ||
+                                  Boolean(arXAutoresp) ||
+                                  Boolean(arXAutoreply) ||
+                                  arPrecedence === "auto_reply" ||
+                                  arPrecedence === "junk";
+        const isAutoReplySubject = /(out[- ]of[- ]office|out of the office|fuera de (la )?oficina|estoy de vacaciones|estare de vacaciones|estoy ausente|fuera del despacho|en estos momentos no me encuentro|no estare disponible|de vacaciones hasta|ausencia|automatic reply|respuesta automatica|aviso de ausencia|notificacion de ausencia)/i.test(subject || "");
+        if (isAutoReplyHeader || isAutoReplySubject) {
+          /* Es auto-reply: NO contar como reply real. Salta sin loggear (es comun). */
+          continue;
+        }
+
         /* Elegir la campaña más reciente del recipient */
         const targetCampaign = matchedCampaigns
           .slice()
