@@ -2413,8 +2413,13 @@ app.post("/api/admin/repair-campaign-counters", (_req, res) => {
       /* P0 FIX 2026-05-05: incluir eventos open/click ademas de delivered.
        * Si un email genero `open` o `click`, necesariamente fue ENTREGADO
        * antes (no se puede abrir lo no recibido). Cubre el caso de eventos
-       * delivered perdidos pero opens/clicks aun en el store. */
-      const RESCUE_TYPES = new Set(["delivered", "open", "click"]);
+       * delivered perdidos pero opens/clicks aun en el store.
+       *
+       * P0 FIX 2026-05-06: incluir tambien `reply`. Si llega una respuesta
+       * a un email, ese email se envio. Lo añadimos al snapshot para que
+       * los contadores cuadren. NO incluimos `bounce` aqui porque los
+       * bounces ya añaden recipient.bouncedAt y se cuentan via stats. */
+      const RESCUE_TYPES = new Set(["delivered", "open", "click", "reply"]);
       for (const ev of store.events || []) {
         if (!RESCUE_TYPES.has(ev.type) || !ev.campaignId || !ev.email) continue;
         if (!eventsByCampaign.has(ev.campaignId)) eventsByCampaign.set(ev.campaignId, new Map());

@@ -1930,17 +1930,25 @@ class DataStore {
         }
       });
 
-      /* P0 FIX 2026-05-05 (bug usuario "0 enviados pero 5 aperturas"):
+      /* P0 FIX 2026-05-05 (bug usuario "0 enviados pero 5 aperturas / 1 rebote / 1 respuesta"):
        * jobDetail.recipients trae solo los recipients del job ACTUAL (los
        * pendientes tras un restart con preserveHistory). Si contaramos sent
        * solo ahi, perderiamos los recipients ya enviados que viven en
        * recipientsSnapshot pero no en el job actual.
        *
-       * Solucion: contar sent y bounced desde el SNAPSHOT COMPLETO
-       * (que conserva la historia gracias a preserveHistory). queued sigue
-       * viniendo del job actual porque solo el motor sabe quien esta vivo. */
+       * P0 FIX 2026-05-06 (bug usuario "0 enviados con 1 rebote"):
+       * `sent` ahora cuenta TODOS los recipients procesados (sentAt OR
+       * bouncedAt). Logicamente: si rebotó es porque se intento enviar.
+       * Si llego una respuesta es porque se envio. Igual con opens/clicks.
+       * Imposible que un recipient tenga eventos sin haber sido enviado.
+       * Asi el contador de la UI cuadra con rebotes/respuestas.
+       *
+       * Solucion: contar sent (=procesados) y bounced desde el SNAPSHOT
+       * COMPLETO (que conserva la historia gracias a preserveHistory).
+       * queued sigue viniendo del job actual porque solo el motor sabe
+       * quien sigue vivo. */
       const finalSnap = ensureArray(campaign.recipientsSnapshot);
-      const sentTotal = finalSnap.filter((r) => r.sentAt).length;
+      const sentTotal = finalSnap.filter((r) => r.sentAt || r.bouncedAt).length;
       const bouncedTotal = finalSnap.filter((r) => r.bouncedAt).length;
       campaign.stats.queued = queued;
       campaign.stats.sent = sentTotal;
