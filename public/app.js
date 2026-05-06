@@ -1241,14 +1241,15 @@ const refreshPanel = async () => {
     let rateLabel = `${currentRate}/min`;
     let rateSubLabel = "";
     if (winOpen && currentSlot) {
+      /* PETICION USUARIO 2026-05-06: etiquetas en castellano. */
       const isMaxRate = schedule ? currentRate === Math.max(...schedule.map(s => s.ratePerMinute)) : false;
-      const tag = isMaxRate ? "PEAK" : (currentRate >= 2 ? "ACTIVO" : "GOTEO");
+      const tag = isMaxRate ? "PUNTA" : (currentRate >= 2 ? "MEDIO" : "GOTEO");
       rateLabel = `${currentRate}/min · ${tag}`;
       rateSubLabel = `Franja ${currentSlot.startHour}-${currentSlot.endHour}h`;
     } else if (winOpen && !currentSlot) {
       rateLabel = `${currentRate}/min`;
     } else {
-      rateLabel = "PAUSADO (fuera ventana)";
+      rateLabel = "PAUSADO (fuera de horario)";
     }
     /* Tooltip con schedule completo */
     const scheduleTooltip = schedule
