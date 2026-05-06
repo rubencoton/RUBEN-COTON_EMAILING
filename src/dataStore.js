@@ -801,31 +801,36 @@ class DataStore {
       }
     );
 
-    /* Lista de campañas activas para mostrar en dashboard inicio
-     * (reemplaza "Sin actividad reciente" cuando hay campañas). */
+    /* Lista de campañas activas para mostrar en dashboard inicio.
+     * P0 FIX 2026-05-05 (bug usuario "falta FESTEJOS y otras"):
+     *   - quitar limite slice(0,8) -> mostrar TODAS (max 30 prudente)
+     *   - ordenar por createdAt asc (FIFO cronologico, primera creada arriba)
+     *   - exponer campaign.number, sentAt, completedAt, openedUnique,
+     *     clickedUnique para que el frontend renderice todo. */
     const recentCampaigns = activeCampaigns
       .slice()
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
-      .slice(0, 8)
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+      .slice(0, 30)
       .map((c) => ({
         id: c.id,
+        number: c.number || null,
         name: c.name,
         subject: c.subject,
         status: c.status,
+        sentAt: c.sentAt || null,
+        completedAt: c.completedAt || null,
         stats: {
-          /* P0 FIX 2026-05-05 (bug usuario captura: % enviados=0.0% siempre):
-           * el frontend lee `s.total` para calcular pct enviados, pero aquí
-           * solo expusimos `totalRecipients`. Resultado: total=0 → div/0 → 0%.
-           * Ahora exponemos ambos: `total` (esperado por el frontend) y
-           * `totalRecipients` (compat con cualquier consumer externo). */
           sent: toNumber(c.stats?.sent, 0),
           opened: toNumber(c.stats?.openedUnique, 0),
+          openedUnique: toNumber(c.stats?.openedUnique, 0),
           clicked: toNumber(c.stats?.clickedUnique, 0),
+          clickedUnique: toNumber(c.stats?.clickedUnique, 0),
           bounced: toNumber(c.stats?.bounced, 0),
           replied: toNumber(c.stats?.replied, 0),
           total: toNumber(c.stats?.total, 0),
           totalRecipients: toNumber(c.stats?.total, 0)
         },
+        createdAt: c.createdAt || null,
         updatedAt: c.updatedAt || c.createdAt
       }));
 

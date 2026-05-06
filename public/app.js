@@ -1316,15 +1316,19 @@ const refreshPanel = async () => {
     const summarySent    = pctOf(totals.sent,    totals.total);
     const summaryOpen    = pctOf(totals.opened,  totals.sent);
     const summaryClick   = pctOf(totals.clicked, totals.sent);
+    /* P0 FIX 2026-05-05 (peticion usuario "anadir CTOR"): CTOR = clicks/opens
+     * (no clicks/sent). Mide cuantos abridores ademas hicieron clic. */
+    const summaryCtor    = pctOf(totals.clicked, totals.opened);
     const summaryReply   = pctOf(totals.replied, totals.sent);
     const summaryBounce  = pctOf(totals.bounced, totals.sent);
 
     const summaryCells = [
-      { key: "sent",   title: "ENVIADOS",   num: totals.sent,    base: totals.total, pct: summarySent,   eval: evalRate("sent",   summarySent)   },
-      { key: "open",   title: "APERTURAS",  num: totals.opened,  base: totals.sent,  pct: summaryOpen,   eval: evalRate("open",   summaryOpen)   },
-      { key: "click",  title: "CLICS",      num: totals.clicked, base: totals.sent,  pct: summaryClick,  eval: evalRate("click",  summaryClick)  },
-      { key: "reply",  title: "RESPUESTAS", num: totals.replied, base: totals.sent,  pct: summaryReply,  eval: evalRate("reply",  summaryReply)  },
-      { key: "bounce", title: "REBOTES",    num: totals.bounced, base: totals.sent,  pct: summaryBounce, eval: evalRate("bounce", summaryBounce) },
+      { key: "sent",   title: "ENVIADOS",   num: totals.sent,    base: totals.total,  pct: summarySent,   eval: evalRate("sent",   summarySent)   },
+      { key: "open",   title: "APERTURAS",  num: totals.opened,  base: totals.sent,   pct: summaryOpen,   eval: evalRate("open",   summaryOpen)   },
+      { key: "click",  title: "CLICS",      num: totals.clicked, base: totals.sent,   pct: summaryClick,  eval: evalRate("click",  summaryClick)  },
+      { key: "ctor",   title: "CTOR",       num: totals.clicked, base: totals.opened, pct: summaryCtor,   eval: evalRate("ctor",   summaryCtor)   },
+      { key: "reply",  title: "RESPUESTAS", num: totals.replied, base: totals.sent,   pct: summaryReply,  eval: evalRate("reply",  summaryReply)  },
+      { key: "bounce", title: "REBOTES",    num: totals.bounced, base: totals.sent,   pct: summaryBounce, eval: evalRate("bounce", summaryBounce) },
     ];
 
     const summaryBlock = `
@@ -1338,7 +1342,7 @@ const refreshPanel = async () => {
             ${fmt(totals.total)} destinatarios totales
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:10px">
+        <div style="display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:10px">
           ${summaryCells.map(c => `
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 10px;text-align:center">
               <div style="font-size:10.5px;font-weight:800;color:#64748b;letter-spacing:0.6px">${c.title}</div>
@@ -1374,11 +1378,13 @@ const refreshPanel = async () => {
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
           <tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
+            <th style="padding:8px 6px;text-align:center">#</th>
             <th style="padding:8px 6px;text-align:left">Campaña</th>
             <th style="padding:8px 6px;text-align:center">Estado</th>
             <th style="padding:8px 6px;text-align:center">Enviados</th>
             <th style="padding:8px 6px;text-align:center">Aperturas</th>
             <th style="padding:8px 6px;text-align:center">Clics</th>
+            <th style="padding:8px 6px;text-align:center">CTOR</th>
             <th style="padding:8px 6px;text-align:center">Respuestas</th>
             <th style="padding:8px 6px;text-align:center">Rebotes</th>
           </tr>
@@ -1405,8 +1411,8 @@ const refreshPanel = async () => {
             const finI = c.completedAt ? fmtFechaI(c.completedAt) : (["sending","queued","paused"].includes(c.status) ? "en curso" : "—");
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:10px 6px;vertical-align:middle;text-align:center;font-weight:900;color:#FF6B00;font-size:13px;letter-spacing:0.5px">#${numLabelI}</td>
                 <td style="padding:10px 6px;vertical-align:middle">
-                  <span style="display:inline-block;background:#FF6B00;color:#fff;font-weight:900;font-size:10.5px;padding:2px 7px;border-radius:6px;letter-spacing:0.5px;margin-right:6px;vertical-align:middle">#${numLabelI}</span>
                   <strong>${esc(c.name || "(sin nombre)")}</strong>
                   <div class="muted" style="font-size:10.5px;margin-top:3px;line-height:1.4">▶ ${inicioI} · ■ ${finI}</div>
                 </td>
@@ -1418,6 +1424,7 @@ const refreshPanel = async () => {
                 ${cellMetric("sent",   sent,    total)}
                 ${cellMetric("open",   opened,  sent)}
                 ${cellMetric("click",  clicked, sent)}
+                ${cellMetric("ctor",   clicked, opened)}
                 ${cellMetric("reply",  replied, sent)}
                 ${cellMetric("bounce", bounced, sent)}
               </tr>`;
