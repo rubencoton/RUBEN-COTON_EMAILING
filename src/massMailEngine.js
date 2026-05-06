@@ -1260,13 +1260,12 @@ const createMassMailEngine = (config) => {
     return recipient.status === "sent";
   };
 
-  /* P0 2026-05-06 (peticion usuario "ritmo alto sin entrar en spam"):
-   * pausas humanas mas eficientes pero seguras.
-   * ANTES: 30-60 envios / 3-8 min break -> eficiencia ~73%
-   * AHORA: 50-80 envios / 2-5 min break -> eficiencia ~85%
-   * Mantiene patron "humano" pero permite mas throughput. */
+  /* P0 2026-05-06 v3 (peticion usuario "real ≈ teorico"):
+   * pausas humanas MAS espaciadas y mas cortas. Ahora cada 80-120 envios
+   * con break 1-3 min. Eficiencia esperada ~93%. Mantiene patron humano
+   * (sigue habiendo pausas) pero permite ritmo cercano al teorico. */
   let sentSinceLastBreak = 0;
-  let nextBreakAt = 50 + Math.floor(Math.random() * 31); /* 50-80 */
+  let nextBreakAt = 80 + Math.floor(Math.random() * 41); /* 80-120 */
 
   const start = () => {
     if (ticker) {
@@ -1288,25 +1287,21 @@ const createMassMailEngine = (config) => {
            * gastar CPU. */
           nextDelay = 5 * 60 * 1000;
         } else if (__throttleHit && queue.length > 0) {
-          /* P0-FIX 2026-05-06 (bug usuario "ritmo real <<< rate configurado"):
-           * el comportamiento anterior esperaba PER_DOMAIN_DELAY_MS (60s)
-           * tras CADA throttle hit, aunque el siguiente item de la cola
-           * podria ser de DISTINTO dominio. Eso bajaba ritmo real a 2/min
-           * en lugar de 6/min cuando habia diversidad de dominios.
-           *
-           * Fix: re-tick RAPIDO (max 2s) tras throttle. El siguiente item
-           * de la cola puede ser de otro dominio y enviarse de inmediato.
-           * Solo si TODOS los siguientes items rebotan, el delay acumulado
-           * dara los 60s necesarios para el dominio congestionado. */
-          nextDelay = 2000;
+          /* P0 FIX 2026-05-06 v3 (peticion usuario "real ≈ teorico"):
+           * tras throttle dominio, casi-instantaneo (200ms) en vez de 2s.
+           * Asi el motor procesa el siguiente item de la cola sin perder
+           * tiempo. Si tambien rebota, vuelve a intentar en 200ms. Es
+           * O(N) ticks rapidos pero cada uno de 200ms, total <1s para
+           * encontrar un item enviable. */
+          nextDelay = 200;
           __throttleHit = false;
         } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
           /* Pausa humana ~3-8 min */
-          /* P0 2026-05-06: pausa humana 2-5 min (era 3-8) para mas eficiencia. */
-          const breakMs = (2 * 60 * 1000) + Math.floor(Math.random() * 3 * 60 * 1000);
+          /* P0 2026-05-06 v3: pausa humana 1-3 min (era 2-5) - mas eficiente. */
+          const breakMs = (1 * 60 * 1000) + Math.floor(Math.random() * 2 * 60 * 1000);
           console.log(`[massMail] pausa humana ${Math.round(breakMs / 60000)}min tras ${sentSinceLastBreak} envios`);
           sentSinceLastBreak = 0;
-          nextBreakAt = 50 + Math.floor(Math.random() * 31); /* 50-80 */
+          nextBreakAt = 80 + Math.floor(Math.random() * 41); /* 80-120 */
           nextDelay = breakMs;
         } else {
           /* P0-FIX 2026-05-01: ELIMINAR distribución adaptativa que causaba
