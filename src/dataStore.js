@@ -817,6 +817,7 @@ class DataStore {
         name: c.name,
         subject: c.subject,
         status: c.status,
+        queuePosition: typeof c.queuePosition === "number" ? c.queuePosition : null,
         sentAt: c.sentAt || null,
         completedAt: c.completedAt || null,
         stats: {
@@ -1959,8 +1960,17 @@ class DataStore {
         campaign.queuePosition = jobDetail.queuePosition;
       }
 
+      /* P0 FIX 2026-05-06 (peticion usuario "diferenciar enviando ahora vs en cola"):
+       * el motor distingue "running" (pos=0, con startedAt) y "queued"
+       * (pos>0 esperando turno). Reflejar esa distincion en campaign.status:
+       *  - jobDetail.running -> campaign.sending (esta enviando ahora mismo)
+       *  - jobDetail.queued  -> campaign.queued (esperando turno en la cola)
+       * Antes solo seteabamos sending en running, dejando "queued" inicial
+       * congelado en sending al primer sync. */
       if (jobDetail.status === "running") {
         campaign.status = "sending";
+      } else if (jobDetail.status === "queued" && campaign.status !== "paused") {
+        campaign.status = "queued";
       }
       if (jobDetail.status === "completed" || jobDetail.status === "completed_with_errors") {
         campaign.status = "sent";

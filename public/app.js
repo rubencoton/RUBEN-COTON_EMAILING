@@ -906,14 +906,38 @@ const renderCampaigns = (campaigns) => {
     completed: "Completada",
   };
   const statusBadge = (s, qp) => {
-    const label = statusLabels[s] || s;
-    let extra = "";
-    if (s === "queued" && typeof qp === "number" && qp >= 1) {
-      extra = `<div style="font-size:10px;color:#666;margin-top:2px">${qp === 1 ? "Siguiente" : `${qp + 1}ª posición`}</div>`;
-    } else if (s === "sending") {
-      extra = `<div style="font-size:10px;color:#666;margin-top:2px">Enviando ahora</div>`;
+    /* PETICION USUARIO 2026-05-06: diferenciar VISUALMENTE "ENVIANDO AHORA"
+     * (campaña activa procesando) vs "EN COLA Pos. N" (esperando turno). */
+    if (s === "sending" || (s === "queued" && qp === 0)) {
+      return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="background:#16a34a;color:#fff;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block;box-shadow:0 0 0 2px rgba(22,163,74,0.18)">▶ ENVIANDO AHORA</span>
+        <span style="font-size:9.5px;color:#16a34a;font-weight:800">campaña activa</span>
+      </div>`;
     }
-    return `<span class="status-badge status-${esc(s)}">${esc(label)}</span>${extra}`;
+    if (s === "queued" && typeof qp === "number" && qp >= 1) {
+      const posLabel = qp === 1 ? "Siguiente" : `Posición ${qp + 1}`;
+      return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block;border:1px solid #fcd34d">⏳ EN COLA</span>
+        <span style="font-size:9.5px;color:#92400e;font-weight:800">${posLabel}</span>
+      </div>`;
+    }
+    if (s === "paused") {
+      return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="background:#e2e8f0;color:#475569;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block">⏸ PAUSADA</span>
+      </div>`;
+    }
+    if (s === "sent") {
+      return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="background:#bbf7d0;color:#166534;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block">✓ COMPLETADA</span>
+      </div>`;
+    }
+    if (s === "failed") {
+      return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="background:#fecaca;color:#991b1b;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:inline-block">⚠ FALLO</span>
+      </div>`;
+    }
+    const label = statusLabels[s] || s;
+    return `<span class="status-badge status-${esc(s)}">${esc(label)}</span>`;
   };
   /* PETICION USUARIO 2026-05-05: cada celda metrica con 3 lineas:
    * - Numero (arriba)
@@ -1424,9 +1448,28 @@ const refreshPanel = async () => {
                   <div class="muted" style="font-size:10.5px;margin-top:3px;line-height:1.4">▶ ${inicioI} · ■ ${finI}</div>
                 </td>
                 <td style="padding:10px 6px;text-align:center;vertical-align:middle">
-                  <span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block">
-                    ${statusLabel(c.status)}
-                  </span>
+                  ${(() => {
+                    /* PETICION USUARIO 2026-05-06: distinguir 3 estados visualmente:
+                     * COMPLETADA / ENVIANDO AHORA / EN COLA pos N. */
+                    const qp = c.queuePosition;
+                    if (c.status === "sending" || (c.status === "queued" && qp === 0)) {
+                      return `<span style="background:#16a34a;color:#fff;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;letter-spacing:0.4px;display:inline-block;box-shadow:0 0 0 2px rgba(22,163,74,0.18)">▶ ENVIANDO AHORA</span>`;
+                    }
+                    if (c.status === "queued" && typeof qp === "number" && qp >= 1) {
+                      const posLabel = qp === 1 ? "Siguiente" : `Pos. ${qp + 1}`;
+                      return `<span style="background:#fef3c7;color:#92400e;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;letter-spacing:0.4px;display:inline-block;border:1px solid #fcd34d">⏳ EN COLA · ${posLabel}</span>`;
+                    }
+                    if (c.status === "paused") {
+                      return `<span style="background:#e2e8f0;color:#475569;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;display:inline-block">⏸ PAUSADA</span>`;
+                    }
+                    if (c.status === "sent") {
+                      return `<span style="background:#bbf7d0;color:#166534;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;display:inline-block">✓ COMPLETADA</span>`;
+                    }
+                    if (c.status === "failed") {
+                      return `<span style="background:#fecaca;color:#991b1b;padding:4px 11px;border-radius:13px;font-size:10.5px;font-weight:900;display:inline-block">⚠ FALLO</span>`;
+                    }
+                    return `<span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block">${statusLabel(c.status)}</span>`;
+                  })()}
                 </td>
                 ${cellMetric("sent",   sent,    total)}
                 ${cellMetric("open",   opened,  sent)}
