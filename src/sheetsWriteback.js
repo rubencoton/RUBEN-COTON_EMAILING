@@ -38,6 +38,12 @@ const MAX_BATCH_REQUESTS = 100;
 const queue = [];
 let _flushTimer = null;
 
+/* P0 FIX 2026-05-06 (saturacion VPS por 411 errores/min):
+ * circuit breaker. Si un sheet+gid devuelve "after last column in grid",
+ * marca la combinacion como rota y skipea futuras escrituras para evitar
+ * loop de errores. Se logea SOLO la primera vez por sheet+gid. */
+const skipBySheet = new Map(); // "sheetId|gid" -> { reason, at }
+
 /* Cache para evitar duplicados rapidos: status mas alto gana.
  * Ej: si el mismo contacto recibe sent y luego open, solo escribimos open
  * (que tiene mas peso). */
@@ -86,6 +92,11 @@ const getAuth = () => getOAuthClient();
  */
 const enqueue = (sheetMeta, status, email = "") => {
   if (!sheetMeta || !sheetMeta.sheetId || sheetMeta.gid == null || sheetMeta.row == null || sheetMeta.col == null) {
+    return false;
+  }
+  /* P0 FIX 2026-05-06: circuit breaker. Skip si sheet+gid esta marcado roto. */
+  const skipKey = `${sheetMeta.sheetId}|${sheetMeta.gid}`;
+  if (skipBySheet.has(skipKey)) {
     return false;
   }
   if (!STATUS_COLOR[status]) {
@@ -173,10 +184,28 @@ const flush = async () => {
       });
       totalUpdated += items.length;
     } catch (e) {
-      console.warn(`[writeback] batchUpdate fallo en ${sheetId.slice(0,12)}: ${e.message}`);
-      /* Re-encolar para reintento si es 429/503 */
-      if (/429|503|quota/i.test(e.message)) {
-        for (const it of items) queue.push(it);
+      /* P0 FIX 2026-05-06: detectar errores PERMANENTES de schema y marcar
+       * sheet+gid como roto para no reintentar mas. Eliminamos el spam de
+       * 411 errores/min que saturaba el VPS. */
+      const isSchemaError = /after last column in grid|exceeds grid limits|invalid range|not found|gridcoordinate|not a valid|invalid requests/i.test(e.message);
+      if (isSchemaError) {
+        const failedKeys = new Set();
+        for (const it of items) {
+          const key = `${it.sheetId}|${it.gid}`;
+          if (!skipBySheet.has(key)) {
+            skipBySheet.set(key, { reason: e.message.slice(0, 120), at: Date.now() });
+            failedKeys.add(key);
+          }
+        }
+        if (failedKeys.size > 0) {
+          console.warn(`[writeback] schema error PERMANENTE en ${Array.from(failedKeys).join(', ')}: ${e.message.slice(0, 100)}. NO reintentamos. Total skipped: ${skipBySheet.size}`);
+        }
+      } else {
+        console.warn(`[writeback] batchUpdate fallo en ${sheetId.slice(0,12)}: ${e.message}`);
+        /* Re-encolar para reintento si es 429/503 transitorios */
+        if (/429|503|quota/i.test(e.message)) {
+          for (const it of items) queue.push(it);
+        }
       }
     }
   }
