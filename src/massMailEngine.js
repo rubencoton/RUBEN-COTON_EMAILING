@@ -170,10 +170,35 @@ const createMassMailEngine = (config) => {
   const transportMode = normalizeTransportMode(config.transportMode);
   const ratePerMinute = Number(config.ratePerMinute || 5);
   const rateDelayMs = Math.max(1000, Math.ceil(60000 / Math.max(ratePerMinute, 1)));
-  /* PETICION USUARIO 2026-05-06: doble ventana horaria con rates distintos.
-   * Peak 8-14h (mañana, mas aperturas en horario laboral): ritmo agresivo.
-   * Off-peak 14-20h: ritmo conservador. Defaults ajustados para llenar
-   * ~90% del cap diario sin riesgo Gmail. */
+  /* PETICION USUARIO 2026-05-06: SCHEDULE multi-franja (mejor estrategia).
+   * Soporta cualquier numero de slots horarios con rate distinto:
+   *   "8-13:6,13-14:2,14-18:2,18-20:1"
+   * = 8-13h: 6/min (peak fuerte mañana)
+   *   13-14h: 2/min (hora comida, baja para no malgastar cap)
+   *   14-18h: 2/min (tarde laboral)
+   *   18-20h: 1/min (cierre, goteo)
+   * Estimacion: ~1.300 + ~85 + ~350 + ~85 = ~1.820 emails/dia (93% cap).
+   * Mantiene anti-spam: jitter, pausas humanas, throttle dominio.
+   * Si MAIL_RATE_SCHEDULE no esta seteado, usa el modelo viejo
+   * (peak/off-peak con dos franjas). */
+  const parseRateSchedule = (raw) => {
+    if (!raw || typeof raw !== "string") return [];
+    const slots = [];
+    for (const part of raw.split(",")) {
+      const m = part.trim().match(/^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+      if (!m) continue;
+      const startH = Number(m[1]);
+      const endH = Number(m[2]);
+      const rate = Number(m[3]);
+      if (Number.isFinite(startH) && Number.isFinite(endH) && endH > startH && rate > 0) {
+        slots.push({ startHour: startH, endHour: endH, ratePerMinute: rate });
+      }
+    }
+    return slots;
+  };
+  const scheduleRaw = String(config.rateSchedule || process.env.MAIL_RATE_SCHEDULE || "8-13:6,13-14:2,14-18:2,18-20:1");
+  const rateSchedule = parseRateSchedule(scheduleRaw);
+  /* Compat con peak/off-peak vieja (fallback si schedule vacio). */
   const peakStart = Number(config.peakStart != null ? config.peakStart : (process.env.MAIL_RATE_PEAK_START != null ? process.env.MAIL_RATE_PEAK_START : 8));
   const peakEnd = Number(config.peakEnd != null ? config.peakEnd : (process.env.MAIL_RATE_PEAK_END != null ? process.env.MAIL_RATE_PEAK_END : 14));
   const peakRatePerMinute = Number(config.peakRatePerMinute || process.env.MAIL_RATE_PEAK_PER_MIN || 5);
@@ -331,20 +356,52 @@ const createMassMailEngine = (config) => {
     }
   };
 
-  /* PETICION USUARIO 2026-05-06: peak hours dentro de la ventana. */
-  const isInPeakHours = () => {
+  /* PETICION USUARIO 2026-05-06: lookup en schedule multi-franja. */
+  const getCurrentSlot = () => {
     try {
       const now = new Date();
       const local = new Date(now.toLocaleString("en-US", { timeZone: sendTz }));
-      const hour = local.getHours();
-      return hour >= peakStart && hour < peakEnd;
+      const hour = local.getHours() + (local.getMinutes() / 60);
+      if (rateSchedule.length > 0) {
+        for (const slot of rateSchedule) {
+          if (hour >= slot.startHour && hour < slot.endHour) {
+            return slot;
+          }
+        }
+        return null;
+      }
+      /* Compat: fallback peak/off-peak antiguo. */
+      const intHour = Math.floor(hour);
+      if (intHour >= peakStart && intHour < peakEnd) {
+        return { startHour: peakStart, endHour: peakEnd, ratePerMinute: peakRatePerMinute };
+      }
+      if (intHour >= peakEnd && intHour < sendWindowEnd) {
+        return { startHour: peakEnd, endHour: sendWindowEnd, ratePerMinute: offPeakRatePerMinute };
+      }
+      return null;
     } catch (_e) {
-      return false;
+      return null;
     }
+  };
+  const isInPeakHours = () => {
+    /* Compat: peak = primera franja con rate mas alto. */
+    const slot = getCurrentSlot();
+    if (!slot) return false;
+    if (rateSchedule.length === 0) return slot.ratePerMinute === peakRatePerMinute;
+    const maxRate = rateSchedule.reduce((m, s) => Math.max(m, s.ratePerMinute), 0);
+    return slot.ratePerMinute === maxRate;
   };
   /* Devuelve el rate efectivo segun la franja actual. */
   const getCurrentRateDelayMs = () => {
-    return isInPeakHours() ? peakRateDelayMs : offPeakRateDelayMs;
+    const slot = getCurrentSlot();
+    if (slot) {
+      return Math.max(1000, Math.ceil(60000 / Math.max(slot.ratePerMinute, 1)));
+    }
+    return rateDelayMs;
+  };
+  const getCurrentRatePerMinute = () => {
+    const slot = getCurrentSlot();
+    return slot ? slot.ratePerMinute : ratePerMinute;
   };
 
   /* Minutos restantes hasta el cierre de la ventana (para ratio adaptativo) */
@@ -1373,13 +1430,15 @@ const createMassMailEngine = (config) => {
     paused,
     ratePerMinute,
     rateDelayMs,
-    /* PETICION USUARIO 2026-05-06: doble ventana horaria con rates distintos. */
+    /* PETICION USUARIO 2026-05-06: doble/triple ventana horaria con rates distintos. */
     ratePeakPerMinute: peakRatePerMinute,
     rateOffPeakPerMinute: offPeakRatePerMinute,
     peakStartHour: peakStart,
     peakEndHour: peakEnd,
     inPeakHours: isInPeakHours(),
-    currentRatePerMinute: isInPeakHours() ? peakRatePerMinute : offPeakRatePerMinute,
+    currentRatePerMinute: getCurrentRatePerMinute(),
+    rateSchedule: rateSchedule.length > 0 ? rateSchedule : null,
+    currentSlot: getCurrentSlot(),
     maxRetries,
     queueSize: queue.length,
     queueOrder,

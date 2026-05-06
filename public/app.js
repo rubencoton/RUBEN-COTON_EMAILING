@@ -1231,35 +1231,39 @@ const refreshPanel = async () => {
       <div style="font-weight:900;line-height:1.1">${stateLabel}</div>
       <div style="font-size:10px;color:#888;font-weight:700;margin-top:6px;letter-spacing:0.5px">${modeLabel}</div>
     `;
-    /* PETICION USUARIO 2026-05-06: mostrar ritmo dinamico segun franja:
-     * - inPeakHours=true  -> "5/min · PEAK"
-     * - inPeakHours=false -> "2/min · OFF-PEAK"
-     * Antes mostraba ratePerMinute fijo (3) que ya no refleja la realidad. */
+    /* PETICION USUARIO 2026-05-06: ritmo dinamico segun franja actual.
+     * Soporta schedule multi-franja (8-13h:6, 13-14h:2, 14-18h:2, 18-20h:1).
+     * El KPI muestra: rate actual + franja actual. Subtitulo: schedule completo. */
     const mm = data.massMail;
     const currentRate = mm.currentRatePerMinute || mm.ratePerMinute;
-    const inPeak = mm.inPeakHours;
-    const peakRate = mm.ratePeakPerMinute;
-    const offPeakRate = mm.rateOffPeakPerMinute;
-    const peakStart = mm.peakStartHour;
-    const peakEnd = mm.peakEndHour;
+    const currentSlot = mm.currentSlot;
+    const schedule = Array.isArray(mm.rateSchedule) ? mm.rateSchedule : null;
     let rateLabel = `${currentRate}/min`;
     let rateSubLabel = "";
-    if (typeof inPeak === "boolean" && peakRate && offPeakRate) {
-      if (inPeak) {
-        rateLabel = `${currentRate}/min · PEAK`;
-        rateSubLabel = `Off-peak ${peakEnd}h: ${offPeakRate}/min`;
-      } else if (winOpen) {
-        rateLabel = `${currentRate}/min · OFF-PEAK`;
-        rateSubLabel = `Peak ${peakStart}-${peakEnd}h: ${peakRate}/min`;
-      } else {
-        rateLabel = "PAUSADO (fuera ventana)";
-        rateSubLabel = `Peak ${peakStart}-${peakEnd}h: ${peakRate}/min · Off ${offPeakRate}/min`;
-      }
+    if (winOpen && currentSlot) {
+      const isMaxRate = schedule ? currentRate === Math.max(...schedule.map(s => s.ratePerMinute)) : false;
+      const tag = isMaxRate ? "PEAK" : (currentRate >= 2 ? "ACTIVO" : "GOTEO");
+      rateLabel = `${currentRate}/min · ${tag}`;
+      rateSubLabel = `Franja ${currentSlot.startHour}-${currentSlot.endHour}h`;
+    } else if (winOpen && !currentSlot) {
+      rateLabel = `${currentRate}/min`;
+    } else {
+      rateLabel = "PAUSADO (fuera ventana)";
     }
+    /* Tooltip con schedule completo */
+    const scheduleTooltip = schedule
+      ? schedule.map(s => `${s.startHour}-${s.endHour}h: ${s.ratePerMinute}/min`).join(" · ")
+      : (mm.peakStartHour ? `Peak ${mm.peakStartHour}-${mm.peakEndHour}h: ${mm.ratePeakPerMinute}/min · Off ${mm.rateOffPeakPerMinute}/min` : "");
+    /* PETICION USUARIO 2026-05-06: mostrar tambien envios hoy / cap. */
+    const dc = mm.dailyCap || {};
+    const used = dc.used || 0;
+    const cap = dc.limit || 1950;
+    const usedPct = cap > 0 ? Math.round((used / cap) * 100) : 0;
     engineQueueEl.innerHTML = `
-      <div style="font-weight:900">${rateLabel}</div>
-      ${rateSubLabel ? `<div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:2px">${rateSubLabel}</div>` : ""}
-      <div style="margin-top:4px">Cola ${mm.queueSize} · ${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
+      <div style="font-weight:900" title="${esc(scheduleTooltip)}">${rateLabel}</div>
+      ${rateSubLabel ? `<div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:2px" title="${esc(scheduleTooltip)}">${rateSubLabel}</div>` : ""}
+      <div style="margin-top:4px;font-size:11px"><b style="color:#FF6B00">${used}</b>/${cap} hoy (${usedPct}%) · Cola ${mm.queueSize}</div>
+      <div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px">${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
     `;
     setStatusStyle(engineStatusEl, mm.paused ? "error" : (winOpen ? "ok" : "warn"));
     setStatusStyle(engineQueueEl,
