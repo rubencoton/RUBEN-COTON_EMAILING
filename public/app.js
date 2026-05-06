@@ -1231,17 +1231,39 @@ const refreshPanel = async () => {
       <div style="font-weight:900;line-height:1.1">${stateLabel}</div>
       <div style="font-size:10px;color:#888;font-weight:700;margin-top:6px;letter-spacing:0.5px">${modeLabel}</div>
     `;
-    /* Compacto para chip 2026-05-05: ritmo principal + cola + ventana. */
+    /* PETICION USUARIO 2026-05-06: mostrar ritmo dinamico segun franja:
+     * - inPeakHours=true  -> "5/min · PEAK"
+     * - inPeakHours=false -> "2/min · OFF-PEAK"
+     * Antes mostraba ratePerMinute fijo (3) que ya no refleja la realidad. */
+    const mm = data.massMail;
+    const currentRate = mm.currentRatePerMinute || mm.ratePerMinute;
+    const inPeak = mm.inPeakHours;
+    const peakRate = mm.ratePeakPerMinute;
+    const offPeakRate = mm.rateOffPeakPerMinute;
+    const peakStart = mm.peakStartHour;
+    const peakEnd = mm.peakEndHour;
+    let rateLabel = `${currentRate}/min`;
+    let rateSubLabel = "";
+    if (typeof inPeak === "boolean" && peakRate && offPeakRate) {
+      if (inPeak) {
+        rateLabel = `${currentRate}/min · PEAK`;
+        rateSubLabel = `Off-peak ${peakEnd}h: ${offPeakRate}/min`;
+      } else if (winOpen) {
+        rateLabel = `${currentRate}/min · OFF-PEAK`;
+        rateSubLabel = `Peak ${peakStart}-${peakEnd}h: ${peakRate}/min`;
+      } else {
+        rateLabel = "PAUSADO (fuera ventana)";
+        rateSubLabel = `Peak ${peakStart}-${peakEnd}h: ${peakRate}/min · Off ${offPeakRate}/min`;
+      }
+    }
     engineQueueEl.innerHTML = `
-      <div>${data.massMail.ratePerMinute}/min</div>
-      <div>Cola ${data.massMail.queueSize} · ${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
+      <div style="font-weight:900">${rateLabel}</div>
+      ${rateSubLabel ? `<div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:2px">${rateSubLabel}</div>` : ""}
+      <div style="margin-top:4px">Cola ${mm.queueSize} · ${winOpen ? "●" : "○"} ${win ? `${win.startHour}-${win.endHour}h` : "—"}</div>
     `;
-    setStatusStyle(engineStatusEl, data.massMail.paused ? "error" : (winOpen ? "ok" : "warn"));
-    /* PETICION USUARIO 2026-05-05: ritmo dentro del cap (rate>=1) y dentro
-     * de la ventana = verde (todo OK). Fuera de ventana = naranja
-     * (operación pausada por horario). Si rate=0 = rojo (motor caído). */
+    setStatusStyle(engineStatusEl, mm.paused ? "error" : (winOpen ? "ok" : "warn"));
     setStatusStyle(engineQueueEl,
-      data.massMail.ratePerMinute < 1 ? "error" :
+      currentRate < 1 ? "error" :
       (winOpen ? "ok" : "warn"));
   } else {
     engineStatusEl.textContent = "NO CONFIGURADO";
