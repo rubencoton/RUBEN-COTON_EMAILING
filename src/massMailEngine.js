@@ -1260,9 +1260,13 @@ const createMassMailEngine = (config) => {
     return recipient.status === "sent";
   };
 
-  /* Contador para pausas humanas: cada 30-60 envios, hacemos break 3-8 min. */
+  /* P0 2026-05-06 (peticion usuario "ritmo alto sin entrar en spam"):
+   * pausas humanas mas eficientes pero seguras.
+   * ANTES: 30-60 envios / 3-8 min break -> eficiencia ~73%
+   * AHORA: 50-80 envios / 2-5 min break -> eficiencia ~85%
+   * Mantiene patron "humano" pero permite mas throughput. */
   let sentSinceLastBreak = 0;
-  let nextBreakAt = 30 + Math.floor(Math.random() * 31); /* 30-60 */
+  let nextBreakAt = 50 + Math.floor(Math.random() * 31); /* 50-80 */
 
   const start = () => {
     if (ticker) {
@@ -1298,10 +1302,11 @@ const createMassMailEngine = (config) => {
           __throttleHit = false;
         } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
           /* Pausa humana ~3-8 min */
-          const breakMs = (3 * 60 * 1000) + Math.floor(Math.random() * 5 * 60 * 1000);
+          /* P0 2026-05-06: pausa humana 2-5 min (era 3-8) para mas eficiencia. */
+          const breakMs = (2 * 60 * 1000) + Math.floor(Math.random() * 3 * 60 * 1000);
           console.log(`[massMail] pausa humana ${Math.round(breakMs / 60000)}min tras ${sentSinceLastBreak} envios`);
           sentSinceLastBreak = 0;
-          nextBreakAt = 30 + Math.floor(Math.random() * 31);
+          nextBreakAt = 50 + Math.floor(Math.random() * 31); /* 50-80 */
           nextDelay = breakMs;
         } else {
           /* P0-FIX 2026-05-01: ELIMINAR distribución adaptativa que causaba
