@@ -3204,15 +3204,14 @@ refreshSheetsList();
 if (!window.__rubencotonInitDone) {
   window.__rubencotonInitDone = true;
   init();
-  /* PETICION USUARIO 2026-05-06: actualizar KPIs en tiempo real sin
-   * tener que refrescar la pagina. Antes era cada 30s, ahora cada 8s
-   * para refresh casi instantaneo. Solo se ejecuta si la pestaña esta
-   * visible (evita carga innecesaria si usuario esta en otra app). */
-  const REFRESH_INTERVAL_MS = 8000;
-  /* Refresh ligero (solo KPIs barra superior + cola) — corre rapido */
-  const QUICK_REFRESH_INTERVAL_MS = 8000;
-  /* Refresh pesado (campañas + setup) — cada 30s suficiente */
-  const HEAVY_REFRESH_INTERVAL_MS = 30000;
+  /* P0 FIX 2026-05-06 (servidor se saturaba): bajar de 8s a 15s para
+   * QUICK refresh. El endpoint /api/panel devuelve el dashboard completo
+   * que es muy pesado. 8s saturaba CPU del container. 15s da balance
+   * entre responsividad y carga. */
+  const REFRESH_INTERVAL_MS = 15000;
+  const QUICK_REFRESH_INTERVAL_MS = 15000;
+  /* Refresh pesado (campañas + setup) — cada 60s suficiente */
+  const HEAVY_REFRESH_INTERVAL_MS = 60000;
   let _heavyRefreshAt = 0;
   setInterval(async () => {
     /* BLINDAJE: no refrescar si la pestaña está oculta (ahorra red/CPU). */

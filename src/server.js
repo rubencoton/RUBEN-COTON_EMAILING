@@ -934,7 +934,11 @@ app.get("/manual", (_req, res) => {
 /* Health endpoint optimizado — NO ejecuta sync en cada request */
 let _healthCache = null;
 let _healthCacheTime = 0;
-const HEALTH_CACHE_MS = 10000; /* cache 10 segundos */
+/* P0 FIX 2026-05-06 (servidor se saturaba): cache 30s en vez de 10s.
+ * /health se llama mucho (cron monitor + monitor externo + UI), y
+ * buildRuntimeStatus es pesado (incluye dashboard completo). 30s cache
+ * reduce CPU drasticamente sin afectar usabilidad. */
+const HEALTH_CACHE_MS = 30000;
 
 app.get("/health", async (_req, res) => {
   const now = Date.now();
