@@ -596,20 +596,41 @@ const createMassMailEngine = (config) => {
     __hardCounter += 1;
   };
   /* Capa 2: lee el archivo cada vez. Pequeño overhead (~5ms) pero
-   * INDEPENDIENTE de la memoria. Si memoria miente, archivo no. */
+   * INDEPENDIENTE de la memoria. Si memoria miente, archivo no.
+   * P1 FIX 2026-05-07: cache TTL 1s. A 10/min con isDailyCapReached()
+   * llamado 1+ veces por send, son 10+ I/O sync por minuto. Con cache de
+   * 1s reducimos ~80% sin perder garantía (si memoria sube de cap dentro
+   * del segundo, la capa 1 también lo detectará). */
+  let __fileSnapshotCache = -1;
+  let __fileSnapshotCacheAt = 0;
+  const FILE_SNAPSHOT_TTL_MS = 1000;
   const getDailyUsedFromFile = () => {
+    const now = Date.now();
+    if (__fileSnapshotCache >= 0 && now - __fileSnapshotCacheAt < FILE_SNAPSHOT_TTL_MS) {
+      return __fileSnapshotCache;
+    }
     try {
-      if (!fsLib.existsSync(STATE_FILE)) return 0;
+      if (!fsLib.existsSync(STATE_FILE)) {
+        __fileSnapshotCache = 0;
+        __fileSnapshotCacheAt = now;
+        return 0;
+      }
       const raw = fsLib.readFileSync(STATE_FILE, "utf-8");
       const j = JSON.parse(raw);
-      if (!Array.isArray(j.sendTimestamps)) return 0;
-      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      if (!Array.isArray(j.sendTimestamps)) {
+        __fileSnapshotCache = 0;
+        __fileSnapshotCacheAt = now;
+        return 0;
+      }
+      const cutoff = now - 24 * 60 * 60 * 1000;
       let n = 0;
       for (const t of j.sendTimestamps) if (t > cutoff) n++;
+      __fileSnapshotCache = n;
+      __fileSnapshotCacheAt = now;
       return n;
     } catch (_e) {
       /* Si el archivo no se puede leer, devolver -1 para forzar bloqueo
-       * conservador via Math.max abajo. */
+       * conservador via Math.max abajo. NO cachear el -1. */
       return -1;
     }
   };
@@ -794,7 +815,10 @@ const createMassMailEngine = (config) => {
 
     /* BLINDAJE: cap duro + LRU simple para evitar leak cuando hay miles de
      * dominios destinatarios. Al llegar al cap, cerrar y descartar el
-     * transporter más antiguo (primer key del Map). */
+     * transporter más antiguo (primer key del Map).
+     * P1 FIX 2026-05-07: garantizar delete-then-set para preservar el
+     * orden de inserción (LRU). Si mxHost ya estaba, el set+delete dejaba
+     * orden ambiguo. */
     const MAX_DIRECT_TRANSPORTS = 200;
     if (directTransportCache.size >= MAX_DIRECT_TRANSPORTS) {
       const oldestKey = directTransportCache.keys().next().value;
@@ -802,6 +826,8 @@ const createMassMailEngine = (config) => {
       try { oldest?.close?.(); } catch (_e) {}
       directTransportCache.delete(oldestKey);
     }
+    /* delete antes de set para que el orden de inserción siempre sea fresh */
+    if (directTransportCache.has(mxHost)) directTransportCache.delete(mxHost);
     directTransportCache.set(mxHost, directTransporter);
     return {
       mxHost,
@@ -1300,10 +1326,22 @@ const createMassMailEngine = (config) => {
    * queda muerto pero el contenedor sigue "healthy" para Docker. Watchdog:
    * cada 60s comprueba que se hizo un tick reciente. Si llevamos >5 min sin
    * tick (durante ventana abierta) o >15 min (fuera de ventana), reinicia
-   * el ticker automáticamente. */
+   * el ticker automáticamente.
+   *
+   * P0 FIX 2026-05-07 (segundo audit): añadir __tickerEpoch para evitar
+   * doble-tick si processNext() estaba colgado en un await y resuelve
+   * después de que el watchdog reinicie. El re-agendado verifica que su
+   * epoch coincida con el actual; si no, descarta el setTimeout zombi. */
   let __lastTickAt = Date.now();
   let __watchdogTimer = null;
   let __watchdogStartCount = 0;
+  let __tickerEpoch = 0;
+  /* P1 FIX 2026-05-07: contador de throttle-hits consecutivos.
+   * Si la cola tiene muchos items del mismo dominio, cada tick rebota por
+   * throttle y re-tickea cada 200ms — esto consume CPU sin enviar. Tras
+   * N consecutivos, esperar perDomainDelayMs completo en vez de 200ms. */
+  let __consecutiveThrottleHits = 0;
+  const MAX_CONSECUTIVE_THROTTLE_HITS = 10;
 
   const start = () => {
     if (ticker) {
@@ -1319,6 +1357,7 @@ const createMassMailEngine = (config) => {
      */
     const tickWithJitter = () => {
       __lastTickAt = Date.now(); /* P0 WATCHDOG: marca tick vivo */
+      const myEpoch = __tickerEpoch; /* snapshot epoch para detectar zombi */
       let nextDelay;
       try {
         if (!isWithinSendingWindow()) {
@@ -1331,8 +1370,19 @@ const createMassMailEngine = (config) => {
            * Asi el motor procesa el siguiente item de la cola sin perder
            * tiempo. Si tambien rebota, vuelve a intentar en 200ms. Es
            * O(N) ticks rapidos pero cada uno de 200ms, total <1s para
-           * encontrar un item enviable. */
-          nextDelay = 200;
+           * encontrar un item enviable.
+           *
+           * P1 FIX 2026-05-07: si llevamos >MAX consecutivos rebotando,
+           * todos los items de la cola probablemente son del mismo
+           * dominio throttled. Esperar perDomainDelayMs completo en vez
+           * de 200ms — ahorra CPU y reduce thrashing del event-loop. */
+          __consecutiveThrottleHits += 1;
+          if (__consecutiveThrottleHits >= MAX_CONSECUTIVE_THROTTLE_HITS) {
+            nextDelay = perDomainDelayMs;
+            __consecutiveThrottleHits = 0;
+          } else {
+            nextDelay = 200;
+          }
           __throttleHit = false;
         } else if (sentSinceLastBreak >= nextBreakAt && queue.length > 0) {
           /* Pausa humana ~3-8 min */
@@ -1363,14 +1413,23 @@ const createMassMailEngine = (config) => {
         nextDelay = getCurrentRateDelayMs();
       }
       processNext().then((wasSent) => {
-        if (wasSent) sentSinceLastBreak += 1;
+        if (wasSent) {
+          sentSinceLastBreak += 1;
+          /* P1 FIX 2026-05-07: reset throttle counter al enviar OK */
+          __consecutiveThrottleHits = 0;
+        }
       }).catch((error) => {
         addHistory({
           type: "engine_error",
           error: error.message || "unknown_engine_error"
         });
       });
-      ticker = setTimeout(tickWithJitter, nextDelay);
+      /* P0 FIX 2026-05-07: si el watchdog reinició mientras estábamos
+       * en este tick (myEpoch < __tickerEpoch), no re-agendar — somos
+       * un ticker zombi. El watchdog ya creó uno nuevo. */
+      if (myEpoch === __tickerEpoch) {
+        ticker = setTimeout(tickWithJitter, nextDelay);
+      }
     };
     ticker = setTimeout(tickWithJitter, getCurrentRateDelayMs());
 
@@ -1392,11 +1451,17 @@ const createMassMailEngine = (config) => {
               inWindow,
               count: __watchdogStartCount
             });
-            /* Forzar restart del ticker */
+            /* P0 FIX 2026-05-07: forzar restart del ticker.
+             * Incrementa epoch para invalidar cualquier ticker zombi que
+             * resuelva su await después. Resetea processing y __throttleHit
+             * por si quedaron en estado inconsistente. */
+            __tickerEpoch += 1;
             if (ticker) {
               clearTimeout(ticker);
               ticker = null;
             }
+            processing = false;        /* desbloquear si quedó zombie */
+            __throttleHit = false;     /* limpiar flag inconsistente */
             __lastTickAt = Date.now();
             ticker = setTimeout(tickWithJitter, 1000);
           }

@@ -616,11 +616,45 @@ class DataStore {
     this._flushTimer = null;
     this._dirty = false;
     this._flushing = false; /* lock anti-concurrencia */
+    /* P0 FIX 2026-05-07: índice email→contact para getContactByEmail O(1).
+     * Antes el motor caía en listContacts({}) que clona y escanea 56k contactos
+     * en CADA envío. */
+    this._contactsByEmailIndex = null; /* lazy: Map<email_lowercase, contact> */
+    this._indexBuiltAt = 0;
     ensureDataFile();
-    /* Flush garantizado al cerrar el proceso (sync OK aqui, ya cerramos) */
-    process.on("beforeExit", () => this._flushSync());
-    process.on("SIGTERM", () => { this._flushSync(); process.exit(0); });
-    process.on("SIGINT", () => { this._flushSync(); process.exit(0); });
+    /* Flush garantizado al cerrar el proceso (sync OK aqui, ya cerramos).
+     * P1 FIX 2026-05-07: process.once en lugar de on para evitar acumulación
+     * de listeners si DataStore se instancia múltiples veces. */
+    process.once("beforeExit", () => this._flushSync());
+    process.once("SIGTERM", () => { this._flushSync(); process.exit(0); });
+    process.once("SIGINT", () => { this._flushSync(); process.exit(0); });
+  }
+
+  /* P0 FIX 2026-05-07: getContactByEmail O(1) con índice lazy.
+   * Construye el índice la primera vez y se invalida en cada mutate(). */
+  _buildContactsIndex(contacts) {
+    const idx = new Map();
+    for (const c of contacts) {
+      if (c && c.email) {
+        idx.set(String(c.email).toLowerCase().trim(), c);
+      }
+    }
+    this._contactsByEmailIndex = idx;
+    this._indexBuiltAt = Date.now();
+  }
+
+  invalidateContactsIndex() {
+    this._contactsByEmailIndex = null;
+  }
+
+  getContactByEmail(email) {
+    if (!email) return null;
+    const key = String(email).toLowerCase().trim();
+    if (!this._contactsByEmailIndex) {
+      const store = this.read();
+      this._buildContactsIndex(store.contacts || []);
+    }
+    return this._contactsByEmailIndex.get(key) || null;
   }
 
   _scheduleFlush() {
@@ -679,8 +713,14 @@ class DataStore {
     }
   }
 
-  /* Flush SINCRONO — solo para shutdown handlers (proceso cerrando). */
+  /* Flush SINCRONO — solo para shutdown handlers (proceso cerrando).
+   * P0 FIX 2026-05-07: limpiar el timer pendiente para no dejar handles
+   * colgados. Importante en tests y cuando el proceso embebe DataStore. */
   _flushSync() {
+    if (this._flushTimer) {
+      clearTimeout(this._flushTimer);
+      this._flushTimer = null;
+    }
     if (!this._dirty || !this.store) return;
     this._dirty = false;
     try {
@@ -764,6 +804,9 @@ class DataStore {
     const store = this.read();
     const output = mutator(store);
     this.write(store);
+    /* P0 FIX 2026-05-07: invalidar índice de contactos al mutate.
+     * El próximo getContactByEmail lo reconstruirá lazy. */
+    this.invalidateContactsIndex();
     return output;
   }
 
