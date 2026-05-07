@@ -26,7 +26,14 @@ const HUB_PATH = path.resolve(__dirname, "..", "..", "RUBEN-COTON_API-GOOGLE");
 const TOKEN_LOCAL_PATH = path.join(HUB_PATH, "config", "token.json");
 
 let _oauthClient = null;
+let _oauthInitialized = false;       /* P0 FIX 2026-05-07: separar "inicializado" de "null" */
+let _oauthInitFailedAt = 0;          /* timestamp último intento fallido para retry */
 let _ready = null; /* cached ready state */
+const RETRY_INIT_AFTER_MS = 5 * 60 * 1000; /* reintentar init cada 5 min si falló */
+/* P0 FIX 2026-05-07: lock para writes atómicos del token local. Evita
+ * corrupción si dos refreshes concurrentes (Drive+Sheets+Gmail comparten
+ * cliente pero gaxios puede emitir varios "tokens"). */
+let _tokenWriteInFlight = false;
 
 function buildOAuthClient() {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -68,29 +75,63 @@ function buildOAuthClient() {
   }
   client.setCredentials(credentials);
 
-  /* Persistir refreshes automáticos SOLO en local */
+  /* Persistir refreshes automáticos SOLO en local.
+   * P0 FIX 2026-05-07: write atómico (tmp + rename) y lock para evitar
+   * corrupción si gaxios emite "tokens" concurrentemente. */
   client.on("tokens", (tokens) => {
+    if (_tokenWriteInFlight) return; /* otro write ya en curso */
+    _tokenWriteInFlight = true;
     try {
       if (!fs.existsSync(path.dirname(TOKEN_LOCAL_PATH))) return;
       const existing = fs.existsSync(TOKEN_LOCAL_PATH)
         ? JSON.parse(fs.readFileSync(TOKEN_LOCAL_PATH, "utf8"))
         : {};
       const merged = { ...existing, ...tokens };
-      fs.writeFileSync(TOKEN_LOCAL_PATH, JSON.stringify(merged, null, 2));
+      const tmp = `${TOKEN_LOCAL_PATH}.tmp-${process.pid}-${Date.now()}`;
+      fs.writeFileSync(tmp, JSON.stringify(merged, null, 2));
+      fs.renameSync(tmp, TOKEN_LOCAL_PATH);
     } catch (_e) { /* ignore */ }
+    finally {
+      _tokenWriteInFlight = false;
+    }
   });
 
   return client;
 }
 
+/* P0 FIX 2026-05-07: separar "inicializado" de "null".
+ * Antes: si buildOAuthClient() devolvía null (faltan creds), _oauthClient
+ * quedaba null permanentemente; el siguiente arranque (env restaurado)
+ * nunca reintentaba. Ahora: usamos flag _oauthInitialized y reintentamos
+ * cada RETRY_INIT_AFTER_MS si el último intento falló. */
 function getOAuthClient() {
-  if (_oauthClient === null) {
-    _oauthClient = buildOAuthClient();
+  /* Caso 1: ya inicializado con éxito → devolver cliente */
+  if (_oauthInitialized && _oauthClient) return _oauthClient;
+  /* Caso 2: nunca se intentó O fallo previo + ya pasaron 5 min → reintentar */
+  const now = Date.now();
+  if (!_oauthInitialized || (!_oauthClient && now - _oauthInitFailedAt > RETRY_INIT_AFTER_MS)) {
+    const c = buildOAuthClient();
+    if (c) {
+      _oauthClient = c;
+      _oauthInitialized = true;
+      _ready = true;
+      _oauthInitFailedAt = 0;
+    } else {
+      _oauthClient = null;
+      _oauthInitialized = true;
+      _oauthInitFailedAt = now;
+      _ready = false;
+    }
   }
   return _oauthClient;
 }
 
 function isGoogleReady() {
+  /* P0 FIX 2026-05-07: invalidar cache si fallo previo + ha pasado tiempo */
+  const now = Date.now();
+  if (_ready === false && now - _oauthInitFailedAt > RETRY_INIT_AFTER_MS) {
+    _ready = null; /* fuerza re-evaluación */
+  }
   if (_ready !== null) return _ready;
   _ready = !!getOAuthClient();
   return _ready;

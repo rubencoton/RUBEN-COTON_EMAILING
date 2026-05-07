@@ -69,7 +69,15 @@ async function scanReplies() {
     }
 
     let registered = 0;
+    let authErrorCount = 0;
     for (const m of msgs) {
+      /* P0 FIX 2026-05-07: si OAuth expira mid-loop, abortar el scan
+       * con código auth_expired en lugar de seguir tragando errores
+       * silenciosamente. Igual al bug del __hardCounter que coloó 18h. */
+      if (authErrorCount >= 3) {
+        console.warn(`[replyTracker] AUTH expirado tras ${authErrorCount} 401s consecutivos. Abortando scan.`);
+        return { ok: false, registered, reason: "auth_expired" };
+      }
       try {
         const get = await gmail.users.messages.get({
           userId: "me",
@@ -223,13 +231,29 @@ async function scanReplies() {
         } catch (_e) { /* no fallar el scan por writeback */ }
         registered += 1;
       } catch (err) {
-        console.warn("[replyTracker] error mensaje:", err.message);
+        /* P0 FIX 2026-05-07: detectar 401 (auth expirado) explícitamente.
+         * Si vienen 3 seguidos, abortamos el scan. */
+        const code = err.code || err.response?.status || 0;
+        const msg = String(err.message || "");
+        if (code === 401 || /invalid_grant|unauthoriz|invalid credentials/i.test(msg)) {
+          authErrorCount += 1;
+          console.warn(`[replyTracker] 401 en mensaje ${m.id}: ${msg.slice(0,80)} (acumulado ${authErrorCount})`);
+        } else {
+          console.warn("[replyTracker] error mensaje:", msg.slice(0, 200));
+        }
       }
     }
-    return { ok: true, scanned: msgs.length, registered };
+    return { ok: true, scanned: msgs.length, registered, authErrors: authErrorCount };
   } catch (err) {
-    console.error("[replyTracker] scan error:", err.message);
-    return { ok: false, error: err.message };
+    /* Detectar 401 también en el catch externo (pre-loop) */
+    const code = err.code || err.response?.status || 0;
+    const msg = String(err.message || "");
+    if (code === 401 || /invalid_grant|unauthoriz|invalid credentials/i.test(msg)) {
+      console.error("[replyTracker] AUTH expirado pre-scan:", msg.slice(0,120));
+      return { ok: false, error: msg, reason: "auth_expired" };
+    }
+    console.error("[replyTracker] scan error:", msg.slice(0,200));
+    return { ok: false, error: msg };
   }
 }
 
@@ -248,16 +272,26 @@ const guardedScan = async () => {
   }
 };
 
+/* P0 FIX 2026-05-07: trackear también el firstTimer para evitar timers
+ * huérfanos si start() se llama múltiples veces. */
+let _firstTimer = null;
+
 function start({ dataStore }) {
-  if (_ticker) return;
+  if (_ticker || _firstTimer) return; /* idempotente */
   _dataStoreRef = dataStore;
   /* Primera corrida pasados 2 minutos (deja arrancar otras rutinas) */
-  setTimeout(() => {
+  _firstTimer = setTimeout(() => {
+    _firstTimer = null;
     guardedScan().then((r) => r && console.log("[replyTracker] first scan:", JSON.stringify(r))).catch(() => {});
-  }, 2 * 60 * 1000).unref?.();
+  }, 2 * 60 * 1000);
+  _firstTimer.unref?.();
   _ticker = setInterval(() => {
     guardedScan().then((r) => {
       if (r && r.registered > 0) console.log("[replyTracker]", JSON.stringify(r));
+      /* P0 FIX 2026-05-07: si el scan reportó auth_expired, alertar */
+      if (r && r.reason === "auth_expired") {
+        console.error("[replyTracker] 🚨 AUTH EXPIRADO. Refrescar token OAuth manualmente.");
+      }
     }).catch(() => {});
   }, CHECK_INTERVAL_MS);
   _ticker.unref?.();
@@ -266,7 +300,9 @@ function start({ dataStore }) {
 
 function stop() {
   if (_ticker) clearInterval(_ticker);
+  if (_firstTimer) clearTimeout(_firstTimer);
   _ticker = null;
+  _firstTimer = null;
 }
 
 module.exports = { start, stop, scanReplies };

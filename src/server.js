@@ -3128,10 +3128,23 @@ app.post("/api/campaigns/:id/resend", (req, res) => {
  * P0 FIX 2026-05-05: el lock se setea AHORA solo justo antes del enqueueJob
  * real, no al inicio. Antes los returns tempranos por validacion (massive,
  * anti-spam, sin destinatarios) dejaban el lock 30s bloqueando el retry
- * legitimo del usuario tras confirmar el modal. */
+ * legitimo del usuario tras confirmar el modal.
+ *
+ * P0 FIX 2026-05-07: TTL automático de 60s para evitar leak si el setTimeout
+ * de cleanup nunca se ejecuta (ej: proceso reinicia en medio). En cada
+ * nueva entrada al endpoint, purgamos entries antiguos. */
 const sendCampaignLocks = new Map();
+const SEND_LOCK_TTL_MS = 60 * 1000;
+const purgeSendLocks = () => {
+  const now = Date.now();
+  for (const [k, ts] of sendCampaignLocks.entries()) {
+    if (now - ts > SEND_LOCK_TTL_MS) sendCampaignLocks.delete(k);
+  }
+};
 app.post("/api/campaigns/:id/send", (req, res) => {
   const campaignId = req.params.id;
+  /* P0 FIX 2026-05-07: purgar locks vencidos antes de chequear */
+  purgeSendLocks();
   if (sendCampaignLocks.get(campaignId)) {
     return apiError(res, 409, "Ya hay un envío en proceso para esta campaña. Espera unos segundos.");
   }
@@ -3210,9 +3223,11 @@ app.post("/api/campaigns/:id/send", (req, res) => {
      * Las validaciones previas (massive, anti-spam, score, sin destinatarios)
      * NO setean el lock — si fallan, el usuario puede reintentar al instante
      * tras corregir el problema o confirmar el modal. Solo bloqueamos doble
-     * enqueue real al motor. */
-    sendCampaignLocks.set(campaignId, Date.now());
+     * enqueue real al motor.
+     * P0 FIX 2026-05-07: setear lockSet=true ANTES del Map.set — defensa
+     * extra para garantizar que el finally siempre limpie el lock. */
     lockSet = true;
+    sendCampaignLocks.set(campaignId, Date.now());
 
     let job = null;
     try {

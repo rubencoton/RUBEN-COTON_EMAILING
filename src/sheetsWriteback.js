@@ -37,12 +37,31 @@ const MAX_BATCH_REQUESTS = 100;
 /* Cola en memoria. Cada item: {sheetId, gid, tabName, row, col, status, email, at} */
 const queue = [];
 let _flushTimer = null;
+/* P0 FIX 2026-05-07: lock anti-reentrant. Si scheduleFlush dispara durante
+ * un flush() lento (>1.5s en Sheets API), dos flushes concurrentes harían
+ * queue.shift() simultáneo → mismo item escrito 2 veces. */
+let _flushing = false;
 
 /* P0 FIX 2026-05-06 (saturacion VPS por 411 errores/min):
  * circuit breaker. Si un sheet+gid devuelve "after last column in grid",
  * marca la combinacion como rota y skipea futuras escrituras para evitar
- * loop de errores. Se logea SOLO la primera vez por sheet+gid. */
+ * loop de errores. Se logea SOLO la primera vez por sheet+gid.
+ *
+ * P0 FIX 2026-05-07: TTL 24h. Antes el Map crecía permanentemente; tras
+ * meses con sheets cambiantes, leak silencioso + bloqueo eterno aunque
+ * el schema se arregle. Ahora se purga al check si la entrada tiene >24h. */
 const skipBySheet = new Map(); // "sheetId|gid" -> { reason, at }
+const SKIP_TTL_MS = 24 * 60 * 60 * 1000;
+const isSheetSkipped = (key) => {
+  const entry = skipBySheet.get(key);
+  if (!entry) return false;
+  if (Date.now() - entry.at > SKIP_TTL_MS) {
+    skipBySheet.delete(key);
+    console.log(`[writeback] circuit breaker reset por TTL para ${key}`);
+    return false;
+  }
+  return true;
+};
 
 /* Cache para evitar duplicados rapidos: status mas alto gana.
  * Ej: si el mismo contacto recibe sent y luego open, solo escribimos open
@@ -94,9 +113,9 @@ const enqueue = (sheetMeta, status, email = "") => {
   if (!sheetMeta || !sheetMeta.sheetId || sheetMeta.gid == null || sheetMeta.row == null || sheetMeta.col == null) {
     return false;
   }
-  /* P0 FIX 2026-05-06: circuit breaker. Skip si sheet+gid esta marcado roto. */
+  /* P0 FIX 2026-05-06: circuit breaker con TTL 24h (refactor 2026-05-07). */
   const skipKey = `${sheetMeta.sheetId}|${sheetMeta.gid}`;
-  if (skipBySheet.has(skipKey)) {
+  if (isSheetSkipped(skipKey)) {
     return false;
   }
   if (!STATUS_COLOR[status]) {
@@ -128,95 +147,106 @@ const scheduleFlush = () => {
 };
 
 const flush = async () => {
+  /* P0 FIX 2026-05-07: lock anti-reentrant. Si scheduleFlush dispara
+   * durante un flush() lento, no permitir doble flush concurrente. */
+  if (_flushing) return { flushed: 0, reason: "already_flushing" };
   if (queue.length === 0) return { flushed: 0 };
-  const auth = getAuth();
-  if (!auth) {
-    console.warn("[writeback] OAuth no configurado, descartando cola");
-    queue.length = 0;
-    return { flushed: 0, reason: "no_auth" };
-  }
-  const sheets = google.sheets({ version: "v4", auth });
-
-  /* Agrupar por sheetId, max MAX_BATCH_REQUESTS por sheet */
-  const bySheet = {};
-  let processed = 0;
-  while (queue.length > 0 && processed < MAX_BATCH_REQUESTS * 5) {
-    const e = queue.shift();
-    if (!bySheet[e.sheetId]) bySheet[e.sheetId] = [];
-    if (bySheet[e.sheetId].length >= MAX_BATCH_REQUESTS) {
-      /* Devolver al final de la cola para siguiente tick */
-      queue.push(e);
-      break;
-    }
-    bySheet[e.sheetId].push(e);
-    processed++;
-  }
-
+  _flushing = true;
   let totalUpdated = 0;
-  for (const [sheetId, items] of Object.entries(bySheet)) {
-    const requests = items.map((it) => {
-      const colors = STATUS_COLOR[it.status];
-      const upperLabel = STATUS_LABEL_UPPER[it.status] || String(it.status).toUpperCase();
-      return {
-        updateCells: {
-          rows: [{
-            values: [{
-              userEnteredValue: { stringValue: upperLabel },
-              userEnteredFormat: {
-                backgroundColor: colors.bg,
-                textFormat: { foregroundColor: colors.fg, bold: true }
-              }
-            }]
-          }],
-          fields: "userEnteredValue,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
-          start: {
-            sheetId: Number(it.gid),
-            rowIndex: Number(it.row),
-            columnIndex: Number(it.col)
+  try {
+    const auth = getAuth();
+    if (!auth) {
+      console.warn("[writeback] OAuth no configurado, descartando cola");
+      queue.length = 0;
+      return { flushed: 0, reason: "no_auth" };
+    }
+    const sheets = google.sheets({ version: "v4", auth });
+
+    /* Agrupar por sheetId, max MAX_BATCH_REQUESTS por sheet */
+    const bySheet = {};
+    let processed = 0;
+    while (queue.length > 0 && processed < MAX_BATCH_REQUESTS * 5) {
+      const e = queue.shift();
+      if (!bySheet[e.sheetId]) bySheet[e.sheetId] = [];
+      if (bySheet[e.sheetId].length >= MAX_BATCH_REQUESTS) {
+        /* Devolver al final de la cola para siguiente tick */
+        queue.push(e);
+        break;
+      }
+      bySheet[e.sheetId].push(e);
+      processed++;
+    }
+
+    for (const [sheetId, items] of Object.entries(bySheet)) {
+      const requests = items.map((it) => {
+        const colors = STATUS_COLOR[it.status];
+        const upperLabel = STATUS_LABEL_UPPER[it.status] || String(it.status).toUpperCase();
+        return {
+          updateCells: {
+            rows: [{
+              values: [{
+                userEnteredValue: { stringValue: upperLabel },
+                userEnteredFormat: {
+                  backgroundColor: colors.bg,
+                  textFormat: { foregroundColor: colors.fg, bold: true }
+                }
+              }]
+            }],
+            fields: "userEnteredValue,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
+            start: {
+              sheetId: Number(it.gid),
+              rowIndex: Number(it.row),
+              columnIndex: Number(it.col)
+            }
           }
-        }
-      };
-    });
-    try {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: sheetId,
-        requestBody: { requests }
+        };
       });
-      totalUpdated += items.length;
-    } catch (e) {
-      /* P0 FIX 2026-05-06: detectar errores PERMANENTES de schema y marcar
-       * sheet+gid como roto para no reintentar mas. Eliminamos el spam de
-       * 411 errores/min que saturaba el VPS. */
-      const isSchemaError = /after last column in grid|exceeds grid limits|invalid range|not found|gridcoordinate|not a valid|invalid requests/i.test(e.message);
-      if (isSchemaError) {
-        const failedKeys = new Set();
-        for (const it of items) {
-          const key = `${it.sheetId}|${it.gid}`;
-          if (!skipBySheet.has(key)) {
-            skipBySheet.set(key, { reason: e.message.slice(0, 120), at: Date.now() });
-            failedKeys.add(key);
+      try {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: sheetId,
+          requestBody: { requests }
+        });
+        totalUpdated += items.length;
+      } catch (e) {
+        /* P0 FIX 2026-05-06: detectar errores PERMANENTES de schema y marcar
+         * sheet+gid como roto para no reintentar mas. Eliminamos el spam de
+         * 411 errores/min que saturaba el VPS. */
+        const isSchemaError = /after last column in grid|exceeds grid limits|invalid range|not found|gridcoordinate|not a valid|invalid requests/i.test(e.message);
+        if (isSchemaError) {
+          const failedKeys = new Set();
+          for (const it of items) {
+            const key = `${it.sheetId}|${it.gid}`;
+            if (!skipBySheet.has(key)) {
+              skipBySheet.set(key, { reason: e.message.slice(0, 120), at: Date.now() });
+              failedKeys.add(key);
+            }
           }
-        }
-        if (failedKeys.size > 0) {
-          console.warn(`[writeback] schema error PERMANENTE en ${Array.from(failedKeys).join(', ')}: ${e.message.slice(0, 100)}. NO reintentamos. Total skipped: ${skipBySheet.size}`);
-        }
-      } else {
-        console.warn(`[writeback] batchUpdate fallo en ${sheetId.slice(0,12)}: ${e.message}`);
-        /* Re-encolar para reintento si es 429/503 transitorios */
-        if (/429|503|quota/i.test(e.message)) {
-          for (const it of items) queue.push(it);
+          if (failedKeys.size > 0) {
+            console.warn(`[writeback] schema error PERMANENTE en ${Array.from(failedKeys).join(', ')}: ${e.message.slice(0, 100)}. NO reintentamos. Total skipped: ${skipBySheet.size}`);
+          }
+        } else {
+          console.warn(`[writeback] batchUpdate fallo en ${sheetId.slice(0,12)}: ${e.message}`);
+          /* Re-encolar para reintento si es 429/503 transitorios */
+          if (/429|503|quota/i.test(e.message)) {
+            for (const it of items) queue.push(it);
+          }
         }
       }
     }
-  }
 
-  if (totalUpdated > 0) {
-    console.log(`[writeback] ${totalUpdated} celdas Merge status actualizadas (cola pendiente: ${queue.length})`);
-  }
+    if (totalUpdated > 0) {
+      console.log(`[writeback] ${totalUpdated} celdas Merge status actualizadas (cola pendiente: ${queue.length})`);
+    }
 
-  /* Si quedan items, reagendar */
-  if (queue.length > 0) scheduleFlush();
-  return { flushed: totalUpdated, pending: queue.length };
+    return { flushed: totalUpdated, pending: queue.length };
+  } finally {
+    /* P0 FIX 2026-05-07: garantizar release del lock + reschedule si quedan
+     * items en cola, AUNQUE haya habido excepciones inesperadas. Antes el
+     * reschedule estaba fuera del try, lo cual fallaba si el bucle lanzaba
+     * antes de llegar al final. */
+    _flushing = false;
+    if (queue.length > 0) scheduleFlush();
+  }
 };
 
 const getQueueSize = () => queue.length;
