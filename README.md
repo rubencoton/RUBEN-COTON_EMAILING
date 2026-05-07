@@ -23,7 +23,24 @@ URL producción: <https://emailing.rubencoton.com>
 
 - **From:** `manager@rubencoton.com`
 - **Google Workspace Business:** límite oficial 2000 emails/24h
-- **Cap blindado:** **1950/24h** (50 emails de margen de seguridad)
+- **Cap blindado:** **1500/24h** (500 emails de margen). Reducido desde 1950 el 2026-05-07 tras detectar que Gmail rechazaba con `mailer-daemon` aún por debajo de 1950 (cuenta más estrictamente que nuestro counter: incluye bounces, retries, throttling internos).
+- **DNS:** `emailing.rubencoton.com` → A record en Hostinger apuntando a `187.77.166.84` (TTL 300s).
+
+## Auto-recuperación (sistema autónomo 24/7)
+
+Tras la auditoría exhaustiva del 2026-05-07 (33 fixes P0/P1 en 6 rondas), el sistema es **completamente autónomo**:
+
+| Mecanismo | Qué hace |
+|---|---|
+| **Watchdog interno** | Cada 60s vigila el ticker. Si lleva >5min sin tick (ventana abierta) o >15min (cerrada), reinicia automáticamente |
+| **`__hardCounter` resync** | Cada chequeo del cap resincroniza con archivo (rolling 24h real). Imposible quedar atascado |
+| **OAuth auto-retry** | Si las credenciales fallan, reintenta cada 5 min |
+| **Reply tracker abort en 401** | Si OAuth expira mid-scan, aborta con alerta en lugar de tragar errores silenciosamente |
+| **Gmail send retry** | 3 retries con backoff exponencial para 429/500/502/503 + timeout 30s |
+| **Sheets writeback lock** | Anti-reentrant + circuit breaker con TTL 24h |
+| **Docker `restart unless-stopped`** | Si Node crashea, contenedor reinicia solo |
+| **Ventana 8-20h auto** | Calculada con hora del servidor cada tick |
+| **Cap rolling 24h** | Slots se liberan automáticamente al expirar timestamps |
 
 ---
 
