@@ -614,20 +614,38 @@ const createMassMailEngine = (config) => {
     }
   };
   const isDailyCapReached = () => {
-    /* P0 FIX 2026-05-07: el hardCounter solo se reseteaba en increment(),
-     * pero si el motor se congela el reset nunca ocurre y bloquea envíos
-     * indefinidamente. Ahora se chequea el rollover de día también aquí. */
+    /* P0 FIX 2026-05-07: el hardCounter era monotónico (solo subía). Al
+     * cargar al boot incluía timestamps de las últimas 24h del día previo,
+     * y luego se sumaba cada envío del día actual. Eventualmente superaba
+     * el rolling 24h y bloqueaba aunque el rolling estuviera por debajo
+     * del cap.
+     *
+     * Fix: resincronizar hardCounter con el snapshot del archivo cada vez
+     * que se chequea el cap. Así hardCounter nunca diverge del rolling
+     * 24h por más de unos ms. La "Capa 3" sigue siendo defensa por si
+     * RAM y filesystem dan números corruptos: Math.max dará el mayor de
+     * los tres pero todos rolling. */
+    const fileSnapshot = getDailyUsedFromFile();
+    if (fileSnapshot >= 0) {
+      /* Resync hardCounter con archivo. Solo subir si archivo creció
+       * (hardCounter no debe ir hacia atrás artificialmente). */
+      if (fileSnapshot > __hardCounter) __hardCounter = fileSnapshot;
+      else if (fileSnapshot < __hardCounter - 5) {
+        /* Archivo bajó >5 respecto a hardCounter: timestamps expiraron.
+         * Resync hardCounter con archivo. */
+        __hardCounter = fileSnapshot;
+      }
+    }
+    /* Rollover de día calendario adicional (defensa para edge cases). */
     const todayCheck = new Date().toISOString().slice(0, 10);
     if (todayCheck !== __hardCounterDay) {
       __hardCounterDay = todayCheck;
-      const fileSnapshot = getDailyUsedFromFile();
-      __hardCounter = fileSnapshot >= 0 ? fileSnapshot : 0;
-      console.log(`[CAP-RESET] día rotó → hardCounter=${__hardCounter} (sync con archivo)`);
+      console.log(`[CAP-DAY-ROLLOVER] día rotó → hardCounter=${__hardCounter}`);
     }
     const cap = getEffectiveCap();
     const memCount = getDailyUsed();             /* Capa 1: RAM */
-    const fileCount = getDailyUsedFromFile();    /* Capa 2: filesystem */
-    const hardCount = __hardCounter;             /* Capa 3: hard counter */
+    const fileCount = fileSnapshot;              /* Capa 2: filesystem (ya leído arriba) */
+    const hardCount = __hardCounter;             /* Capa 3: hard counter (ya sincronizado) */
     /* Si CUALQUIERA llega al cap, bloquear. Math.max blindaje:
      * elegimos el MAYOR de los tres como verdad. Si fileCount=-1 (error
      * leyendo), Math.max ignora ese y usa los otros dos. */
