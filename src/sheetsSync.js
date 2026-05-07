@@ -411,8 +411,9 @@ const runSync = async (dataStore) => {
             });
             tabCreated += report.created;
             tabUpdated += report.updated;
-            /* Liberar memoria entre batches */
-            if (typeof global.gc === "function") global.gc();
+            /* P1 FIX 2026-05-07: quitado global.gc() — bloqueaba event loop
+             * agresivamente en hojas grandes. Si hay leak real, perfilar
+             * con --inspect en lugar de forzar GC sincrónica. */
           }
 
           sheetContacts += tabCreated + tabUpdated;

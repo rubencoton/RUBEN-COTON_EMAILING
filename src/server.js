@@ -30,11 +30,18 @@ const sheetsWriteback = require("./sheetsWriteback");
 const trackingSign = require("./trackingSign");
 const pdfGen = require("./pdfGen");
 
-/* Helper writeback: busca _sheetMeta del contacto y encola update */
+/* Helper writeback: busca _sheetMeta del contacto y encola update.
+ * P0 FIX 2026-05-07: usar getContactByEmail O(1) en lugar de listContacts({search})
+ * que clonaba+filtraba 56k contactos en cada open/click. */
 const wbForEmail = (email, status) => {
   try {
-    const all = dataStore.listContacts({ search: email });
-    const c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email || "").toLowerCase());
+    let c = null;
+    if (typeof dataStore.getContactByEmail === "function") {
+      c = dataStore.getContactByEmail(email);
+    } else {
+      const all = dataStore.listContacts({ search: email });
+      c = (all || []).find((x) => String(x.email || "").toLowerCase() === String(email || "").toLowerCase());
+    }
     if (!c) return;
     let meta = c.customFields?._sheetMeta || c.custom?._sheetMeta;
     if (typeof meta === "string") { try { meta = JSON.parse(meta); } catch (_e) { meta = null; } }
@@ -1183,7 +1190,10 @@ app.post("/api/contacts/cleanup", (req, res) => {
     const allContacts = dataStore.listContacts({});
     const toRemove = allContacts.filter((c) => {
       const hasSource = (c.sources || []).some((s) => s.startsWith(sourcePrefix));
-      return hasSource && !keepSet.has(c.email.toLowerCase());
+      /* P1 FIX 2026-05-07: guard contra c.email undefined (contactos importados
+       * de Sheets sin email validado). Antes crasheaba con TypeError. */
+      const emailLower = String(c.email || "").toLowerCase();
+      return hasSource && emailLower && !keepSet.has(emailLower);
     });
     let removed = 0;
     for (const c of toRemove) {
@@ -4196,8 +4206,15 @@ const processUnsubscribe = (email, source = "post") => {
   }
   if (!EMAIL_REGEX_UNSUB.test(decoded)) return { ok: false, reason: "invalid_format" };
   try {
-    const allContacts = dataStore.listContacts({});
-    const contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
+    /* P0 FIX 2026-05-07: getContactByEmail O(1) en lugar de listContacts({})
+     * que clonaba 56k contactos por cada baja. */
+    let contact = null;
+    if (typeof dataStore.getContactByEmail === "function") {
+      contact = dataStore.getContactByEmail(decoded);
+    } else {
+      const allContacts = dataStore.listContacts({});
+      contact = allContacts.find((c) => String(c.email || "").toLowerCase() === decoded);
+    }
     /* P0 audit 2026-05-01: enmascarar email en logs (Coolify retiene logs).
      * Pseudonimización GDPR Art. 32. */
     const masked = decoded.replace(/^(.{2}).*?(@.*)$/, "$1***$2");
@@ -4403,9 +4420,11 @@ const startServer = async () => {
               console.warn("[backup] excepcion backup:", e.message);
             }
           };
-          /* Primer backup a los 60s del arranque (no bloquea arranque) */
-          setTimeout(runBackup, 60_000);
-          setInterval(runBackup, intervalMs);
+          /* Primer backup a los 60s del arranque (no bloquea arranque).
+           * P1 FIX 2026-05-07: .unref() para no bloquear graceful shutdown. */
+          setTimeout(runBackup, 60_000).unref?.();
+          const backupInterval = setInterval(runBackup, intervalMs);
+          backupInterval.unref?.();
         } catch (e) {
           console.error("[backup] no se pudo programar backup auto:", e.message);
         }
@@ -4431,6 +4450,8 @@ const periodicSync = setInterval(() => {
     console.error("Periodic sync error:", error.message || error);
   }
 }, 60000);
+/* P1 FIX 2026-05-07: .unref() para no bloquear graceful shutdown */
+periodicSync.unref?.();
 
 /* Sheets sync — solo L-V 8:00-20:00 Europe/Madrid, cada 30 min */
 const SHEETS_AUTOSYNC_ENABLED = String(process.env.SHEETS_AUTOSYNC_ENABLED || "true").toLowerCase() !== "false";
@@ -4448,7 +4469,8 @@ if (sheetsSync.getSheetIds().length > 0 && SHEETS_AUTOSYNC_ENABLED) {
   const syncIntervalMs = SYNC_INTERVAL_MIN * 60000;
   console.log(`[sheetsSync] Auto-sync cada ${SYNC_INTERVAL_MIN}min L-V 8:00-20:00 Madrid (${sheetsSync.getSheetIds().length} hojas)`);
 
-  /* Sync inicial tras 30s si estamos en horario */
+  /* Sync inicial tras 30s si estamos en horario.
+   * P1 FIX 2026-05-07: .unref() en timer + interval para no bloquear graceful shutdown */
   setTimeout(() => {
     if (isBusinessHours()) {
       sheetsSync.runSync(dataStore).catch((err) => {
@@ -4457,14 +4479,15 @@ if (sheetsSync.getSheetIds().length > 0 && SHEETS_AUTOSYNC_ENABLED) {
     } else {
       console.log("[sheetsSync] Fuera de horario laboral — sync inicial omitido");
     }
-  }, 30000);
+  }, 30000).unref?.();
 
-  setInterval(() => {
+  const sheetsAutoSyncInterval = setInterval(() => {
     if (!isBusinessHours()) return;
     sheetsSync.runSync(dataStore).catch((err) => {
       console.error("[sheetsSync] Auto-sync error:", err.message);
     });
   }, syncIntervalMs);
+  sheetsAutoSyncInterval.unref?.();
 } else {
   console.log(`[sheetsSync] Auto-sync DESACTIVADO (SHEETS_AUTOSYNC_ENABLED=${SHEETS_AUTOSYNC_ENABLED}, hojas=${sheetsSync.getSheetIds().length})`);
 }
