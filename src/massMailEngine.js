@@ -614,6 +614,16 @@ const createMassMailEngine = (config) => {
     }
   };
   const isDailyCapReached = () => {
+    /* P0 FIX 2026-05-07: el hardCounter solo se reseteaba en increment(),
+     * pero si el motor se congela el reset nunca ocurre y bloquea envíos
+     * indefinidamente. Ahora se chequea el rollover de día también aquí. */
+    const todayCheck = new Date().toISOString().slice(0, 10);
+    if (todayCheck !== __hardCounterDay) {
+      __hardCounterDay = todayCheck;
+      const fileSnapshot = getDailyUsedFromFile();
+      __hardCounter = fileSnapshot >= 0 ? fileSnapshot : 0;
+      console.log(`[CAP-RESET] día rotó → hardCounter=${__hardCounter} (sync con archivo)`);
+    }
     const cap = getEffectiveCap();
     const memCount = getDailyUsed();             /* Capa 1: RAM */
     const fileCount = getDailyUsedFromFile();    /* Capa 2: filesystem */
