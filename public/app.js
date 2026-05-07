@@ -1932,7 +1932,10 @@ importConfirmBtn?.addEventListener("click", async () => {
   chatSend?.addEventListener("click", async () => {
     const msg = chatInput.value.trim();
     if (!msg) return;
-    appendChatMsg("user", `<p>${msg}</p>${currentSelection ? `<small style="opacity:.75">📌 Sobre: "${currentSelection.slice(0,80)}…"</small>` : ""}`);
+    /* P0 FIX 2026-05-07: esc() en mensajes del chat IA. Antes interpolaba
+     * msg/r.note/r.reply directamente en innerHTML → XSS si contenían
+     * payload tipo <img onerror=...> o si la IA generaba HTML inseguro. */
+    appendChatMsg("user", `<p>${esc(msg)}</p>${currentSelection ? `<small style="opacity:.75">📌 Sobre: "${esc(currentSelection.slice(0,80))}…"</small>` : ""}`);
     chatInput.value = "";
     chatSend.disabled = true;
     appendChatMsg("bot", `<p>⏳ Pensando con cascada IA…</p>`);
@@ -1950,9 +1953,9 @@ importConfirmBtn?.addEventListener("click", async () => {
       if (r.html) {
         htmlEditor.value = r.html;
         aiChatRefreshPreview();
-        appendChatMsg("bot", `<p>✅ Listo. He actualizado el email (<em>${r.providerName || r.provider || "IA"}</em>).</p>${r.note ? `<p>${r.note}</p>` : ""}`);
+        appendChatMsg("bot", `<p>✅ Listo. He actualizado el email (<em>${esc(r.providerName || r.provider || "IA")}</em>).</p>${r.note ? `<p>${esc(r.note)}</p>` : ""}`);
       } else if (r.reply) {
-        appendChatMsg("bot", `<p>${r.reply}</p>`);
+        appendChatMsg("bot", `<p>${esc(r.reply)}</p>`);
       } else {
         appendChatMsg("bot", `<p>Hmm, no he conseguido respuesta. Prueba a reformular.</p>`);
       }
@@ -1960,7 +1963,7 @@ importConfirmBtn?.addEventListener("click", async () => {
       chatSelected.style.display = "none";
     } catch (e) {
       chatHistory.removeChild(chatHistory.lastChild);
-      appendChatMsg("bot", `<p style="color:#fee">❌ Error: ${e.message}</p>`);
+      appendChatMsg("bot", `<p style="color:#fee">❌ Error: ${esc(e.message)}</p>`);
     } finally {
       chatSend.disabled = false;
     }
@@ -3176,7 +3179,8 @@ const refreshSheetsList = async () => {
       });
     });
   } catch (e) {
-    list.innerHTML = `<span style="color:#E65100">Error: ${e.message}</span>`;
+    /* P1 FIX 2026-05-07: esc() en mensajes de error */
+    list.innerHTML = `<span style="color:#E65100">Error: ${esc(e.message)}</span>`;
   }
 };
 

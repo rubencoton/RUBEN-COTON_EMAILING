@@ -418,7 +418,8 @@
                       <div class="ai-chat-preview-bar">
                         <span>🖱 Selecciona el texto del email que quieras modificar y escribe en el chat</span>
                       </div>
-                      <iframe id="aiChatFrame" class="ai-chat-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+                      <!-- P0 FIX 2026-05-07: sandbox sin allow-scripts para evitar XSS si la IA genera <script> que ejecutaría con cookies de sesión. allow-same-origin es necesario para que doc.write funcione. -->
+                      <iframe id="aiChatFrame" class="ai-chat-frame" sandbox="allow-same-origin"></iframe>
                     </div>
                     <div class="ai-chat-panel">
                       <div class="ai-chat-header">💬 Chat con IA</div>
