@@ -813,10 +813,15 @@ class DataStore {
   getOverview() {
     const store = this.read();
 
-    const subscribed = store.contacts.filter((c) => c.status === "subscribed").length;
-    const suppressed = store.contacts.filter((c) =>
-      ["unsubscribed", "bounced", "complained", "suppressed"].includes(c.status)
-    ).length;
+    /* P0 FIX 2026-05-07: un solo bucle en lugar de 2 filters separados.
+     * Antes recorría los 56k contactos 2 veces por cada llamada al panel
+     * (cada 15s desde el frontend). Ahora 1 sola pasada. */
+    let subscribed = 0;
+    let suppressed = 0;
+    for (const c of store.contacts) {
+      if (c.status === "subscribed") subscribed++;
+      else if (c.status === "unsubscribed" || c.status === "bounced" || c.status === "complained" || c.status === "suppressed") suppressed++;
+    }
 
     /* P0 fix 2026-05-04 (bug reportado por usuario): el dashboard mostraba
      * 18 campañas y 11 enviadas pero la tabla "Estado campañas" solo
@@ -2239,12 +2244,18 @@ class DataStore {
 
     const recipients = ensureArray(campaign.recipientsSnapshot);
 
-    const delivered = recipients.filter((item) => item.deliveredAt || item.sentAt).length;
-    const opened = recipients.filter((item) => item.openedAt).length;
-    const clicked = recipients.filter((item) => item.clickedAt).length;
-    const bounced = recipients.filter((item) => item.bouncedAt).length;
-    const unsubscribed = recipients.filter((item) => item.unsubscribedAt).length;
-    const complained = recipients.filter((item) => item.complainedAt).length;
+    /* P0 FIX 2026-05-07: un solo bucle en lugar de 6 filters. Antes
+     * recorría los recipients 6 veces por cada evento. Con jobs de
+     * 10k+ recipients y muchos eventos, blocking del event-loop. */
+    let delivered = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, complained = 0;
+    for (const item of recipients) {
+      if (item.deliveredAt || item.sentAt) delivered++;
+      if (item.openedAt) opened++;
+      if (item.clickedAt) clicked++;
+      if (item.bouncedAt) bounced++;
+      if (item.unsubscribedAt) unsubscribed++;
+      if (item.complainedAt) complained++;
+    }
 
     /* Replies: contar events únicos (por email) de type=reply en esta campaña. */
     const replyEmails = new Set();
