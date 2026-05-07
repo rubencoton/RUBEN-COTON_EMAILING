@@ -180,13 +180,13 @@ const validateContent = (html, text) => {
     score += 5 * imgsSinAlt;
   }
 
-  /* Links: shorteners */
+  /* Links: shorteners.
+   * P0 FIX 2026-05-07: usar matchAll en lugar de regex.exec con /g.
+   * El regex global mantiene lastIndex mutable; si validateContent se
+   * llama concurrentemente (varios jobs paralelos), corrupción del
+   * estado del regex compartido en módulo. matchAll crea iterator nuevo. */
   const linkRegex = /href=["'](https?:\/\/[^"']+)["']/gi;
-  const links = [];
-  let m;
-  while ((m = linkRegex.exec(htmlStr)) !== null) {
-    links.push(m[1]);
-  }
+  const links = Array.from(htmlStr.matchAll(linkRegex), (m) => m[1]);
   const shortenerHits = links.filter((url) => {
     try {
       const host = new URL(url).hostname.replace(/^www\./, "");

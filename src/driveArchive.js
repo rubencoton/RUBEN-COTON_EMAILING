@@ -469,9 +469,33 @@ async function restoreStoreFromDrive(dataFilePath) {
       { responseType: "arraybuffer" }
     );
     const content = Buffer.from(dl.data).toString("utf8");
+    /* P0 FIX 2026-05-07: validar JSON antes de sobrescribir disco.
+     * Si Drive devuelve un backup corrupto/truncado mid-flight, NO
+     * machacar el store local con basura. Mejor abortar y mantener
+     * lo que haya en local (aunque sea vacío). */
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      return { ok: false, reason: `backup_corrupted_invalid_json: ${e.message}` };
+    }
+    /* Validar shape mínimo: debe tener arrays contacts y events */
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.contacts)) {
+      return { ok: false, reason: "backup_invalid_shape (missing contacts array)" };
+    }
+    /* Validar tamaño mínimo: si es muy pequeño es sospechoso */
+    if (content.length < 100) {
+      return { ok: false, reason: `backup_too_small (${content.length} bytes)` };
+    }
     fs.mkdirSync(path.dirname(dataFilePath), { recursive: true });
     fs.writeFileSync(dataFilePath, content, "utf8");
-    return { ok: true, restored: latest.name, fileId: latest.id, size: content.length };
+    return {
+      ok: true,
+      restored: latest.name,
+      fileId: latest.id,
+      size: content.length,
+      contactsCount: parsed.contacts.length
+    };
   } catch (err) {
     return { ok: false, reason: err.message || "restore_failed" };
   }
