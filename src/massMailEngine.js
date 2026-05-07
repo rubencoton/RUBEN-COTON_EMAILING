@@ -1295,6 +1295,16 @@ const createMassMailEngine = (config) => {
   let sentSinceLastBreak = 0;
   let nextBreakAt = 80 + Math.floor(Math.random() * 41); /* 80-120 */
 
+  /* P0 WATCHDOG 2026-05-07: si el motor se congela (ej: bug, gc largo,
+   * await colgado en API externa), el ticker deja de re-agendar y el motor
+   * queda muerto pero el contenedor sigue "healthy" para Docker. Watchdog:
+   * cada 60s comprueba que se hizo un tick reciente. Si llevamos >5 min sin
+   * tick (durante ventana abierta) o >15 min (fuera de ventana), reinicia
+   * el ticker automáticamente. */
+  let __lastTickAt = Date.now();
+  let __watchdogTimer = null;
+  let __watchdogStartCount = 0;
+
   const start = () => {
     if (ticker) {
       return;
@@ -1308,6 +1318,7 @@ const createMassMailEngine = (config) => {
      *   - Fuera de ventana: tick cada 5 min (esperando reapertura).
      */
     const tickWithJitter = () => {
+      __lastTickAt = Date.now(); /* P0 WATCHDOG: marca tick vivo */
       let nextDelay;
       try {
         if (!isWithinSendingWindow()) {
@@ -1362,6 +1373,39 @@ const createMassMailEngine = (config) => {
       ticker = setTimeout(tickWithJitter, nextDelay);
     };
     ticker = setTimeout(tickWithJitter, getCurrentRateDelayMs());
+
+    /* P0 WATCHDOG 2026-05-07: arrancar watchdog que vigila el ticker.
+     * Si el ticker deja de marcar __lastTickAt, lo reinicia. */
+    if (!__watchdogTimer) {
+      __watchdogTimer = setInterval(() => {
+        try {
+          const ageMs = Date.now() - __lastTickAt;
+          const inWindow = isWithinSendingWindow();
+          /* Tolerancia: 5 min con ventana abierta, 15 min cerrada. */
+          const limitMs = inWindow ? 5 * 60 * 1000 : 15 * 60 * 1000;
+          if (ageMs > limitMs) {
+            __watchdogStartCount += 1;
+            console.warn(`[WATCHDOG] ticker congelado ${Math.round(ageMs/1000)}s (limite ${Math.round(limitMs/1000)}s, inWindow=${inWindow}). Reiniciando ticker. Count=${__watchdogStartCount}`);
+            addHistory({
+              type: "watchdog_restart",
+              ageSec: Math.round(ageMs / 1000),
+              inWindow,
+              count: __watchdogStartCount
+            });
+            /* Forzar restart del ticker */
+            if (ticker) {
+              clearTimeout(ticker);
+              ticker = null;
+            }
+            __lastTickAt = Date.now();
+            ticker = setTimeout(tickWithJitter, 1000);
+          }
+        } catch (e) {
+          console.error("[WATCHDOG] error:", e.message);
+        }
+      }, 60 * 1000); /* check cada 60s */
+      console.log("[WATCHDOG] iniciado (limite 5min ventana abierta, 15min cerrada)");
+    }
   };
 
   const stop = () => {
