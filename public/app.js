@@ -297,6 +297,30 @@ const __apiBanner = (() => {
   };
 })();
 
+/* P1 FEAT 2026-05-08 (peticion usuario "tarda mucho, pon que carga"):
+   loadingHint flotante arriba derecha. Devuelve {hide()} para ocultar
+   tras la operación. Inde de pantalla, siempre visible. */
+const loadingHint = (msg) => {
+  try {
+    const id = "lh_" + Math.random().toString(36).slice(2, 9);
+    const el = document.createElement("div");
+    el.id = id;
+    el.style.cssText = "position:fixed;top:12px;right:16px;background:#1a1a1a;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 6px 16px rgba(0,0,0,0.25);z-index:9998;display:flex;align-items:center;gap:8px;animation:abFadeIn 0.15s ease-out";
+    el.innerHTML = `<span style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:lhSpin 0.7s linear infinite;display:inline-block"></span><span>${esc(msg)}</span>`;
+    /* Animación spinner inyectada una sola vez */
+    if (!document.getElementById("lhSpinStyle")) {
+      const st = document.createElement("style");
+      st.id = "lhSpinStyle";
+      st.textContent = "@keyframes lhSpin { to { transform: rotate(360deg) } }";
+      document.head.appendChild(st);
+    }
+    document.body.appendChild(el);
+    return {
+      hide: () => { try { el.remove(); } catch (_) {} }
+    };
+  } catch (_) { return { hide: () => {} }; }
+};
+
 const api = async (url, options = {}, retryCount = 0) => {
   const MAX_RETRIES = 3;
   let response;
@@ -309,10 +333,16 @@ const api = async (url, options = {}, retryCount = 0) => {
       ...options
     });
   } catch (networkErr) {
-    /* Fetch fallo por red (timeout, conexion rota, cold start). Reintentar. */
+    /* P1 FIX 2026-05-08 (peticion usuario "sale mucho lo de servidor arrancando"):
+       el banner ahora solo aparece A PARTIR DEL 2º RETRY (retryCount>=1).
+       El 1er retry es silencioso y muy rápido (300ms en vez de 1s) → cubre
+       blips invisibles sin que el usuario vea nada.
+       Si aún falla en 2º retry → banner. Si recupera → se oculta inmediato. */
     if (retryCount < MAX_RETRIES) {
-      __apiBanner.show(`🔄 Reconectando con el servidor… (intento ${retryCount + 1}/${MAX_RETRIES})`);
-      const delayMs = 1000 * Math.pow(2, retryCount); /* 1s, 2s, 4s */
+      if (retryCount >= 1) {
+        __apiBanner.show(`🔄 Reconectando…`);
+      }
+      const delayMs = retryCount === 0 ? 300 : 1500 * Math.pow(2, retryCount - 1); /* 300ms, 1.5s, 3s */
       await new Promise((r) => setTimeout(r, delayMs));
       return api(url, options, retryCount + 1);
     }
@@ -328,8 +358,11 @@ const api = async (url, options = {}, retryCount = 0) => {
 
   /* Cold start del backend devuelve 502/503/504 mientras arranca. Reintentar. */
   if ([502, 503, 504].includes(response.status) && retryCount < MAX_RETRIES) {
-    __apiBanner.show(`🔄 Servidor arrancando… (${retryCount + 1}/${MAX_RETRIES})`);
-    const delayMs = 1500 * Math.pow(2, retryCount);
+    /* P1 FIX 2026-05-08: banner solo desde 2º intento (silencio en blips). */
+    if (retryCount >= 1) {
+      __apiBanner.show(`🔄 Servidor arrancando…`);
+    }
+    const delayMs = retryCount === 0 ? 500 : 1500 * Math.pow(2, retryCount - 1);
     await new Promise((r) => setTimeout(r, delayMs));
     return api(url, options, retryCount + 1);
   }
@@ -339,7 +372,7 @@ const api = async (url, options = {}, retryCount = 0) => {
     throw new Error(data.message || "Error de API");
   }
 
-  /* Éxito tras reintento: ocultar banner. */
+  /* Éxito tras reintento: ocultar banner inmediato. */
   if (retryCount > 0) __apiBanner.hide();
 
   return data;
@@ -551,6 +584,9 @@ window.tplUnvalidate = async (id) => {
 };
 
 window.tplPreview = async (id) => {
+  /* P1 FEAT 2026-05-08 (peticion usuario "tarda mucho, pon que carga"):
+     loadingHint flotante visible mientras carga. Se oculta al terminar. */
+  const lh = loadingHint("Cargando vista previa…");
   try {
     const data = await api(`/api/templates/${id}`);
     const t = data.template;
@@ -577,6 +613,8 @@ window.tplPreview = async (id) => {
     modal.style.display = "flex";
   } catch (e) {
     rubenCotonAlert({ title: "No se pudo previsualizar", body: humanizeError(e), icon: "❌", tone: "error" });
+  } finally {
+    lh.hide();
   }
 };
 
@@ -654,16 +692,29 @@ window.tplPurge = async (id, name) => {
 };
 
 /* P1 FEAT 2026-05-08: render de la tabla de papelera. */
+/* P1 FEAT 2026-05-08 (peticion usuario): seleccion multiple estilo Gmail
+   en papelera. Checkbox por fila + cabecera con "select all" + barra
+   contextual de acciones (restaurar X / eliminar X) que aparece cuando
+   hay seleccion. */
+const __tplTrashSelected = new Set();
+
 const refreshTemplatesTrash = async () => {
   const tbody = qs("#templatesTrashTable tbody");
   const counter = qs("#tplTrashCount");
   if (!tbody) return;
+  /* Loading row mientras carga */
+  tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">⏳ Cargando papelera…</td></tr>';
   try {
     const r = await api("/api/templates?trashed=1");
     const trashed = r.templates || [];
     if (counter) counter.textContent = trashed.length ? `(${trashed.length})` : "";
+    /* Limpiar selecciones de plantillas que ya no estén en la papelera */
+    for (const id of Array.from(__tplTrashSelected)) {
+      if (!trashed.find((t) => t.id === id)) __tplTrashSelected.delete(id);
+    }
     if (!trashed.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">Papelera vacía 🗑</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">Papelera vacía 🗑</td></tr>';
+      __tplTrashUpdateBulkBar();
       return;
     }
     const now = Date.now();
@@ -674,8 +725,10 @@ const refreshTemplatesTrash = async () => {
       const remaining = Math.max(0, 30 - elapsedDays);
       const remainingColor = remaining <= 3 ? "#dc2626" : remaining <= 7 ? "#f59e0b" : "#6b7280";
       const safeName = esc(t.name).replace(/'/g, "\\'");
+      const isChecked = __tplTrashSelected.has(t.id) ? "checked" : "";
       return `
       <tr>
+        <td style="width:36px;text-align:center"><input type="checkbox" class="tpl-trash-cb" data-id="${t.id}" ${isChecked} style="cursor:pointer;width:16px;height:16px"></td>
         <td><strong>${esc(t.name)}</strong></td>
         <td>${esc(t.subject)}</td>
         <td style="font-size:0.85rem;color:#666">${fechaTrash}</td>
@@ -686,9 +739,106 @@ const refreshTemplatesTrash = async () => {
         </td>
       </tr>`;
     }).join("");
+    /* Wireup checkboxes */
+    qsa(".tpl-trash-cb").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        const id = cb.dataset.id;
+        if (cb.checked) __tplTrashSelected.add(id);
+        else __tplTrashSelected.delete(id);
+        __tplTrashUpdateBulkBar();
+        const all = qs("#tplTrashSelectAll");
+        if (all) {
+          all.checked = qsa(".tpl-trash-cb").every((c) => c.checked);
+          all.indeterminate = !all.checked && qsa(".tpl-trash-cb").some((c) => c.checked);
+        }
+      });
+    });
+    __tplTrashUpdateBulkBar();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center;padding:30px;color:#dc2626">Error: ${esc(e.message)}</td></tr>`;
+    /* P1 FIX 2026-05-08 (peticion usuario "me sale Error de API"):
+       mensaje mas claro que indica el endpoint que fallo. */
+    const msg = humanizeError(e);
+    tbody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;padding:30px;color:#dc2626"><div style="margin-bottom:8px">⚠️ No se pudo cargar la papelera</div><div style="font-size:12px;color:#991b1b">${esc(msg)}</div><button type="button" onclick="refreshTemplatesTrash()" style="margin-top:10px;background:#1a1a1a;color:#fff;border:0;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">🔄 Reintentar</button></td></tr>`;
+    console.warn("[refreshTemplatesTrash]", e.message);
   }
+};
+
+/* Barra contextual de acciones en bulk para papelera. */
+const __tplTrashUpdateBulkBar = () => {
+  let bar = qs("#tplTrashBulkBar");
+  const count = __tplTrashSelected.size;
+  if (count === 0) {
+    if (bar) bar.style.display = "none";
+    return;
+  }
+  if (!bar) {
+    /* Crear barra si no existe */
+    const trashSection = qs("#tplSectionTrash");
+    if (!trashSection) return;
+    bar = document.createElement("div");
+    bar.id = "tplTrashBulkBar";
+    bar.style.cssText = "display:none;background:#1a1a1a;color:#fff;border-radius:8px;padding:10px 16px;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.15)";
+    bar.innerHTML = `
+      <span id="tplTrashBulkCount" style="font-weight:700;font-size:14px"></span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" id="tplTrashBulkRestore" style="background:#16a34a;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px">↩ Restaurar seleccionadas</button>
+        <button type="button" id="tplTrashBulkPurge" style="background:#dc2626;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px">🗑 Eliminar seleccionadas</button>
+        <button type="button" id="tplTrashBulkClear" style="background:transparent;color:#fff;border:1px solid #4b5563;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px">Cancelar</button>
+      </div>
+    `;
+    /* Insertar antes de la tabla */
+    const tableWrap = trashSection.querySelector("table");
+    if (tableWrap?.parentElement) {
+      trashSection.insertBefore(bar, tableWrap.parentElement);
+    } else {
+      trashSection.prepend(bar);
+    }
+    /* Listeners de la barra */
+    qs("#tplTrashBulkRestore").addEventListener("click", () => __tplTrashBulkAction("restore"));
+    qs("#tplTrashBulkPurge").addEventListener("click", () => __tplTrashBulkAction("purge"));
+    qs("#tplTrashBulkClear").addEventListener("click", () => {
+      __tplTrashSelected.clear();
+      qsa(".tpl-trash-cb").forEach((c) => { c.checked = false; });
+      const all = qs("#tplTrashSelectAll");
+      if (all) { all.checked = false; all.indeterminate = false; }
+      __tplTrashUpdateBulkBar();
+    });
+  }
+  qs("#tplTrashBulkCount").textContent = `${count} plantilla${count !== 1 ? "s" : ""} seleccionada${count !== 1 ? "s" : ""}`;
+  bar.style.display = "flex";
+};
+
+/* Ejecuta acciones bulk: restore o purge para todas las seleccionadas. */
+const __tplTrashBulkAction = async (action) => {
+  const ids = Array.from(__tplTrashSelected);
+  if (!ids.length) return;
+  if (action === "purge") {
+    const ok = await rubenCotonConfirm({
+      title: "Eliminar permanentemente",
+      icon: "⚠️",
+      subtitle: `${ids.length} plantilla${ids.length !== 1 ? "s" : ""} seleccionada${ids.length !== 1 ? "s" : ""}`,
+      body: `Vas a eliminar <strong>${ids.length}</strong> plantilla${ids.length !== 1 ? "s" : ""} <strong>permanentemente</strong>.<br><br>No se puede deshacer.`,
+      confirmText: "Sí, eliminar todas"
+    });
+    if (!ok) return;
+  }
+  const lh = loadingHint(action === "restore" ? `Restaurando ${ids.length}…` : `Eliminando ${ids.length}…`);
+  let ok = 0, fail = 0;
+  for (const id of ids) {
+    try {
+      if (action === "restore") {
+        await api(`/api/templates/${id}/restore`, { method: "POST" });
+      } else {
+        await api(`/api/templates/${id}/permanent`, { method: "DELETE" });
+      }
+      ok++;
+    } catch (_) { fail++; }
+  }
+  lh.hide();
+  __tplTrashSelected.clear();
+  await refreshTemplatesTrash();
+  if (action === "restore") await refreshTemplates();
+  toast(`✅ ${ok} plantilla${ok !== 1 ? "s" : ""} ${action === "restore" ? "restaurada" + (ok !== 1 ? "s" : "") : "eliminada" + (ok !== 1 ? "s" : "")}${fail > 0 ? ` · ⚠️ ${fail} con error` : ""}`);
 };
 
 /* P1 REFACTOR 2026-05-08 (peticion usuario): 3 sub-tabs Crear/Mis/Papelera.
@@ -721,6 +871,18 @@ try {
   if (saved === "active" || saved === "trash") __activateTplSubTab(saved);
   /* "create" es el default visual, no hace falta activar explícitamente. */
 } catch (_) {}
+
+/* P1 FEAT 2026-05-08: select all en cabecera de papelera (estilo Gmail). */
+qs("#tplTrashSelectAll")?.addEventListener("change", (ev) => {
+  const checked = ev.target.checked;
+  qsa(".tpl-trash-cb").forEach((cb) => {
+    cb.checked = checked;
+    const id = cb.dataset.id;
+    if (checked) __tplTrashSelected.add(id);
+    else __tplTrashSelected.delete(id);
+  });
+  __tplTrashUpdateBulkBar();
+});
 
 /* P1 FEAT 2026-05-08: botón vaciar papelera completa. */
 qs("#tplEmptyTrashBtn")?.addEventListener("click", async () => {
@@ -772,6 +934,9 @@ document.addEventListener("rubencoton:tab", (ev) => {
 });
 
 window.tplEdit = async (id) => {
+  /* P1 FEAT 2026-05-08: loadingHint inmediato visible mientras se carga
+     la plantilla para edición (cambio de tab + populate form). */
+  const lh = loadingHint("Cargando plantilla…");
   try {
     /* P1 FIX UX#5 (audit 2026-05-08): si hay otra edición en curso con
        cambios en el editor HTML, pedir confirmación antes de sobrescribir.
@@ -847,6 +1012,8 @@ window.tplEdit = async (id) => {
     tplHtmlEditor?.dispatchEvent(new Event("input"));
   } catch (e) {
     rubenCotonAlert({ title: "No se pudo cargar el borrador", body: humanizeError(e), icon: "❌", tone: "error" });
+  } finally {
+    lh.hide();
   }
 };
 
