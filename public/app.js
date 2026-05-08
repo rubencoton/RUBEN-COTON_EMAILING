@@ -2057,6 +2057,72 @@ const refreshPanel = async () => {
       </div>
     `;
 
+    /* P0 FEAT 2026-05-08 (peticion usuario "puntuacion + comentario IA en
+       el resumen del dashboard"): bloque global con nota 0-10 ponderada
+       sobre apertura/clic/CTOR/respuesta/rebote, y diagnostico operativo
+       que destaca alertas (rebotes altos, apertura baja, etc.) y wins. */
+    const computeGlobalScore = () => {
+      if (totals.sent === 0) return null;
+      const sOpen   = Math.min(10, (summaryOpen   / 20) * 10);
+      const sClick  = Math.min(10, (summaryClick  / 5)  * 10);
+      const sCtor   = totals.opened > 0 ? Math.min(10, (summaryCtor / 25) * 10) : 0;
+      const sReply  = Math.min(10, (summaryReply  / 2)  * 10);
+      const sBounce = Math.max(0, 10 - ((Math.max(0, summaryBounce - 2) / 8) * 10));
+      const score = sOpen * 0.25 + sClick * 0.25 + sCtor * 0.25 + sReply * 0.15 + sBounce * 0.10;
+      return Math.round(score * 10) / 10;
+    };
+    const globalScore = computeGlobalScore();
+    const gradeOf = (s) => {
+      if (s == null) return { lbl: "EN FORMACIÓN", bg: "#e2e8f0", fg: "#475569" };
+      if (s >= 8)    return { lbl: "EXCELENTE",    bg: "#bbf7d0", fg: "#166534" };
+      if (s >= 6.5)  return { lbl: "BIEN",         bg: "#d1fae5", fg: "#065f46" };
+      if (s >= 5)    return { lbl: "REGULAR",      bg: "#fef3c7", fg: "#854d0e" };
+      if (s >= 3)    return { lbl: "FLOJO",        bg: "#fed7aa", fg: "#9a3412" };
+      return { lbl: "CRÍTICO", bg: "#fee2e2", fg: "#991b1b" };
+    };
+    const grade = gradeOf(globalScore);
+    const diagnose = () => {
+      if (totals.sent === 0) {
+        return "Aún no hay envíos completados. La puntuación se generará cuando llegue el primer lote de stats.";
+      }
+      const issues = [];
+      const wins = [];
+      if (summaryBounce >= 10)      issues.push(`🚨 Rebotes críticos (${fmtPct(summaryBounce)}) — limpia listas YA antes del próximo envío para no quemar reputación`);
+      else if (summaryBounce >= 5)  issues.push(`⚠️ Rebotes elevados (${fmtPct(summaryBounce)})`);
+      if (summaryOpen >= 20)        wins.push(`✅ Apertura excelente (${fmtPct(summaryOpen)})`);
+      else if (summaryOpen >= 15)   wins.push(`✅ Apertura buena (${fmtPct(summaryOpen)})`);
+      else if (summaryOpen < 10 && totals.sent > 100) issues.push(`📭 Apertura baja (${fmtPct(summaryOpen)}) — revisa asunto y pre-header`);
+      if (summaryClick >= 5)        wins.push(`🎯 Clics excelentes (${fmtPct(summaryClick)})`);
+      else if (summaryClick < 2 && totals.opened > 100) issues.push(`🖱️ CTR bajo (${fmtPct(summaryClick)}) — revisa CTAs y enlaces`);
+      if (summaryReply >= 1)        wins.push(`💬 Respuestas saludables (${fmtPct(summaryReply)})`);
+      const totalCamps = recentCamps.length;
+      const completed = recentCamps.filter(c => c.status === "completed" || c.status === "sent").length;
+      const sending   = recentCamps.filter(c => c.status === "sending").length;
+      const queued    = recentCamps.filter(c => c.status === "queued").length;
+      const ctxParts = [];
+      if (sending > 0)   ctxParts.push(`${sending} enviando ahora`);
+      if (queued > 0)    ctxParts.push(`${queued} en cola`);
+      if (completed > 0) ctxParts.push(`${completed} completada${completed === 1 ? "" : "s"}`);
+      const ctx = ctxParts.length ? ` · Estado: ${ctxParts.join(", ")}` : "";
+      if (issues.length === 0 && wins.length === 0) return `Datos en evaluación, aún pocos envíos para concluir.${ctx}`;
+      if (issues.length === 0) return `${wins.join(" · ")}. Sigue así.${ctx}`;
+      const winsStr = wins.length ? ` · 👍 ${wins.join(" · ")}` : "";
+      return `${issues.join(" · ")}${winsStr}.${ctx}`;
+    };
+    const scoreDisplay = globalScore != null
+      ? `<span style="font-size:32px;font-weight:900;color:#111;line-height:1">${globalScore.toFixed(1)}</span><span style="font-size:18px;color:#64748b;font-weight:700">/10</span>`
+      : `<span style="font-size:24px;font-weight:900;color:#94a3b8;line-height:1">— —</span>`;
+    const globalScoreBlock = `
+      <div style="background:#fff;border:2px solid #FF6B00;border-radius:12px;padding:16px 20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(255,107,0,0.08)">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:900;color:#FF6B00;letter-spacing:0.6px;text-transform:uppercase">📊 Puntuación global de la operación</div>
+          <div>${scoreDisplay}</div>
+          <div style="background:${grade.bg};color:${grade.fg};padding:5px 14px;border-radius:13px;font-weight:900;font-size:11px;letter-spacing:0.4px">${grade.lbl}</div>
+        </div>
+        <div style="font-size:13px;color:#475569;line-height:1.55">${esc(diagnose())}</div>
+      </div>
+    `;
+
     /* ---- 2) TABLA INDIVIDUAL CON PORCENTAJES + ETIQUETAS ----
      * PETICION USUARIO 2026-05-05 (segunda iteración): alturas fijas en
      * cada bloque (16/26/20px) para alinear horizontalmente entre filas
@@ -2165,7 +2231,7 @@ const refreshPanel = async () => {
       </table>
     `;
 
-    dashActivity.innerHTML = summaryBlock + tableBlock;
+    dashActivity.innerHTML = summaryBlock + globalScoreBlock + tableBlock;
   } else if (dashActivity) {
     dashActivity.innerHTML = '<p class="muted">Sin campañas activas. Pulsa "Crear campaña" en el menú lateral para empezar.</p>';
   }

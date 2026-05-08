@@ -42,6 +42,7 @@
 
 ### Cambios funcionales 2026-05-08 (post-hardening)
 - [x] (2026-05-08) `importContacts` deduplica por (email+source) en vez de email global. Sheets se reflejan literales — un email en 2 pestañas → 2 contactos.
+- [x] (2026-05-08) Dashboard: Puntuación global 0-10 + diagnóstico IA (alertas + wins) en el resumen de campañas en proceso.
 
 ### Pendientes detectados en audit 2026-05-08 (estado tras hardening)
 - [x] (2026-05-08) **CRITICO** `sendCampaignLocks`: ya tenía TTL 60s + purgeSendLocks. Añadido `.unref()` en cleanup setTimeout.

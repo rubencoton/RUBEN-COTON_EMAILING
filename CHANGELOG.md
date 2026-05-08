@@ -6,6 +6,36 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — Puntuación global + diagnóstico IA en dashboard
+
+### Contexto
+
+Petición usuario: "en el resumen del dashboard quiero una puntuación y un comentario de todas las campañas en proceso, una conclusión general (rebotes, etc.)".
+
+### Añadido
+
+#### `public/app.js` — bloque global tras "Resumen de campañas en proceso"
+
+- **Puntuación global 0-10** ponderada sobre todas las campañas en proceso:
+  - Apertura (peso 25%): 20% real → 10/10
+  - Clic (peso 25%): 5% real → 10/10
+  - CTOR (peso 25%): 25% real → 10/10
+  - Respuestas (peso 15%): 2% real → 10/10
+  - Rebotes (peso 10%): <2% → 10/10, ≥10% → 0/10 (penalización)
+- **Etiqueta cualitativa:** EXCELENTE / BIEN / REGULAR / FLOJO / CRÍTICO / EN FORMACIÓN.
+- **Diagnóstico narrativo:** issues + wins generados según umbrales:
+  - 🚨 Rebotes ≥10% → alerta crítica de limpieza de listas
+  - ⚠️ Rebotes 5-10% → atención
+  - ✅ Apertura ≥20% → win
+  - 📭 Apertura <10% → revisa asunto
+  - 🎯 Clics ≥5% → win
+  - 💬 Respuestas ≥1% → win
+  - Contexto operativo: "X enviando ahora, Y en cola, Z completadas"
+
+Aparece justo debajo del resumen de 6 métricas, antes de la tabla individual. Visible al abrir la app.
+
+---
+
 ## [2026-05-08] — Importación literal del Sheet (sin dedup por email global)
 
 ### Contexto
