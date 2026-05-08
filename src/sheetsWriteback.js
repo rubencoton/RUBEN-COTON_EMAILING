@@ -200,11 +200,50 @@ const flush = async () => {
       processed++;
     }
 
+    /* P0 FEAT 2026-05-08 (peticion usuario "que rebotados queden FUERA de la
+       lista visualmente"): para estados terminales negativos (rebotado,
+       unsubscribed, complained) tachamos toda la fila con strikethrough +
+       fondo gris claro. El motor ya filtra estos estados (no recibiran mas
+       envios), aqui hacemos el efecto visual. NO borramos la fila para no
+       invalidar los row indices de los contactos siguientes. */
+    const ROW_TACHADO_STATES = new Set(["rebotado", "unsubscribed"]);
+    const ROW_TACHADO_FORMAT = {
+      backgroundColor: { red: 0.93, green: 0.93, blue: 0.93 }, /* gris claro */
+      textFormat: {
+        foregroundColor: { red: 0.45, green: 0.45, blue: 0.45 },
+        strikethrough: true
+      }
+    };
+
     for (const [sheetId, items] of Object.entries(bySheet)) {
-      const requests = items.map((it) => {
+      const requests = [];
+      for (const it of items) {
         const colors = STATUS_COLOR[it.status];
         const upperLabel = STATUS_LABEL_UPPER[it.status] || String(it.status).toUpperCase();
-        return {
+
+        /* P0 FEAT 2026-05-08: si es estado "fuera de lista", tachar TODA
+           la fila ANTES de escribir Merge status (orden importante: la
+           celda Merge status conserva su color rojo encima del gris). */
+        if (ROW_TACHADO_STATES.has(it.status)) {
+          requests.push({
+            repeatCell: {
+              range: {
+                sheetId: Number(it.gid),
+                startRowIndex: Number(it.row),
+                endRowIndex: Number(it.row) + 1,
+                startColumnIndex: 0
+                /* sin endColumnIndex -> Sheets aplica a toda la fila */
+              },
+              cell: {
+                userEnteredFormat: ROW_TACHADO_FORMAT
+              },
+              fields: "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat.foregroundColor,userEnteredFormat.textFormat.strikethrough"
+            }
+          });
+        }
+
+        /* Celda Merge status (siempre, en todos los estados) */
+        requests.push({
           updateCells: {
             rows: [{
               values: [{
@@ -222,8 +261,8 @@ const flush = async () => {
               columnIndex: Number(it.col)
             }
           }
-        };
-      });
+        });
+      }
       try {
         await sheets.spreadsheets.batchUpdate({
           spreadsheetId: sheetId,

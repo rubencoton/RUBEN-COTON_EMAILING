@@ -6,6 +6,36 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — Tachado automático de filas REBOTADO/BAJA en Sheets
+
+### Contexto
+
+Petición usuario: "cuando un correo rebote o sea malo, que se ponga REBOTADO en Merge status Y que el contacto se quite de la lista de forma automática".
+
+### Decisión técnica
+
+- ❌ **Borrar fila físicamente:** descartado. Cambiar `row indices` invalidaría los `_sheetMeta` de TODOS los contactos debajo en la pestaña. Próxima escritura iría a fila equivocada.
+- ✅ **Tachar fila visualmente:** estado "fuera de lista activa" sin destruir referencias.
+
+### Cambiado
+
+#### `src/sheetsWriteback.js` — `flush()`
+
+- Para estados `rebotado` y `unsubscribed`, antes de escribir la celda Merge status se aplica un `repeatCell` a TODA la fila con:
+  - `backgroundColor`: gris claro `#ededed`
+  - `textFormat.foregroundColor`: gris medio `#737373`
+  - `textFormat.strikethrough`: true
+- La celda Merge status conserva su color/etiqueta REBOTADO/BAJA encima del gris (orden de requests garantiza override).
+- El motor de envío ya excluía estos estados via `eligible.filter` ([dataStore.js:1981](01_PROYECTOS/RUBEN-COTON_EMAILING/src/dataStore.js:1981)). Esto solo añade el efecto visual en el Sheet.
+
+### Resultado para el usuario
+
+- Fila tachada con strikethrough → "fuera de la lista" visualmente.
+- Filtrable/ocultable en Sheets por color → desaparece de la vista activa.
+- Trazabilidad histórica preservada (no se pierde la fila).
+
+---
+
 ## [2026-05-08] — Puntuación global + diagnóstico IA en dashboard
 
 ### Contexto
