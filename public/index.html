@@ -203,6 +203,10 @@
                 <div class="mode-selector" style="margin-top:8px">
                   <div class="mode-selector-label">¿CÓMO QUIERES CREAR LA PLANTILLA?</div>
                   <div class="mode-tabs">
+                    <!-- P1 FIX 2026-05-08 (peticion usuario "no se ve el texto"):
+                         estructura igual que campañas pero solo clase .tpl-tab
+                         (no .mode-tab para no chocar con handler campañas).
+                         Estilo via CSS .tpl-tab que tenga .mode-ico hijo. -->
                     <button type="button" class="tpl-tab is-active" data-tpl-view="gmail">
                       <span class="mode-ico">✍️</span>
                       <span class="mode-txt"><strong>Editor Gmail</strong><br><small>Escribir y formatear</small></span>

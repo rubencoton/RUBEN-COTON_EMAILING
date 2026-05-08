@@ -1042,6 +1042,48 @@ h3 {
   border-bottom-color: var(--brand-red);
 }
 
+/* P1 FIX 2026-05-08 (peticion usuario "no se ve el texto al seleccionar"):
+   cuando .tpl-tab está dentro de .mode-tabs (nuevo HTML del editor de
+   plantillas con icono+texto), aplicar estilo idéntico a .mode-tab de
+   campañas: flex, gradiente activo, texto siempre visible.
+   El selector ".mode-tabs > .tpl-tab" sobreescribe el .tpl-tab antiguo. */
+.mode-tabs > .tpl-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  margin-bottom: 0;
+  border-bottom: 2px solid #e5e7eb; /* anula border-bottom transparent del .tpl-tab old */
+  transition: all 0.15s;
+  color: var(--ink);
+}
+.mode-tabs > .tpl-tab:hover {
+  border-color: #FF6B00;
+  background: #fff8f0;
+  color: var(--ink);
+}
+.mode-tabs > .tpl-tab.is-active {
+  border-color: #FF6B00;
+  border-bottom-color: #FF6B00; /* anula sobrescrito del .tpl-tab.is-active old */
+  background: linear-gradient(135deg, #1a1a1a, #FF6B00);
+  color: #fff !important; /* fuerza blanco frente al .tpl-tab.is-active old (rojo invisible) */
+  box-shadow: 0 4px 12px rgba(255,107,0,0.25);
+}
+.mode-tabs > .tpl-tab.is-active .mode-txt strong,
+.mode-tabs > .tpl-tab.is-active .mode-txt small {
+  color: #fff;
+}
+.mode-tabs > .tpl-tab .mode-ico { font-size: 28px; flex-shrink: 0; }
+.mode-tabs > .tpl-tab .mode-txt { font-size: 13px; line-height: 1.35; }
+.mode-tabs > .tpl-tab .mode-txt strong { font-size: 14px; }
+.mode-tabs > .tpl-tab .mode-txt small { opacity: 0.85; font-size: 11px; display: block; margin-top: 2px; }
+
 .tpl-view { display: none; }
 .tpl-view.is-active { display: block; }
 
