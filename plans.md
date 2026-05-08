@@ -77,3 +77,42 @@ del `__hardCounter` (motor congelado 18h). 33 fixes P0/P1 aplicados.
 - [x] CHANGELOG.md v2.1.0 con todos los fixes.
 - [x] README actualizado con cap 1500 + sección auto-recuperación.
 - [x] plans.md (este archivo) con HITO 6.
+
+## HITO 7 - UX CAMPAÑAS (2026-05-08) ✅
+
+Mejoras de usabilidad en el formulario de creación de campañas tras
+detección de fricciones reales operando con tráfico de producción.
+
+### Cap diario
+- [x] Cap subido 1500 → 1600 → 1650 (Gmail estabilizado, sin más rebotes).
+- [x] DNS `emailing.rubencoton.com` arreglado vía Hostinger API (A record).
+
+### Pre-header (texto gris junto al asunto)
+- [x] Campo `previewText` en formulario de campaña (max 120 chars).
+- [x] Campo `previewText` en plantillas (`POST /api/templates`).
+- [x] Inyección automática en HTML del email vía `massMailEngine`
+      (div oculto al inicio del body con `display:none`).
+- [x] Trackeable y editable también desde plantillas guardadas.
+
+### Sistema de plantillas reutilizables
+- [x] Selector de plantilla en formulario campaña (`#campaignTemplateSelect`).
+- [x] Botón "⭐ Guardar como plantilla" en formulario campaña (3ª acción).
+- [x] Endpoint `POST /api/templates` reutilizado (CRUD ya existía).
+- [x] Filtro: solo plantillas con status `validada` o `borrador`.
+- [x] Selector → IMPORTA TODO el contenido (asunto + pre-header + HTML +
+      texto + editor Gmail) y SALTA AUTOMÁTICO a "Vista previa" para
+      que el usuario vea cómo queda el email.
+
+### Branding
+- [x] Favicon RUBEN COTON (logo RRSS) en `index.html`, `login.html`,
+      `manual.html`. Reemplaza el círculo genérico del navegador.
+      Fuente: Drive `1bFZ6RfoV96OFgvANj0nP5BCdCEQEWnCp` (4167x4167 PNG).
+
+### Trazabilidad
+- [x] CHANGELOG.md v2.2.0 con cambios HITO 7.
+- [x] plans.md (este archivo) con HITO 7.
+- [x] Commits descriptivos:
+      - `0f38028` feat(campañas): pre-header en formulario + plantillas
+      - `06c9a61` feat(plantillas): selector + botón guardar como plantilla
+      - `36e5db7` feat: favicon RUBEN COTON (logo RRSS)
+      - `459312e` feat(plantillas): seleccionar = importar TODO + Vista previa

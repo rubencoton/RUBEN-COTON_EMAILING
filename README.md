@@ -23,8 +23,21 @@ URL producción: <https://emailing.rubencoton.com>
 
 - **From:** `manager@rubencoton.com`
 - **Google Workspace Business:** límite oficial 2000 emails/24h
-- **Cap blindado:** **1500/24h** (500 emails de margen). Reducido desde 1950 el 2026-05-07 tras detectar que Gmail rechazaba con `mailer-daemon` aún por debajo de 1950 (cuenta más estrictamente que nuestro counter: incluye bounces, retries, throttling internos).
-- **DNS:** `emailing.rubencoton.com` → A record en Hostinger apuntando a `187.77.166.84` (TTL 300s).
+- **Cap blindado:** **1650/24h** (350 emails de margen). Histórico: 1950 → 1500 (2026-05-07 tras rebotes Gmail) → 1600 → 1650 (2026-05-08 tras estabilización 24h sin más rebotes).
+- **DNS:** `emailing.rubencoton.com` → A record en Hostinger apuntando a `187.77.166.84` (TTL 300s). Recreado el 2026-05-08 tras desaparecer del DNS.
+
+## Hand-off rápido (si te lías o el hilo se rompe)
+
+| Dato | Valor |
+|---|---|
+| URL app | `https://emailing.rubencoton.com` |
+| VPS | `187.77.166.84` (Coolify) |
+| App UUID Coolify | `mu245rbjcqd6jxx2ouyev8no` |
+| Repo | `https://github.com/rubencoton/RUBEN-COTON_EMAILING` (privado) |
+| Branch deploy | `main` (autodeploy activo) |
+| Cap actual | **1650/24h rolling** (env `MAIL_DAILY_CAP=1650`) |
+| Slot envíos | 8-13h: 10/min · 13-14h: 3/min · 14-18h: 4/min · 18-20h: 1/min · 20-08h: cerrado |
+| Trazabilidad | Cada cambio: README + CHANGELOG + plans.md + commit descriptivo |
 
 ## Auto-recuperación (sistema autónomo 24/7)
 

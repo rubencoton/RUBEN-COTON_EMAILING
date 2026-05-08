@@ -6,6 +6,88 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.2.0 — UX CAMPAÑAS + PLANTILLAS REUTILIZABLES
+
+### Contexto
+
+Tras estabilizar el motor (v2.1.0) y operar en producción con tráfico real,
+emergieron fricciones de UX al crear campañas: faltaba pre-header (texto
+gris junto al asunto en bandeja), faltaba reutilizar plantillas validadas,
+faltaba favicon de marca, y la app aparecía sin estilos por DNS perdido.
+
+### 🟠 P1 — Operación
+
+- **Cap diario subido `1500 → 1600 → 1650`**. Gmail estabilizado tras 24h
+  sin más rebotes; margen vs Google 2000 = **350 emails** (suficiente).
+- **DNS `emailing.rubencoton.com` recreado** vía Hostinger API (A record
+  → `187.77.166.84`, TTL 300). El dominio había desaparecido del DNS y la
+  app aparecía sin CSS porque ningún asset cargaba.
+
+### 🟢 P1 — Pre-header (preview text)
+
+#### `src/dataStore.js`
+- Campo `previewText` en `createTemplate` y `updateTemplate` (max 120 chars).
+
+#### `src/server.js`
+- `enqueueJob` propaga `previewText` del campaign al motor.
+
+#### `src/massMailEngine.js`
+- Inyección automática del pre-header como `<div style="display:none">…</div>`
+  al inicio del body si el HTML no contiene ya `preheader`/`preview-text`.
+- Si no hay `previewText` explícito, fallback a las primeras 100 chars del
+  `textBody`.
+
+#### `public/index.html`
+- Input `<input name="previewText">` en formulario de campaña, debajo del
+  asunto. Placeholder: "Pre-header (texto gris junto al asunto, recomendado
+  <90 caracteres)".
+
+### 🟢 P1 — Sistema de plantillas reutilizables
+
+#### `public/index.html`
+- Selector `<select id="campaignTemplateSelect">` en formulario campaña.
+- Botón "⭐ Guardar como plantilla" como 3ª acción del form (junto a
+  "Guardar borrador" y "Lanzar campaña").
+
+#### `public/app.js`
+- `populateCampaignTemplateSelect()`: carga plantillas con status
+  `validada` o `borrador`. Refresca al entrar en pestaña Campañas.
+- Handler `change` del selector: al elegir plantilla, **importa todo el
+  contenido** (sobrescribe asunto, pre-header, HTML, texto plano, editor
+  Gmail) y **salta automáticamente al modo "Vista previa"** para que el
+  usuario vea cómo queda visualmente el email importado.
+- Truco interno: pasa por modo "Pegar HTML" antes de "Vista previa" para
+  que `lastEditMode=html` y NO machaque el HTML completo de la plantilla
+  (DOCTYPE/head/styles) desde el contenido del editor Gmail.
+- Submit handler: 3 acciones (`draft`, `template`, `send`). La acción
+  `template` hace `POST /api/templates` con los datos del formulario.
+
+### 🟢 Branding
+
+- Favicon RUBEN COTON (logo RRSS) en `index.html`, `login.html`,
+  `manual.html`. Reemplaza el círculo genérico del navegador.
+- Fuente: Drive `1bFZ6RfoV96OFgvANj0nP5BCdCEQEWnCp` (PNG 4167x4167, 156KB).
+- Servido desde `/assets/favicon-rrss.png`.
+
+### Commits
+
+- `0f38028` feat(campañas): pre-header en formulario + plantillas
+- `06c9a61` feat(plantillas): selector + botón guardar como plantilla
+- `36e5db7` feat: favicon RUBEN COTON (logo RRSS) en index/login/manual
+- `459312e` feat(plantillas): seleccionar plantilla = importar TODO + Vista previa
+
+### Hand-off para próxima sesión (si el hilo se rompe)
+
+- App: `https://emailing.rubencoton.com` (Coolify VPS `187.77.166.84`)
+- App UUID Coolify: `mu245rbjcqd6jxx2ouyev8no`
+- Cap actual: **1650/24h rolling** (env `MAIL_DAILY_CAP=1650`)
+- Slot horario actual: 08-13h = 10/min, 13-14h = 3/min, 14-18h = 4/min,
+  18-20h = 1/min. Ventana cerrada 20:00-08:00.
+- Auto-deploy Coolify tras push a `main` activo.
+- Trazabilidad: README.md + CHANGELOG.md + plans.md + commits descriptivos.
+
+---
+
 ## [2026-05-07] — v2.1.0 — AUDITORÍA EXHAUSTIVA + BLINDAJE TOTAL
 
 ### Contexto
