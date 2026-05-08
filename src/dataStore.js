@@ -1527,6 +1527,19 @@ class DataStore {
     });
   }
 
+  /* P1 FEAT 2026-05-08: vaciar papelera completamente (todas las trashed).
+     Devuelve los IDs purgados para limpiar carpetas físicas de adjuntos. */
+  emptyTemplatesTrash() {
+    return this.mutate((store) => {
+      const purgedIds = [];
+      store.templates = store.templates.filter((tpl) => {
+        if (tpl.trashed) { purgedIds.push(tpl.id); return false; }
+        return true;
+      });
+      return { count: purgedIds.length, ids: purgedIds };
+    });
+  }
+
   /* P1 FEAT 2026-05-08: purga automática plantillas en papelera más
      antiguas que `days`. Llamado por cron diario.
      P1 FIX UX (audit 2026-05-08): retorna los IDs purgados además del

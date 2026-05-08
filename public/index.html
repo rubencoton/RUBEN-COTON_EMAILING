@@ -165,11 +165,16 @@
             Las plantillas eliminadas van a la <strong>🗑 papelera (30 días)</strong>.
           </p>
 
-          <!-- P1 FEAT 2026-05-08: sub-tabs "Mis plantillas" / "Papelera" -->
+          <!-- P1 FEAT 2026-05-08 (refactor petición usuario): 3 sub-tabs
+               Crear plantilla · Mis plantillas · Papelera. -->
           <div class="tpl-section-tabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid #e5e7eb">
-            <button type="button" class="tpl-section-tab is-active" data-tpl-section="active"
+            <button type="button" class="tpl-section-tab is-active" data-tpl-section="create"
                     style="padding:10px 18px;border:none;background:none;cursor:pointer;font-weight:600;border-bottom:3px solid #FF6B00;color:#FF6B00">
-              ⭐ Mis plantillas
+              ✏️ Crear plantilla
+            </button>
+            <button type="button" class="tpl-section-tab" data-tpl-section="active"
+                    style="padding:10px 18px;border:none;background:none;cursor:pointer;font-weight:600;border-bottom:3px solid transparent;color:#6b7280">
+              ⭐ Mis plantillas <span id="tplActiveCount" class="muted" style="font-size:11px"></span>
             </button>
             <button type="button" class="tpl-section-tab" data-tpl-section="trash"
                     style="padding:10px 18px;border:none;background:none;cursor:pointer;font-weight:600;border-bottom:3px solid transparent;color:#6b7280">
@@ -177,7 +182,8 @@
             </button>
           </div>
 
-          <div class="split-grid" id="tplSectionActive">
+          <!-- SUB-TAB: CREAR PLANTILLA (form) -->
+          <div id="tplSectionCreate">
             <div>
               <form id="templateForm" class="mail-form">
                 <input type="hidden" id="templateEditingId" value="" />
@@ -253,36 +259,38 @@
                   <p class="muted" style="font-size:11px;margin-top:6px">Máximo 10 MB total. Se copiarán automáticamente a las campañas que usen esta plantilla.</p>
                 </div>
 
-                <button type="submit" id="templateSubmitBtn">Guardar plantilla</button>
+                <button type="submit" id="templateSubmitBtn" style="background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-weight:800;padding:14px 28px;font-size:15px">💾 Guardar plantilla</button>
                 <p id="templateResult" class="mail-form-result">-</p>
               </form>
             </div>
-            <div>
-              <h3>Tus plantillas</h3>
-              <p class="muted" style="margin-top:-4px;margin-bottom:10px;font-size:0.85rem">
-                <span class="status-pill status-borrador">borrador</span> Pendiente de revisión ·
-                <span class="status-pill status-validado">validado</span> Ya revisado (se puede usar igualmente en campañas)
-              </p>
-              <table class="table" id="templatesTable">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Asunto</th>
-                    <th>Estado</th>
-                    <th>Actualizada</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+          </div>
+
+          <!-- SUB-TAB: MIS PLANTILLAS (lista, sin estado) -->
+          <div id="tplSectionActive" style="display:none">
+            <h3 style="margin-bottom:10px">Tus plantillas operativas</h3>
+            <p class="muted" style="margin-top:0;margin-bottom:14px;font-size:13px">
+              Estas son las plantillas que aparecen en el desplegable al crear campañas.
+              Puedes <strong>verlas, editarlas o moverlas a la papelera</strong>.
+            </p>
+            <table class="table" id="templatesTable">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Asunto</th>
+                  <th>Actualizada</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
 
           <!-- P1 FEAT 2026-05-08: vista PAPELERA (oculta por defecto). -->
           <div id="tplSectionTrash" style="display:none">
-            <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px">
-              🗑 Las plantillas en papelera se eliminan <strong>automáticamente tras 30 días</strong>.
-              Puedes restaurarlas o eliminarlas permanentemente antes.
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;flex-wrap:wrap">
+              <span>🗑 Las plantillas en papelera se eliminan <strong>automáticamente tras 30 días</strong>.
+              Puedes restaurarlas o eliminarlas permanentemente antes.</span>
+              <button type="button" id="tplEmptyTrashBtn" style="background:#dc2626;color:#fff;border:0;padding:9px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">🗑 Vaciar papelera</button>
             </div>
             <table class="table" id="templatesTrashTable">
               <thead>

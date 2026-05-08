@@ -406,44 +406,32 @@ window.__contactsPrev = () => { if (contactsPage > 0) { contactsPage--; refreshC
 window.__contactsNext = () => { if (state.contactsHasMore) { contactsPage++; refreshContacts(); } };
 
 const renderTemplates = (templates) => {
-  const tplStatusLabels = { borrador: "Borrador", validado: "Validado" };
-
+  /* P1 REFACTOR 2026-05-08 (peticion usuario): eliminada la columna Estado.
+     Todas las plantillas guardadas son operativas (no hay borrador/validado).
+     Botón "Validar" eliminado. Solo quedan Ver / Editar / Eliminar. */
   templatesTableBody.innerHTML = templates
     .map((template) => {
-      const status = template.status || "borrador";
-      const label = tplStatusLabels[status] || status;
       const fechaBase = template.updatedAt || template.createdAt;
       const fecha = fechaBase ? new Date(fechaBase).toLocaleString("es-ES") : "-";
-      const isValidado = status === "validado";
-      const validateBtn = isValidado
-        ? `<button class="btn-sm btn-warn" onclick="tplUnvalidate('${template.id}')" title="Volver a borrador">↩ Desvalidar</button>`
-        : `<button class="btn-sm btn-success" onclick="tplValidate('${template.id}')" title="Marcar como listo para usar">✓ Validar</button>`;
+      const safeName = esc(template.name).replace(/'/g, "\\'");
       return `
       <tr>
-        <td><a href="javascript:void(0)" class="tpl-name-link" onclick="tplPreview('${template.id}')" title="Ver cómo queda este borrador"><strong>${esc(template.name)}</strong></a></td>
+        <td><a href="javascript:void(0)" class="tpl-name-link" onclick="tplPreview('${template.id}')" title="Ver cómo queda esta plantilla"><strong>${esc(template.name)}</strong></a></td>
         <td>${esc(template.subject)}</td>
-        <td><span class="status-pill status-${esc(status)}">${esc(label)}</span></td>
         <td style="font-size:0.85rem;color:#666">${fecha}</td>
         <td class="tpl-actions">
           <button class="btn-sm" onclick="tplPreview('${template.id}')" title="Ver cómo queda">👁 Ver</button>
           <button class="btn-sm" onclick="tplEdit('${template.id}')" title="Editar contenido">✎ Editar</button>
-          ${validateBtn}
-          <button class="btn-sm btn-danger" onclick="tplDelete('${template.id}','${esc(template.name).replace(/'/g, "\\'")}')" title="Mover a la papelera (30 días para restaurar)">🗑 Eliminar</button>
+          <button class="btn-sm btn-danger" onclick="tplDelete('${template.id}','${safeName}')" title="Mover a la papelera (30 días para restaurar)">🗑 Eliminar</button>
         </td>
       </tr>
     `;
     })
     .join("");
 
-  /* TODOS los borradores (validados y no validados) aparecen en los
-   * selectores de campana y workflow. El estado se indica en la etiqueta
-   * con un prefijo visual [✓ VALIDADO] o [✎ BORRADOR] para que el
-   * usuario sepa cual esta revisada sin bloquear el uso de borradores. */
-  const labelForSelect = (item) => {
-    const status = item.status || "borrador";
-    const mark = status === "validado" ? "✓ VALIDADO" : "✎ BORRADOR";
-    return `[${mark}] ${item.name} | ${item.subject}`;
-  };
+  /* P1 REFACTOR 2026-05-08: sin estados (todas las plantillas operativas).
+     Selector campañas/workflows muestra solo nombre + asunto, sin prefijos. */
+  const labelForSelect = (item) => `${item.name} · ${item.subject}`;
 
   fillSelectOptions(
     campaignTemplateSelect,
@@ -622,9 +610,9 @@ const refreshTemplatesTrash = async () => {
   }
 };
 
-/* P1 FEAT 2026-05-08: switch sub-tabs "Mis plantillas" / "Papelera".
-   P1 FIX UX#7 (audit 2026-05-08): persistir sub-tab activa en localStorage
-   para que tras refresh el usuario vuelva a la sub-tab donde estaba. */
+/* P1 REFACTOR 2026-05-08 (peticion usuario): 3 sub-tabs Crear/Mis/Papelera.
+   Tab "Crear plantilla" tiene el form. "Mis plantillas" lista. "Papelera"
+   con botón vaciar. Persiste sub-tab activa en localStorage. */
 const TPL_SUBTAB_KEY = "ui:tplSubTab";
 const __activateTplSubTab = (target) => {
   qsa(".tpl-section-tab").forEach((b) => {
@@ -633,12 +621,15 @@ const __activateTplSubTab = (target) => {
     b.style.color = isActive ? "#FF6B00" : "#6b7280";
     b.style.borderBottomColor = isActive ? "#FF6B00" : "transparent";
   });
+  const createEl = qs("#tplSectionCreate");
   const activeEl = qs("#tplSectionActive");
   const trashEl = qs("#tplSectionTrash");
+  if (createEl) createEl.style.display = target === "create" ? "" : "none";
   if (activeEl) activeEl.style.display = target === "active" ? "" : "none";
   if (trashEl) trashEl.style.display = target === "trash" ? "" : "none";
   try { localStorage.setItem(TPL_SUBTAB_KEY, target); } catch (_) {}
   if (target === "trash") refreshTemplatesTrash();
+  if (target === "active") refreshTemplates(); /* refresca contador y tabla */
 };
 qsa(".tpl-section-tab").forEach((btn) => {
   btn.addEventListener("click", () => __activateTplSubTab(btn.dataset.tplSection));
@@ -646,8 +637,28 @@ qsa(".tpl-section-tab").forEach((btn) => {
 /* Restaurar sub-tab al cargar (si hay valor guardado). */
 try {
   const saved = localStorage.getItem(TPL_SUBTAB_KEY);
-  if (saved === "trash") __activateTplSubTab("trash");
+  if (saved === "active" || saved === "trash") __activateTplSubTab(saved);
+  /* "create" es el default visual, no hace falta activar explícitamente. */
 } catch (_) {}
+
+/* P1 FEAT 2026-05-08: botón vaciar papelera completa. */
+qs("#tplEmptyTrashBtn")?.addEventListener("click", async () => {
+  const ok = await rubenCotonConfirm({
+    title: "Vaciar papelera",
+    icon: "⚠️",
+    subtitle: "Eliminar TODAS las plantillas en papelera",
+    body: "Esta acción <strong>elimina permanentemente</strong> todas las plantillas que están en la papelera (incluidos sus archivos adjuntos).<br><br>No se puede deshacer.",
+    confirmText: "Sí, vaciar papelera"
+  });
+  if (!ok) return;
+  try {
+    const r = await api("/api/templates/trash", { method: "DELETE" });
+    toast(`✅ ${r.message || "Papelera vaciada"}`);
+    await refreshTemplatesTrash();
+  } catch (e) {
+    rubenCotonAlert({ title: "No se pudo vaciar", body: humanizeError(e), icon: "❌", tone: "error" });
+  }
+});
 
 /* Refrescar papelera al entrar en la pestaña Plantillas (nº actualizado en counter). */
 document.addEventListener("rubencoton:tab", (ev) => {
@@ -687,9 +698,13 @@ window.tplEdit = async (id) => {
     const previewInput = templateForm?.querySelector('input[name="previewText"]');
     const textInput = templateForm?.querySelector('textarea[name="text"]');
 
+    /* P1 REFACTOR 2026-05-08: al editar, ir a sub-tab "Crear plantilla"
+       (donde está el formulario) para que el usuario vea el editor. */
+    if (typeof __activateTplSubTab === "function") __activateTplSubTab("create");
+
     if (editingIdEl) editingIdEl.value = t.id;
     if (editBannerEl) editBannerEl.style.display = "flex";
-    if (submitBtn) submitBtn.textContent = "Actualizar plantilla";
+    if (submitBtn) submitBtn.textContent = "💾 Actualizar plantilla";
     if (nameInput) nameInput.value = t.name || "";
     if (subjectInput) subjectInput.value = t.subject || "";
     if (previewInput) previewInput.value = t.previewText || "";
@@ -799,7 +814,7 @@ qs("#templateEditCancel")?.addEventListener("click", () => {
   const submitBtn = qs("#templateSubmitBtn");
   if (editingIdEl) editingIdEl.value = "";
   if (editBannerEl) editBannerEl.style.display = "none";
-  if (submitBtn) submitBtn.textContent = "Guardar plantilla";
+  if (submitBtn) submitBtn.textContent = "💾 Guardar plantilla";
   templateForm?.reset();
   if (tplHtmlEditor) tplHtmlEditor.value = "";
   tplHtmlEditor?.dispatchEvent(new Event("input"));
@@ -807,6 +822,11 @@ qs("#templateEditCancel")?.addEventListener("click", () => {
      de adjuntos se oculte sin polling. */
   if (editingIdEl) editingIdEl.dispatchEvent(new Event("change", { bubbles: true }));
 });
+
+/* P1 REFACTOR 2026-05-08: alias funciones obsoletas de validar para no
+   romper si alguna parte del código las invoca (ej. links internos). */
+window.tplValidate = window.tplValidate || (() => {});
+window.tplUnvalidate = window.tplUnvalidate || (() => {});
 
 const renderSegments = (segments) => {
   segmentsTableBody.innerHTML = segments
@@ -1731,6 +1751,9 @@ const refreshTemplates = async () => {
   const data = await api("/api/templates");
   state.templates = data.templates || [];
   renderTemplates(state.templates);
+  /* P1 REFACTOR 2026-05-08: actualizar contador en sub-tab "Mis plantillas" */
+  const counter = qs("#tplActiveCount");
+  if (counter) counter.textContent = state.templates.length ? `(${state.templates.length})` : "";
 };
 
 const refreshSegments = async () => {
@@ -2329,23 +2352,39 @@ templateForm?.addEventListener("submit", async (event) => {
   templateResult.textContent = editingId ? "Actualizando plantilla…" : "Guardando plantilla…";
 
   try {
+    let savedName = payload.name;
     if (editingId) {
-      await api(`/api/templates/${editingId}`, {
+      const r = await api(`/api/templates/${editingId}`, {
         method: "PUT",
         body: JSON.stringify(payload)
       });
-      templateResult.textContent = "✅ Plantilla actualizada (vuelve a estado borrador para revalidar).";
+      savedName = r.template?.name || savedName;
+      templateResult.textContent = "✅ Plantilla actualizada.";
     } else {
-      await api("/api/templates", {
+      const r = await api("/api/templates", {
         method: "POST",
         body: JSON.stringify(payload)
       });
-      templateResult.textContent = "✅ Plantilla guardada. Pulsa 'Validar' para usarla en campañas.";
+      savedName = r.template?.name || savedName;
+      templateResult.textContent = "✅ Plantilla guardada.";
     }
 
     /* Reset + salir de modo edición */
     qs("#templateEditCancel")?.click();
     await refreshTemplates();
+
+    /* P1 FEAT 2026-05-08 (peticion usuario): modal de confirmación tras
+       guardar y redirección automática a "Mis plantillas" para que el
+       usuario vea inmediatamente que la plantilla está integrada. */
+    await rubenCotonAlert({
+      title: editingId ? "Plantilla actualizada" : "Plantilla guardada",
+      body: `<strong>"${esc(savedName)}"</strong> ya está disponible en tus plantillas.<br><br>` +
+            `Aparecerá en el desplegable cuando crees una campaña.`,
+      icon: "✅",
+      tone: "success",
+      okText: "Ver mis plantillas"
+    });
+    __activateTplSubTab("active");
   } catch (error) {
     templateResult.textContent = `❌ Error: ${error.message}`;
     templateResult.style.color = "#dc2626";
@@ -2406,16 +2445,14 @@ const populateCampaignTemplateSelect = async () => {
   if (!sel) return;
   try {
     const r = await api("/api/templates");
-    /* P1 FIX BUG #3 (audit 2026-05-08): el status real en DB es "validado"
-       (sin 'a'). Antes filtraba por "validada" (typo) → solo pasaban borradores
-       y las plantillas validadas no aparecían con icono ✅ en el selector. */
-    const tpls = (r.templates || []).filter(t => t.status === "validado" || t.status === "borrador");
+    /* P1 REFACTOR 2026-05-08: sin estados, todas las plantillas son operativas. */
+    const tpls = r.templates || [];
     const current = sel.value;
     sel.innerHTML = '<option value="">— Empezar desde cero —</option>';
     tpls.forEach(t => {
       const opt = document.createElement("option");
       opt.value = t.id;
-      opt.textContent = `${t.status === "validado" ? "✅" : "📝"} ${t.name}`;
+      opt.textContent = `⭐ ${t.name}`;
       sel.appendChild(opt);
     });
     if (current) sel.value = current;

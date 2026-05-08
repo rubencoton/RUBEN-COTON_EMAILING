@@ -1389,6 +1389,38 @@ app.post("/api/templates/:id/restore", (req, res) => {
   }
 });
 
+/* P1 FEAT 2026-05-08: vaciar papelera (purga TODAS las plantillas trashed).
+   Limpia también los archivos físicos de adjuntos huérfanos. */
+app.delete("/api/templates/trash", (req, res) => {
+  try {
+    const result = dataStore.emptyTemplatesTrash();
+    /* Limpieza de carpetas adjuntos huérfanas. */
+    try {
+      const fsLib = require("fs");
+      const pathLib = require("path");
+      for (const id of (result.ids || [])) {
+        const safe = String(id).replace(/[^a-zA-Z0-9_-]/g, "");
+        const dir = pathLib.join(__dirname, "..", "data", "attachments", safe);
+        if (!fsLib.existsSync(dir)) continue;
+        for (const f of fsLib.readdirSync(dir)) {
+          try { fsLib.unlinkSync(pathLib.join(dir, f)); } catch (_) {}
+        }
+        try { fsLib.rmdirSync(dir); } catch (_) {}
+      }
+    } catch (e) {
+      console.warn(`[trash] cleanup error: ${e.message}`);
+    }
+    return apiOk(res, {
+      purged: result.count,
+      message: result.count > 0
+        ? `Papelera vaciada: ${result.count} plantilla${result.count !== 1 ? "s" : ""} eliminada${result.count !== 1 ? "s" : ""} permanentemente.`
+        : "La papelera ya estaba vacía."
+    });
+  } catch (error) {
+    return apiError(res, 500, error.message);
+  }
+});
+
 /* P1 FEAT 2026-05-08: borrado permanente inmediato (sin pasar por papelera).
    P1 FIX UX (audit 2026-05-08): borrar también la carpeta física de adjuntos
    de la plantilla para no dejar huérfanos en data/attachments/. */
