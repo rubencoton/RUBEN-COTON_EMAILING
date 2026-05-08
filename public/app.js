@@ -1100,15 +1100,17 @@ const updateCampaignSortIndicators = () => {
 };
 
 /* P1 FEAT 2026-05-08 (peticion usuario): scorecard por campaña.
-   Calcula nota A/B/C/D/F + diagnóstico breve diciendo qué falla:
-   contactos (bounce alto), asunto (apertura baja), copy (CTOR bajo)…
-   Devuelve null si la campaña no está completada/enviada. */
+   P2 REFACTOR 2026-05-08 (peticion usuario "que aparezca durante el envío,
+   no solo al completar"): ahora devuelve scorecard EN CUANTO hay envíos
+   (sent > 0), independiente del status. Marca inProgress=true si la
+   campaña aún está en sending/queued/paused para que la UI lo indique. */
 const getCampaignScorecard = (c) => {
-  if (!c || !["sent", "completed"].includes(c.status)) return null;
+  if (!c) return null;
   const s = c.stats || {};
   const total = s.totalRecipients || s.total || 0;
   const sent = s.sent || 0;
-  if (sent === 0) return null;
+  if (sent === 0) return null; /* sin datos aún → sin nota */
+  const inProgress = ["sending", "queued", "paused"].includes(c.status);
   const opened = s.openedUnique || s.opened || 0;
   const clicked = s.clickedUnique || s.clicked || 0;
   const bounced = s.bounced || 0;
@@ -1183,7 +1185,7 @@ const getCampaignScorecard = (c) => {
     ? issues.slice(0, 2).map(i => i.msg).join(" · ")
     : "✅ ¡Bien hecho! Esta campaña funciona muy bien — repite la fórmula";
 
-  return { score, score10, grade, gradeColor, gradeBg, diagnostic, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
+  return { score, score10, grade, gradeColor, gradeBg, diagnostic, inProgress, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
 };
 
 const renderCampaigns = (campaigns) => {
@@ -1351,8 +1353,14 @@ const renderCampaigns = (campaigns) => {
          para campañas completadas. Aparece como pill al lado del nombre +
          diagnóstico en línea siguiente. */
       const scorecard = getCampaignScorecard(c);
+      /* P2 REFACTOR 2026-05-08: si la campaña está en curso (sending/queued/
+         paused), añadir " · en curso" al badge para indicar que la nota
+         puede cambiar cuando termine. */
+      const liveSuffix = scorecard?.inProgress
+        ? ` <span style="opacity:0.65;font-weight:600;font-size:9.5px">· en curso</span>`
+        : "";
       const scorecardBadge = scorecard
-        ? `<span title="Nota global basada en aperturas, clics, conversión, respuestas, rebotes y spam" style="display:inline-block;background:${scorecard.gradeBg};color:${scorecard.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scorecard.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scorecard.grade}</span>`
+        ? `<span title="Nota global basada en aperturas, clics, conversión, respuestas, rebotes y spam${scorecard.inProgress ? '. Esta campaña aún está enviando, la nota se actualiza en vivo.' : '.'}" style="display:inline-block;background:${scorecard.gradeBg};color:${scorecard.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scorecard.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scorecard.grade}${liveSuffix}</span>`
         : "";
       const scorecardDiag = scorecard
         ? `<div style="font-size:10.5px;color:${scorecard.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scorecard.diagnostic)}</div>`
@@ -1805,7 +1813,8 @@ const refreshPanel = async () => {
             const finI = c.completedAt ? fmtFechaI(c.completedAt) : (["sending","queued","paused"].includes(c.status) ? "en curso" : "—");
             /* P1 FEAT 2026-05-08: scorecard también en dashboard de inicio */
             const scI = getCampaignScorecard(c);
-            const scBadgeI = scI ? `<span title="Nota global de esta campaña (0-10)" style="display:inline-block;background:${scI.gradeBg};color:${scI.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scI.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scI.grade}</span>` : "";
+            const liveSuffixI = scI?.inProgress ? ` <span style="opacity:0.65;font-weight:600;font-size:9.5px">· en curso</span>` : "";
+            const scBadgeI = scI ? `<span title="Nota global de esta campaña (0-10)${scI.inProgress ? ' · Actualizándose en vivo mientras envía' : ''}" style="display:inline-block;background:${scI.gradeBg};color:${scI.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scI.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scI.grade}${liveSuffixI}</span>` : "";
             const scDiagI = scI ? `<div style="font-size:10.5px;color:${scI.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scI.diagnostic)}</div>` : "";
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
