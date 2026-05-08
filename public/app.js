@@ -732,6 +732,19 @@ window.tplEdit = async (id) => {
     if (tplHtmlEditor) tplHtmlEditor.value = t.html || "";
     if (textInput) textInput.value = t.text || "";
 
+    /* P1 REFACTOR 2026-05-08: si la plantilla tiene HTML, también poblamos
+       el editor Gmail (extraemos el <body> si lo hay) por si el usuario
+       quiere editarlo en modo WYSIWYG. El click a codeTab está más abajo. */
+    const tplGmailEditorEl = qs("#tplGmailEditor");
+    if (tplGmailEditorEl) {
+      if (t.html) {
+        const bodyMatch = t.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        tplGmailEditorEl.innerHTML = bodyMatch ? bodyMatch[1] : t.html;
+      } else {
+        tplGmailEditorEl.innerHTML = "<p>Escribe aquí tu email como si lo estuvieras redactando en Gmail…</p>";
+      }
+    }
+
     /* Disparar evento sintético para que el observer/polling detecte
        el cambio de editingId y muestre la caja de adjuntos. */
     if (editingIdEl) {
@@ -2336,20 +2349,88 @@ document.addEventListener("submit", (e) => {
   }
 }, true);
 
-/* ── Template editor: tabs + live preview ── */
+/* ── Template editor: tabs + live preview ──
+   P1 REFACTOR 2026-05-08 (peticion usuario): mismas opciones que Crear
+   campania: Editor Gmail / Pegar HTML / Vista previa. Sin IA, sin Texto. */
 (() => {
   const tabs = qsa(".tpl-tab");
-  const views = { code: qs("#tplCodeView"), preview: qs("#tplPreviewView"), text: qs("#tplTextView"), ai: qs("#tplAiView") };
+  const views = {
+    gmail:   qs("#tplGmailView"),
+    code:    qs("#tplCodeView"),
+    preview: qs("#tplPreviewView")
+  };
+
+  /* Sincroniza tplGmailEditor → tplHtmlEditor (fuente de verdad).
+     Idéntico patrón al de campañas: wrap en <div dir="ltr">. */
+  const tplGmailEditor = qs("#tplGmailEditor");
+  const tplSyncFromGmail = () => {
+    if (tplGmailEditor && tplHtmlEditor) {
+      const body = tplGmailEditor.innerHTML;
+      tplHtmlEditor.value = `<div dir="ltr">${body}</div>`;
+    }
+  };
+
+  /* Recordamos qué modo fue el último que editó contenido.
+     Si el último era gmail, sincronizamos al ir a preview (y al guardar).
+     Si era code (HTML pegado), NO sobreescribimos htmlEditor.value. */
+  let tplLastEditMode = "gmail";
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
+      const prev = Array.from(tabs).find((x) => x.classList.contains("is-active"))?.dataset.tplView;
       tabs.forEach((t) => t.classList.remove("is-active"));
       Object.values(views).forEach((v) => v?.classList.remove("is-active"));
       tab.classList.add("is-active");
       const target = tab.dataset.tplView;
       views[target]?.classList.add("is-active");
-      if (target === "preview") updateTplPreview();
+      if (prev === "gmail" || prev === "code") tplLastEditMode = prev;
+      if (target === "preview") {
+        if (tplLastEditMode === "gmail") tplSyncFromGmail();
+        updateTplPreview();
+      }
     });
+  });
+
+  /* Toolbar Editor Gmail (botones .tpl-gm con data-cmd) */
+  qsa(".gmail-toolbar .tpl-gm[data-cmd]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      const cmd = el.dataset.cmd;
+      if (el.tagName === "SELECT") return;
+      if (el.tagName === "INPUT" && el.type === "color") return;
+      e.preventDefault();
+      tplGmailEditor?.focus();
+      try { document.execCommand(cmd, false, null); } catch (_) {}
+    });
+  });
+  qsa(".gmail-toolbar select.tpl-gm[data-cmd]").forEach((sel) => {
+    sel.addEventListener("change", () => {
+      tplGmailEditor?.focus();
+      try { document.execCommand(sel.dataset.cmd, false, sel.value); } catch (_) {}
+    });
+  });
+  qsa(".gmail-toolbar input.tpl-gm[type='color'][data-cmd]").forEach((c) => {
+    c.addEventListener("input", () => {
+      tplGmailEditor?.focus();
+      try { document.execCommand(c.dataset.cmd, false, c.value); } catch (_) {}
+    });
+  });
+  qs("#tplGmLinkBtn")?.addEventListener("click", () => {
+    const url = window.prompt("URL del enlace:", "https://");
+    if (!url) return;
+    tplGmailEditor?.focus();
+    try { document.execCommand("createLink", false, url); } catch (_) {}
+  });
+  qs("#tplGmImageBtn")?.addEventListener("click", () => {
+    const url = window.prompt("URL de la imagen:", "https://");
+    if (!url) return;
+    tplGmailEditor?.focus();
+    try { document.execCommand("insertImage", false, url); } catch (_) {}
+  });
+
+  /* Sincronización: cuando el usuario escribe en gmailEditor, actualizar
+     htmlEditor (fuente de verdad para guardar y para preview). */
+  tplGmailEditor?.addEventListener("input", () => {
+    if (tplLastEditMode !== "code") tplSyncFromGmail();
   });
 
   const updateTplPreview = () => {
@@ -2452,6 +2533,25 @@ document.addEventListener("submit", (e) => {
 templateForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const editingId = qs("#templateEditingId")?.value || "";
+
+  /* P1 REFACTOR 2026-05-08: si el modo activo es "Editor Gmail", sincronizar
+     gmailEditor → htmlEditor antes de enviar. Si es "Pegar HTML" o "Vista
+     previa", el htmlEditor ya tiene el contenido pegado por el usuario. */
+  const activeTab = qs(".tpl-tab.is-active")?.dataset.tplView;
+  const tplGmailEditorEl = qs("#tplGmailEditor");
+  if (activeTab === "gmail" && tplGmailEditorEl && tplHtmlEditor) {
+    const body = tplGmailEditorEl.innerHTML.trim();
+    /* Solo sobreescribir si hay contenido real (no el placeholder por defecto). */
+    if (body && !/^<p>Escribe aquí tu email/i.test(body)) {
+      tplHtmlEditor.value = `<div dir="ltr">${body}</div>`;
+    }
+  }
+  /* P1: auto-generar texto plano del HTML si está vacío. */
+  const txtArea = templateForm.querySelector('textarea[name="text"]');
+  if (txtArea && !txtArea.value && tplHtmlEditor?.value) {
+    txtArea.value = tplHtmlEditor.value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
   const formData = new FormData(templateForm);
   const payload = {
     name: String(formData.get("name") || "").trim(),

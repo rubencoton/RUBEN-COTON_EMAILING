@@ -195,29 +195,79 @@
                 <input name="subject" type="text" placeholder="Asunto" required />
                 <!-- P1 FEAT 2026-05-08: pre-header en plantillas -->
                 <input name="previewText" type="text" placeholder="Pre-header (texto gris junto al asunto, recomendado <90 caracteres)" maxlength="120" />
-                <div class="template-editor-tabs">
-                  <button type="button" class="tpl-tab" data-tpl-view="ai">🤖 Crear con IA</button>
-                  <button type="button" class="tpl-tab is-active" data-tpl-view="code">Código HTML</button>
-                  <button type="button" class="tpl-tab" data-tpl-view="preview">Vista previa</button>
-                  <button type="button" class="tpl-tab" data-tpl-view="text">Texto plano</button>
-                </div>
-                <div id="tplAiView" class="tpl-view">
-                  <div class="ai-builder-wrap">
-                    <div class="ai-builder-header">
-                      <div>
-                        <h3>Email Builder con IA</h3>
-                        <p class="muted">Genera emails HTML profesionales con inteligencia artificial. Cuando tengas el email listo, haz clic en "Usar en campaña" dentro del builder.</p>
-                      </div>
-                      <span class="ai-builder-badge">Qwen 2.5 14B</span>
-                    </div>
-                    <iframe id="aiBuilderFrame" class="ai-builder-frame" src="about:blank" allow="clipboard-write"></iframe>
-                    <div class="ai-builder-footer">
-                      <button type="button" id="aiBuilderLoadBtn" class="btn-ai-load">Cargar Email Builder</button>
-                      <p id="aiBuilderStatus" class="muted">Comprobando disponibilidad de IA local…</p>
-                    </div>
+                <!-- P1 REFACTOR 2026-05-08 (peticion usuario "que crear plantilla
+                     tenga las mismas opciones que crear campania"):
+                     3 tabs: Editor Gmail · Pegar HTML · Vista previa.
+                     Eliminado el tab 'Crear con IA' (problemas) y 'Texto plano'
+                     (no se usa). Texto plano se genera automaticamente del HTML. -->
+                <div class="mode-selector" style="margin-top:8px">
+                  <div class="mode-selector-label">¿CÓMO QUIERES CREAR LA PLANTILLA?</div>
+                  <div class="mode-tabs">
+                    <button type="button" class="tpl-tab is-active" data-tpl-view="gmail">
+                      <span class="mode-ico">✍️</span>
+                      <span class="mode-txt"><strong>Editor Gmail</strong><br><small>Escribir y formatear</small></span>
+                    </button>
+                    <button type="button" class="tpl-tab" data-tpl-view="code">
+                      <span class="mode-ico">📋</span>
+                      <span class="mode-txt"><strong>Pegar HTML</strong><br><small>Ya lo tengo hecho</small></span>
+                    </button>
+                    <button type="button" class="tpl-tab" data-tpl-view="preview">
+                      <span class="mode-ico">👁</span>
+                      <span class="mode-txt"><strong>Vista previa</strong><br><small>Cómo se verá</small></span>
+                    </button>
                   </div>
                 </div>
-                <div id="tplCodeView" class="tpl-view is-active">
+
+                <!-- MODO 1: Editor tipo Gmail (WYSIWYG) -->
+                <div id="tplGmailView" class="tpl-view is-active">
+                  <div class="gmail-toolbar">
+                    <select class="gm-font tpl-gm" data-cmd="fontName" title="Tipografía">
+                      <option value="Arial">Arial</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Times New Roman">Times</option>
+                      <option value="Courier New">Courier</option>
+                      <option value="Tahoma">Tahoma</option>
+                      <option value="Trebuchet MS">Trebuchet</option>
+                      <option value="Helvetica">Helvetica</option>
+                    </select>
+                    <select class="gm-size tpl-gm" data-cmd="fontSize" title="Tamaño">
+                      <option value="1">10</option>
+                      <option value="2">12</option>
+                      <option value="3" selected>14</option>
+                      <option value="4">16</option>
+                      <option value="5">18</option>
+                      <option value="6">24</option>
+                      <option value="7">32</option>
+                    </select>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="bold" title="Negrita"><b>B</b></button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="italic" title="Cursiva"><i>I</i></button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="underline" title="Subrayado"><u>U</u></button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="strikeThrough" title="Tachado"><s>S</s></button>
+                    <span class="gm-sep"></span>
+                    <input type="color" class="gm-color tpl-gm" data-cmd="foreColor" value="#1a1a1a" title="Color texto">
+                    <input type="color" class="gm-color tpl-gm" data-cmd="hiliteColor" value="#ffff00" title="Color fondo">
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="justifyLeft" title="Izquierda">⇤</button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="justifyCenter" title="Centrado">≡</button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="justifyRight" title="Derecha">⇥</button>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="insertUnorderedList" title="Lista">• —</button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
+                    <span class="gm-sep"></span>
+                    <button type="button" class="gm-btn tpl-gm" id="tplGmLinkBtn" title="Insertar enlace">🔗</button>
+                    <button type="button" class="gm-btn tpl-gm" id="tplGmImageBtn" title="Insertar imagen">🖼</button>
+                    <button type="button" class="gm-btn tpl-gm" data-cmd="removeFormat" title="Quitar formato">✕ formato</button>
+                  </div>
+                  <div id="tplGmailEditor" class="gmail-editor" contenteditable="true" spellcheck="true">
+                    <p>Escribe aquí tu email como si lo estuvieras redactando en Gmail…</p>
+                  </div>
+                </div>
+
+                <!-- MODO 2: Pegar HTML directo -->
+                <div id="tplCodeView" class="tpl-view">
+                  <p class="mode-hint" style="margin-bottom:8px">Pega aquí tu HTML ya maquetado, <strong>adjunta un archivo .html</strong> o <strong>arrástralo a esta zona</strong>.</p>
                   <div class="html-dropzone" data-html-dropzone="tpl">
                     <div class="tpl-code-toolbar">
                       <label for="tplHtmlFile" class="tpl-upload-btn" title="Sube un archivo .html o arrástralo aquí">
@@ -229,20 +279,22 @@
                     <textarea id="tplHtmlEditor" name="html" rows="14" placeholder="Pega aquí tu código HTML… o arrastra un archivo .html sobre esta zona"></textarea>
                   </div>
                 </div>
+
+                <!-- MODO 3: Vista previa -->
                 <div id="tplPreviewView" class="tpl-view">
                   <div class="tpl-preview-frame-wrap">
                     <div class="tpl-preview-toolbar">
-                      <button type="button" class="tpl-device-btn is-active" data-width="100%">Desktop</button>
-                      <button type="button" class="tpl-device-btn" data-width="375px">Mobile</button>
+                      <button type="button" class="tpl-device-btn is-active" data-width="100%">🖥 Desktop</button>
+                      <button type="button" class="tpl-device-btn" data-width="375px">📱 Móvil</button>
                     </div>
                     <div class="tpl-preview-container" id="tplPreviewContainer">
                       <iframe id="tplPreviewFrame" class="tpl-preview-frame" sandbox="allow-same-origin"></iframe>
                     </div>
                   </div>
                 </div>
-                <div id="tplTextView" class="tpl-view">
-                  <textarea name="text" rows="14" placeholder="Texto plano (alternativa sin HTML)"></textarea>
-                </div>
+
+                <!-- Textarea oculto para texto plano (auto-generado del HTML) -->
+                <textarea name="text" style="display:none"></textarea>
                 <!-- P1 FEAT 2026-05-08: adjuntos por plantilla. Visibles solo
                      al EDITAR (cuando ya existe el id). Al crear, primero se
                      guarda la plantilla y después aparece la caja. -->
