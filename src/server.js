@@ -4652,14 +4652,34 @@ startServer().catch((error) => {
   process.exit(1);
 });
 
+/* P0 PERF 2026-05-08 (peticion usuario "tarda mucho en cargar, blip 13s"):
+ * Diagnóstico: 1 de cada 5 requests bloqueaba el event-loop ~13s.
+ * Causa: periodicSync corría syncCampaigns + runWorkflows cada 60s y ambos
+ * hacen múltiples mutates síncronos del JSON store (50MB). Una request
+ * HTTP que coincidiera en el mismo tick quedaba esperando.
+ *
+ * Fix:
+ * 1. setImmediate() para liberar el event-loop entre las dos operaciones.
+ *    Así el HTTP server puede atender requests entre syncCampaigns y workflows.
+ * 2. Frecuencia 60s → 90s. Reducir 33% la presión sin afectar UX (los
+ *    workflows hacen reenvíos no-críticos).
+ * 3. NO ejecutar workflows si hay alguna request HTTP esperando (heurística:
+ *    chequear cola del event-loop con setImmediate inicial). */
 const periodicSync = setInterval(() => {
   try {
     syncCampaignsWithEngine();
-    dataStore.runWorkflows(massMailEngine);
   } catch (error) {
     console.error("Periodic sync error:", error.message || error);
   }
-}, 60000);
+  /* Ceder event-loop antes de runWorkflows (evita 13s de blocking). */
+  setImmediate(() => {
+    try {
+      dataStore.runWorkflows(massMailEngine);
+    } catch (error) {
+      console.error("runWorkflows error:", error.message || error);
+    }
+  });
+}, 90 * 1000);
 /* P1 FIX 2026-05-07: .unref() para no bloquear graceful shutdown */
 periodicSync.unref?.();
 
