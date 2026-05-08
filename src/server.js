@@ -3172,7 +3172,11 @@ app.delete("/api/templates/:id/attachments/:name", (req, res) => {
 /* P1 FEAT 2026-05-08: heredar adjuntos de plantilla → campaña.
    Cuando el usuario crea una campaña a partir de plantilla, este endpoint
    COPIA los archivos físicos de data/attachments/tpl_xxx/ a cmp_yyy/.
-   No mueve, copia: la plantilla puede usarse en otra campaña después. */
+   No mueve, copia: la plantilla puede usarse en otra campaña después.
+
+   P1 FIX BUG #6 (audit 2026-05-08): el bloque de copia se hace ahora dentro
+   del mutex de attachments.js. Antes, un upload manual simultáneo a la
+   campaña podía colarse por debajo del check 10 MB. */
 app.post("/api/campaigns/:campaignId/attachments/inherit-from-template/:templateId", async (req, res) => {
   try {
     const { campaignId, templateId } = req.params;
@@ -3186,36 +3190,16 @@ app.post("/api/campaigns/:campaignId/attachments/inherit-from-template/:template
     const tplFiles = attachments.listAttachments(templateId);
     if (!tplFiles.length) return apiOk(res, { copied: 0, message: "La plantilla no tiene adjuntos" });
 
-    const ROOT = pathLib.join(__dirname, "..", "data", "attachments");
-    const safeTpl = String(templateId).replace(/[^a-zA-Z0-9_-]/g, "");
-    const safeCmp = String(campaignId).replace(/[^a-zA-Z0-9_-]/g, "");
-    const srcDir = pathLib.join(ROOT, safeTpl);
-    const dstDir = pathLib.join(ROOT, safeCmp);
-    if (!fsLib.existsSync(dstDir)) fsLib.mkdirSync(dstDir, { recursive: true });
-
-    let copied = 0;
-    for (const f of tplFiles) {
-      try {
-        const srcPath = pathLib.join(srcDir, f.name);
-        const dstPath = pathLib.join(dstDir, f.name);
-        if (fsLib.existsSync(srcPath) && !fsLib.existsSync(dstPath)) {
-          fsLib.copyFileSync(srcPath, dstPath);
-          copied++;
-        }
-      } catch (e) {
-        console.warn(`[attachments] copy ${f.name}: ${e.message}`);
-      }
-    }
-    /* Validar que no superamos 10 MB tras copiar; si sí, revertir. */
-    if (attachments.totalSize(campaignId) > attachments.TOTAL_LIMIT) {
-      /* Borrar lo recién copiado. */
-      for (const f of tplFiles) {
-        try { fsLib.unlinkSync(pathLib.join(dstDir, f.name)); } catch (_) {}
-      }
-      return apiError(res, 413, "Heredar los adjuntos de la plantilla excedería el límite de 10 MB");
-    }
-    return apiOk(res, { copied, total: attachments.totalSize(campaignId) });
-  } catch (e) { return apiError(res, 500, e.message); }
+    /* Usar el mutex del módulo attachments para serializar con uploads
+       concurrentes a la misma campaña. La forma más limpia es usar
+       `addAttachment` por archivo (ya tiene mutex + cap 10 MB integrado). */
+    const result = await attachments.inheritFromOwner(templateId, campaignId);
+    return apiOk(res, result);
+  } catch (e) {
+    /* Distinguir error de cap (413 Payload Too Large) del resto. */
+    if (/10 MB|exceder|exced/i.test(e.message)) return apiError(res, 413, e.message);
+    return apiError(res, 500, e.message);
+  }
 });
 
 /* Endpoint de RESEND: resetea campaña failed a draft y la vuelve a enviar.

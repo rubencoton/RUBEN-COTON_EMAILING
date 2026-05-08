@@ -31,11 +31,12 @@
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             CRM
           </button>
-          <!-- P1 FEAT 2026-05-08 (peticion usuario): Crear plantilla DEBAJO de CRM,
-               ANTES de Crear campana. Renombrado para coherencia con "Crear campana". -->
-          <button data-tab="templates" class="tab" type="button" title="Crear, editar y guardar plantillas reutilizables. Después podrás elegirlas al crear una campaña.">
+          <!-- P1 FEAT 2026-05-08 (peticion usuario): Plantillas DEBAJO de CRM,
+               ANTES de Crear campana. Aquí se gestionan TODAS las plantillas:
+               crear, ver, editar, eliminar, papelera + adjuntos. -->
+          <button data-tab="templates" class="tab" type="button" title="Gestionar todas tus plantillas: crear, editar, eliminar, papelera. Disponibles después al crear campañas.">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-            Crear plantilla
+            Plantillas
           </button>
           <button data-tab="campaigns" class="tab" type="button" title="Crear y enviar una nueva campaña de email a una lista de contactos">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -149,11 +150,12 @@
         </section>
 
         <section class="panel tab-panel" data-panel="templates">
-          <h2>⭐ Crear plantilla</h2>
+          <h2>⭐ Plantillas</h2>
           <p class="muted" style="margin-top:-8px;margin-bottom:16px">
-            Crea, edita y guarda tus correos estándar para reutilizarlos en campañas.
-            Las plantillas eliminadas van a la <strong>papelera</strong> y se restauran
-            durante 30 días (luego se borran solas, estilo Gmail).
+            Gestiona todas tus plantillas reutilizables: crear, editar, eliminar.
+            Cuando crees una campaña, podrás <strong>seleccionarlas del desplegable</strong>
+            para autocompletar asunto, pre-header, HTML y adjuntos.
+            Las plantillas eliminadas van a la <strong>🗑 papelera (30 días)</strong>.
           </p>
 
           <!-- P1 FEAT 2026-05-08: sub-tabs "Mis plantillas" / "Papelera" -->

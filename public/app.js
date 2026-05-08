@@ -648,15 +648,26 @@ window.tplEdit = async (id) => {
     const submitBtn = qs("#templateSubmitBtn");
     const nameInput = templateForm?.querySelector('input[name="name"]');
     const subjectInput = templateForm?.querySelector('input[name="subject"]');
+    /* P1 FIX BUG #7 (audit 2026-05-08): cargar previewText (pre-header).
+       Sin esto, al guardar la edición el input estaba vacío y se borraba
+       el pre-header existente en BBDD. */
+    const previewInput = templateForm?.querySelector('input[name="previewText"]');
     const textInput = templateForm?.querySelector('textarea[name="text"]');
 
     if (editingIdEl) editingIdEl.value = t.id;
     if (editBannerEl) editBannerEl.style.display = "flex";
-    if (submitBtn) submitBtn.textContent = "Actualizar borrador";
+    if (submitBtn) submitBtn.textContent = "Actualizar plantilla";
     if (nameInput) nameInput.value = t.name || "";
     if (subjectInput) subjectInput.value = t.subject || "";
+    if (previewInput) previewInput.value = t.previewText || "";
     if (tplHtmlEditor) tplHtmlEditor.value = t.html || "";
     if (textInput) textInput.value = t.text || "";
+
+    /* Disparar evento sintético para que el observer/polling detecte
+       el cambio de editingId y muestre la caja de adjuntos. */
+    if (editingIdEl) {
+      editingIdEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
 
     /* Cambiar a tab Código HTML para que el usuario vea qué está editando */
     const codeTab = qs('.tpl-tab[data-tpl-view="code"]');
@@ -755,10 +766,13 @@ qs("#templateEditCancel")?.addEventListener("click", () => {
   const submitBtn = qs("#templateSubmitBtn");
   if (editingIdEl) editingIdEl.value = "";
   if (editBannerEl) editBannerEl.style.display = "none";
-  if (submitBtn) submitBtn.textContent = "Guardar borrador";
+  if (submitBtn) submitBtn.textContent = "Guardar plantilla";
   templateForm?.reset();
   if (tplHtmlEditor) tplHtmlEditor.value = "";
   tplHtmlEditor?.dispatchEvent(new Event("input"));
+  /* P1 FIX BUG #5 (audit 2026-05-08): disparar change para que la caja
+     de adjuntos se oculte sin polling. */
+  if (editingIdEl) editingIdEl.dispatchEvent(new Event("change", { bubbles: true }));
 });
 
 const renderSegments = (segments) => {
@@ -2326,13 +2340,16 @@ const populateCampaignTemplateSelect = async () => {
   if (!sel) return;
   try {
     const r = await api("/api/templates");
-    const tpls = (r.templates || []).filter(t => t.status === "validada" || t.status === "borrador");
+    /* P1 FIX BUG #3 (audit 2026-05-08): el status real en DB es "validado"
+       (sin 'a'). Antes filtraba por "validada" (typo) → solo pasaban borradores
+       y las plantillas validadas no aparecían con icono ✅ en el selector. */
+    const tpls = (r.templates || []).filter(t => t.status === "validado" || t.status === "borrador");
     const current = sel.value;
     sel.innerHTML = '<option value="">— Empezar desde cero —</option>';
     tpls.forEach(t => {
       const opt = document.createElement("option");
       opt.value = t.id;
-      opt.textContent = `${t.status === "validada" ? "✅" : "📝"} ${t.name}`;
+      opt.textContent = `${t.status === "validado" ? "✅" : "📝"} ${t.name}`;
       sel.appendChild(opt);
     });
     if (current) sel.value = current;
@@ -2340,7 +2357,13 @@ const populateCampaignTemplateSelect = async () => {
 };
 qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
   const tplId = ev.target.value;
-  if (!tplId) return;
+  /* P1 FIX BUG #4 (audit 2026-05-08): si el usuario deselecciona la plantilla,
+     resetear el flag de herencia. Sin esto, se heredarían adjuntos de una
+     plantilla que ya no está seleccionada cuando se cree la campaña. */
+  if (!tplId) {
+    window.__inheritFromTemplate = null;
+    return;
+  }
   try {
     const r = await api(`/api/templates/${tplId}`);
     const tpl = r.template;
@@ -3058,26 +3081,28 @@ qs("#tplAttachInput")?.addEventListener("change", async (e) => {
   refreshTplAttachList();
 });
 
-/* Mostrar/ocultar la caja de adjuntos según haya plantilla en edición. */
-const observerTplEditing = new MutationObserver(() => {
+/* P1 FIX BUG #5 (audit 2026-05-08): reemplazado el polling 500ms eterno por
+   listener directo + observer. Ahora el cambio de editingId se detecta vía:
+   1) MutationObserver sobre attribute "value" (cuando se hace setAttribute).
+   2) Event listener sobre evento "change" sintético que disparan tplEdit
+      y el botón cancelar.
+   No más setInterval consumiendo CPU para siempre. */
+const __syncTplAttachBox = () => {
   const id = qs("#templateEditingId")?.value;
   const box = qs("#tplAttachBox");
   if (box) box.style.display = id ? "" : "none";
   if (id) refreshTplAttachList();
-});
+};
 const editIdEl = qs("#templateEditingId");
 if (editIdEl) {
+  /* Observer para setAttribute("value", ...) */
+  const observerTplEditing = new MutationObserver(__syncTplAttachBox);
   observerTplEditing.observe(editIdEl, { attributes: true, attributeFilter: ["value"] });
-  /* También al cambiar value vía .value = ... (no dispara mutation): polling 500ms */
-  let lastVal = editIdEl.value;
-  setInterval(() => {
-    if (editIdEl.value !== lastVal) {
-      lastVal = editIdEl.value;
-      const box = qs("#tplAttachBox");
-      if (box) box.style.display = lastVal ? "" : "none";
-      if (lastVal) refreshTplAttachList();
-    }
-  }, 500);
+  /* Event listener para cambios programáticos (.value = ...) que disparen
+     change manualmente. tplEdit ya lo dispara, también el botón cancelar. */
+  editIdEl.addEventListener("change", __syncTplAttachBox);
+  /* Estado inicial al cargar la página. */
+  __syncTplAttachBox();
 }
 
 const loadAnalytics = async () => {

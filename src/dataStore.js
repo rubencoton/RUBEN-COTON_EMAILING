@@ -1321,6 +1321,10 @@ class DataStore {
           });
           added++;
         } else if ((tpl.seedVersion || 0) < SEED_VERSION) {
+          /* P1 FIX BUG #1 (audit 2026-05-08): si el seed está en papelera,
+             NO sobrescribirlo. El usuario lo eliminó intencionalmente.
+             Sin esta guarda, un bump de SEED_VERSION resucita seeds borrados. */
+          if (tpl.trashed) continue;
           /* Existe y esta desactualizado: sincronizar */
           tpl.name = draft.name;
           tpl.subject = draft.subject;
@@ -1366,6 +1370,13 @@ class DataStore {
       if (!html && !text) {
         throw new Error("Debes poner HTML o texto");
       }
+      /* P1 ROBUSTEZ 2026-05-08: límites de tamaño para que un usuario no
+         pueda meter un HTML de 50 MB y tumbar el JSON store. */
+      if (name.length > 200) throw new Error("Nombre demasiado largo (max 200 caracteres)");
+      if (subject.length > 500) throw new Error("Asunto demasiado largo (max 500 caracteres)");
+      if (previewText.length > 200) throw new Error("Pre-header demasiado largo (max 200 caracteres)");
+      if (html.length > 2 * 1024 * 1024) throw new Error("HTML demasiado grande (max 2 MB)");
+      if (text.length > 500 * 1024) throw new Error("Texto plano demasiado grande (max 500 KB)");
 
       const template = {
         id: createId("tpl"),
@@ -1395,21 +1406,29 @@ class DataStore {
       if (input.name !== undefined) {
         const name = String(input.name).trim();
         if (!name) throw new Error("Nombre de plantilla obligatorio");
+        if (name.length > 200) throw new Error("Nombre demasiado largo (max 200 caracteres)");
         tpl.name = name;
       }
       if (input.subject !== undefined) {
         const subject = String(input.subject).trim();
         if (!subject) throw new Error("Asunto obligatorio");
+        if (subject.length > 500) throw new Error("Asunto demasiado largo (max 500 caracteres)");
         tpl.subject = subject;
       }
       if (input.previewText !== undefined) {
-        tpl.previewText = String(input.previewText || "").trim();
+        const pt = String(input.previewText || "").trim();
+        if (pt.length > 200) throw new Error("Pre-header demasiado largo (max 200 caracteres)");
+        tpl.previewText = pt;
       }
       if (input.html !== undefined) {
-        tpl.html = String(input.html).trim();
+        const h = String(input.html).trim();
+        if (h.length > 2 * 1024 * 1024) throw new Error("HTML demasiado grande (max 2 MB)");
+        tpl.html = h;
       }
       if (input.text !== undefined) {
-        tpl.text = String(input.text).trim();
+        const t = String(input.text).trim();
+        if (t.length > 500 * 1024) throw new Error("Texto plano demasiado grande (max 500 KB)");
+        tpl.text = t;
       }
       if (!tpl.html && !tpl.text) {
         throw new Error("Debes mantener HTML o texto");
@@ -1424,6 +1443,14 @@ class DataStore {
       ) {
         tpl.status = "borrador";
         tpl.validatedAt = null;
+
+        /* P1 FIX BUG #2 (audit 2026-05-08): si era seed, eliminar seedKey
+           para que ensureDefaultTemplates() NUNCA vuelva a sobrescribir
+           los cambios del usuario en futuros bumps de SEED_VERSION. */
+        if (tpl.seedKey) {
+          delete tpl.seedKey;
+          delete tpl.seedVersion;
+        }
       }
 
       tpl.updatedAt = nowIso();

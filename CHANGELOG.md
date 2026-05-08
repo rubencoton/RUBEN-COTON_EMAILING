@@ -6,6 +6,82 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.6.0 — ROBUSTEZ TOTAL: 7 BUGS DEL AUDIT + LÍMITES INPUT
+
+### Contexto
+
+Tras la auditoría profunda del sistema completo de plantillas, se detectaron
+**7 bugs (2 críticos, 2 altos, 3 medios)**. Todos corregidos en esta versión.
+Además, añadidos límites de tamaño en inputs para evitar DoS por payload.
+
+### 🔴 BUGS CRÍTICOS
+
+#### `src/dataStore.js`
+- **BUG #1 — Seeds en papelera resucitaban** al bumpear `SEED_VERSION`.
+  Si el usuario eliminaba un seed y luego se actualizaba, el código de
+  `ensureDefaultTemplates` lo sobrescribía pero no tocaba `trashed=true`,
+  dejándolo en estado ambiguo. **Fix**: si `tpl.trashed` está, NO actualizar.
+- **BUG #2 — `updateTemplate` perdía cambios del usuario**. El comentario
+  decía que eliminaba `seedKey` para no pisar ediciones, pero el código no
+  lo hacía. **Fix**: `delete tpl.seedKey` y `delete tpl.seedVersion` cuando
+  el usuario edita contenido.
+
+### 🟠 BUGS ALTOS
+
+#### `public/app.js`
+- **BUG #3 — Typo `"validada"` vs `"validado"`** en filtro del selector
+  campaña (`populateCampaignTemplateSelect`). El status real en DB es
+  `"validado"` (sin 'a'). Las plantillas validadas nunca aparecían con
+  ✅ en el desplegable de campañas.
+- **BUG #4 — `__inheritFromTemplate` no se reseteaba** al deseleccionar.
+  Si el usuario elegía plantilla y luego volvía a "Empezar desde cero",
+  el flag se quedaba con el id anterior y se heredaban adjuntos no deseados.
+
+### 🟡 BUGS MEDIOS
+
+#### `public/app.js`
+- **BUG #5 — `setInterval(500ms)` eterno** vigilando `editingId`.
+  **Fix**: reemplazado por `MutationObserver` + `dispatchEvent('change')`
+  desde los handlers que cambian el value (`tplEdit`, `cancelEdit`).
+  Cero polling de fondo.
+- **BUG #7 — `tplEdit` no cargaba `previewText`** en el formulario.
+  Al guardar la edición sin tocar el input, el `PUT` enviaba string vacío
+  y borraba el pre-header existente en BBDD. **Fix**: leer `t.previewText`
+  y poblarlo en el input.
+
+#### `src/server.js` + `src/attachments.js`
+- **BUG #6 — Inherit attachments fuera del mutex**. Race con uploads
+  simultáneos podían colarse por debajo del cap 10 MB.
+  **Fix**: nueva función `attachments.inheritFromOwner(srcId, dstId)` que
+  copia archivos DENTRO del `_withLock(dstId)`. Validación 10 MB y rollback
+  automático si excede.
+
+### 🟢 ROBUSTEZ EXTRA — Límites de input
+
+#### `src/dataStore.js` (createTemplate + updateTemplate)
+- `name` max **200 chars**
+- `subject` max **500 chars**
+- `previewText` max **200 chars**
+- `html` max **2 MB**
+- `text` max **500 KB**
+
+Sin esto, un payload malicioso (ej: 50 MB de HTML) tumbaba el JSON store
+o agotaba memoria. Ahora se rechaza con error claro.
+
+### Renombrado UX
+
+#### `public/index.html`
+- Pestaña sidebar: **"Crear plantilla" → "Plantillas"** (más claro: el
+  apartado gestiona TODAS las plantillas, no solo crea).
+- Título panel: "⭐ Plantillas".
+- Subtítulo actualizado: "Gestiona todas tus plantillas reutilizables…"
+
+### Commits
+
+- `<HASH>` fix(audit): 7 bugs criticos/altos/medios + limites input
+
+---
+
 ## [2026-05-08] — v2.5.0 — MENÚ REORDENADO + ADJUNTOS PLANTILLA + FIX UI
 
 ### Petición usuario

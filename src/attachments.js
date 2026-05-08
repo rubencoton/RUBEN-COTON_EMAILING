@@ -152,6 +152,47 @@ const removeAttachment = (campaignId, filename) => {
   }
 };
 
+/* P1 FEAT 2026-05-08: copia adjuntos de un owner a otro DENTRO del mutex.
+   Usado para heredar los adjuntos de una plantilla a una campaña sin
+   carrera contra uploads simultáneos a la campaña destino.
+   Valida cap 10 MB tras copiar. Si excede, revierte y lanza error. */
+const inheritFromOwner = async (srcOwnerId, dstOwnerId) => {
+  const srcDir = dirFor(srcOwnerId);
+  const dstDir = dirFor(dstOwnerId);
+  if (!fs.existsSync(srcDir)) return { copied: 0, message: "Sin adjuntos en origen" };
+  const srcFiles = fs.readdirSync(srcDir);
+  if (!srcFiles.length) return { copied: 0, message: "Sin adjuntos en origen" };
+  return _withLock(dstOwnerId, async () => {
+    const copiedNames = [];
+    try {
+      for (const name of srcFiles) {
+        const srcPath = path.join(srcDir, name);
+        const dstPath = path.join(dstDir, name);
+        if (fs.existsSync(srcPath) && !fs.existsSync(dstPath)) {
+          fs.copyFileSync(srcPath, dstPath);
+          copiedNames.push(name);
+        }
+      }
+      const total = totalSize(dstOwnerId);
+      if (total > TOTAL_LIMIT) {
+        /* Revertir lo recién copiado. */
+        for (const name of copiedNames) {
+          try { fs.unlinkSync(path.join(dstDir, name)); } catch (_) {}
+        }
+        const mb = (total / 1024 / 1024).toFixed(2);
+        throw new Error(`Heredar los adjuntos excedería los 10 MB (sería ${mb} MB).`);
+      }
+      return { copied: copiedNames.length, total };
+    } catch (e) {
+      /* Cleanup defensivo de huérfanos si algo falló a mitad. */
+      for (const name of copiedNames) {
+        try { fs.unlinkSync(path.join(dstDir, name)); } catch (_) {}
+      }
+      throw e;
+    }
+  });
+};
+
 /** Devuelve array compatible con nodemailer: [{filename, path}] */
 const getAttachmentsForSending = (campaignId) => {
   try {
@@ -180,5 +221,6 @@ module.exports = {
   listAttachments,
   totalSize,
   getAttachmentsForSending,
+  inheritFromOwner,
   TOTAL_LIMIT
 };
