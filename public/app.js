@@ -1140,46 +1140,50 @@ const getCampaignScorecard = (c) => {
     scoreSpam   * 0.05
   );
 
-  /* Letra y color */
+  /* P1 REFACTOR 2026-05-08 (peticion usuario): escala 0-10 + etiqueta clara
+     en español que cualquier persona entienda. Antes A/B/C/D/F = confuso.
+     Score 0-100 se convierte a 0-10 con 1 decimal. */
+  const score10 = Math.round(score / 10 * 10) / 10; /* 0.0 - 10.0 con 1 decimal */
   let grade, gradeColor, gradeBg;
-  if (score >= 80)      { grade = "A"; gradeColor = "#065f46"; gradeBg = "#d1fae5"; }
-  else if (score >= 65) { grade = "B"; gradeColor = "#1e40af"; gradeBg = "#dbeafe"; }
-  else if (score >= 50) { grade = "C"; gradeColor = "#92400e"; gradeBg = "#fef3c7"; }
-  else if (score >= 35) { grade = "D"; gradeColor = "#9a3412"; gradeBg = "#ffedd5"; }
-  else                   { grade = "F"; gradeColor = "#991b1b"; gradeBg = "#fee2e2"; }
+  if (score >= 80)      { grade = "Excelente";        gradeColor = "#065f46"; gradeBg = "#d1fae5"; }
+  else if (score >= 65) { grade = "Muy bien";         gradeColor = "#1e40af"; gradeBg = "#dbeafe"; }
+  else if (score >= 50) { grade = "Bien";             gradeColor = "#92400e"; gradeBg = "#fef3c7"; }
+  else if (score >= 35) { grade = "Regular";          gradeColor = "#9a3412"; gradeBg = "#ffedd5"; }
+  else                   { grade = "Necesita mejorar"; gradeColor = "#991b1b"; gradeBg = "#fee2e2"; }
 
-  /* Diagnóstico: priorizamos el problema MÁS GRAVE.
-     Orden: spam > bounce > open > click > ctor > reply > all good. */
+  /* P1 REFACTOR 2026-05-08 (peticion usuario "que cualquiera lo entienda
+     aunque no sepa nada"): diagnósticos en español llano, sin tecnicismos
+     (sin "A/B", sin "CTOR"), con acción concreta y tono conversacional. */
   const issues = [];
   if (spamRate > 0.1) {
-    issues.push({ priority: 1, msg: `🚨 ${spamRate.toFixed(2)}% queja spam — revisa el copy (palabras como GRATIS, !!!)` });
+    issues.push({ priority: 1, msg: `🚨 Marcaron el correo como spam (${spamRate.toFixed(2)}%). Suena demasiado a publicidad: quita palabras como GRATIS, OFERTA, !!!` });
   }
   if (bounceRate >= 5) {
-    issues.push({ priority: 2, msg: `⚠️ ${bounceRate.toFixed(1)}% rebotes — limpia la lista de contactos (emails inválidos)` });
+    issues.push({ priority: 2, msg: `⚠️ Muchos rebotes (${bounceRate.toFixed(1)}%). Hay emails que ya no existen en tu lista — límpiala antes del próximo envío` });
   } else if (bounceRate >= 3) {
-    issues.push({ priority: 3, msg: `${bounceRate.toFixed(1)}% rebotes — algunos emails inválidos en la lista` });
+    issues.push({ priority: 3, msg: `Algunos emails inválidos (${bounceRate.toFixed(1)}% rebotes). Revisa la lista para próximas campañas` });
   }
   if (openRate < 10 && sent >= 50) {
-    issues.push({ priority: 2, msg: `📭 ${openRate.toFixed(1)}% aperturas — el asunto no engancha (prueba A/B)` });
+    issues.push({ priority: 2, msg: `📭 Casi nadie abrió el correo (${openRate.toFixed(1)}% aperturas). El asunto no engancha — prueba uno más corto, personal y curioso` });
   } else if (openRate < 15 && sent >= 50) {
-    issues.push({ priority: 4, msg: `${openRate.toFixed(1)}% aperturas — el asunto se puede mejorar` });
+    issues.push({ priority: 4, msg: `Pocas aperturas (${openRate.toFixed(1)}%). El asunto se puede mejorar para llamar más la atención` });
   }
   if (opened >= 20 && ctor < 10) {
-    issues.push({ priority: 3, msg: `🖱 CTOR ${ctor.toFixed(1)}% — el email se abre pero no convierte. Revisa CTA y diseño` });
+    issues.push({ priority: 3, msg: `🖱 Lo abren pero no hacen clic. Mejora el botón principal: más grande, color llamativo, texto claro como "Ver propuesta"` });
   }
   if (clicked >= 5 && replyRate === 0) {
-    issues.push({ priority: 5, msg: `💬 0 respuestas — añade pregunta directa o llamada a responder` });
+    issues.push({ priority: 5, msg: `💬 Nadie respondió. Pídelo al final: "¿Qué te parece? Responde a este mismo correo"` });
   }
   if (sent < 50 && total < 100) {
-    issues.push({ priority: 6, msg: `📊 Lista pequeña (${total}) — resultados poco representativos` });
+    issues.push({ priority: 6, msg: `📊 Lista pequeña (${total} contactos). Con tan pocos envíos, los datos no son fiables todavía` });
   }
 
   issues.sort((a, b) => a.priority - b.priority);
   const diagnostic = issues.length
     ? issues.slice(0, 2).map(i => i.msg).join(" · ")
-    : "✅ Excelente performance — sigue con esta línea";
+    : "✅ ¡Bien hecho! Esta campaña funciona muy bien — repite la fórmula";
 
-  return { score, grade, gradeColor, gradeBg, diagnostic, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
+  return { score, score10, grade, gradeColor, gradeBg, diagnostic, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
 };
 
 const renderCampaigns = (campaigns) => {
@@ -1348,7 +1352,7 @@ const renderCampaigns = (campaigns) => {
          diagnóstico en línea siguiente. */
       const scorecard = getCampaignScorecard(c);
       const scorecardBadge = scorecard
-        ? `<span title="Puntuación basada en aperturas, clics, CTOR, respuestas, rebotes y spam" style="display:inline-block;background:${scorecard.gradeBg};color:${scorecard.gradeColor};padding:2px 9px;border-radius:10px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.3px">${scorecard.grade} · ${scorecard.score}/100</span>`
+        ? `<span title="Nota global basada en aperturas, clics, conversión, respuestas, rebotes y spam" style="display:inline-block;background:${scorecard.gradeBg};color:${scorecard.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scorecard.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scorecard.grade}</span>`
         : "";
       const scorecardDiag = scorecard
         ? `<div style="font-size:10.5px;color:${scorecard.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scorecard.diagnostic)}</div>`
@@ -1801,7 +1805,7 @@ const refreshPanel = async () => {
             const finI = c.completedAt ? fmtFechaI(c.completedAt) : (["sending","queued","paused"].includes(c.status) ? "en curso" : "—");
             /* P1 FEAT 2026-05-08: scorecard también en dashboard de inicio */
             const scI = getCampaignScorecard(c);
-            const scBadgeI = scI ? `<span title="Puntuación campaña" style="display:inline-block;background:${scI.gradeBg};color:${scI.gradeColor};padding:2px 9px;border-radius:10px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.3px">${scI.grade} · ${scI.score}</span>` : "";
+            const scBadgeI = scI ? `<span title="Nota global de esta campaña (0-10)" style="display:inline-block;background:${scI.gradeBg};color:${scI.gradeColor};padding:3px 11px;border-radius:11px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.2px;white-space:nowrap"><span style="font-size:13px">${scI.score10.toFixed(1)}</span><span style="opacity:0.7;font-weight:700">/10</span> · ${scI.grade}</span>` : "";
             const scDiagI = scI ? `<div style="font-size:10.5px;color:${scI.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scI.diagnostic)}</div>` : "";
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
