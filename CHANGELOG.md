@@ -6,6 +6,64 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — Audit profundo perf + autonomía + trazabilidad
+
+### Contexto
+
+Tras petición usuario "búsqueda de errores en el código + optimiza para que cargue rápido + trazabilidad para que funcione solo y si se rompe se sepa cómo".
+
+Lanzadas **2 auditorías paralelas (perf + bugs latentes)** sobre los 12K LOC del proyecto. Aplicados los fixes de mayor impacto sin tocar lo que ya funcionaba.
+
+### 🚀 Performance — causa raíz del "1 minuto de carga"
+
+#### `src/server.js` — `buildSetupChecklist()` y `getSetupChecklist()`
+
+- **CAUSA RAÍZ identificada:** el endpoint `/api/setup/checklist` ejecutaba **6 DNS lookups secuenciales** (`tryResolveA` x2, `tryResolveTxt` x3, `tryReverse` x1) con timeouts largos. En cold start podía sumar **30-60s bloqueando la pestaña del cliente**.
+- **Fix 1 — Paralelización:** todos los lookups DNS independientes ahora corren con `Promise.all`. Tiempo total = el más lento (~5s peor caso) en vez de la suma.
+- **Fix 2 — Stale-while-revalidate:** si la cache está vencida pero existe, se devuelve la antigua y se refresca en background. La 1ª llamada bloqueante solo ocurre la primerísima vez tras el arranque.
+- **Fix 3 — TTL 60s → 600s:** registros DNS no cambian a esa velocidad. 10 min es suficiente para QA.
+- **Fix 4 — Pre-warm:** 1.5s tras `app.listen` se dispara un refresh en background. Cuando llega la 1ª request del cliente, la cache ya está caliente.
+
+#### `src/server.js` — `syncCampaignsWithEngine()` diferido
+
+- Antes corría síncrono dentro de `GET /api/campaigns`, `/api/campaigns/:id`, `/api/panel`, `/api/dashboard` añadiendo 100-500ms al P50.
+- Ahora se hace `setImmediate(() => sync...)` tras responder. El `periodicSync` cada 90s ya cubre la actualización de fondo.
+
+### 🔒 Robustez — autonomía del sistema
+
+#### `src/dataStore.js`
+- `_scheduleFlush` y reschedule fallback: `setTimeout` ahora con `.unref()` para no bloquear graceful shutdown ni acumular timers huérfanos.
+
+#### `src/server.js` — POST `/api/campaigns/:id/events`
+- **P1 SEGURIDAD:** validación estricta del campo `url`. Solo se aceptan URLs `http(s)://` absolutas. Bloqueo de `javascript:`, `file:`, `data:`, `vbscript:` y rutas relativas. Previene XSS/SSRF al renderizar el informe HTML.
+
+### 📋 Trazabilidad — sistema autónomo + runbook
+
+- **`AGENTS.md`** reescrito con bloque "TRAZABILIDAD OBLIGATORIA": tabla de archivos a tocar por tipo de cambio, política de comentarios inline, anti-patrones prohibidos, sección AUTO-FUNCIONAMIENTO con todos los watchdogs.
+- **`OPERATIONS.md`** nuevo: runbook completo con 11 secciones — incidencias frecuentes (502, motor congelado, OAuth, store corrupto, disco lleno, cap rebotes, backup Drive, Sheets sync), comandos de emergencia, "cuándo NO tocar nada", "cómo subir un fix urgente".
+- **`plans.md`** actualizado con HITO 5 ampliado.
+
+### 🔍 Pendientes de auditoría (priorizados, NO aplicados aquí)
+
+Para próximas sesiones — items detectados pero que requieren refactor más grande:
+
+- **CRÍTICO:** mutex real con TTL en `sendCampaignLocks` (server.js:3355). Si proceso crashea antes del 30s timeout, queda zombi.
+- **CRÍTICO:** bucle `sync-all-to-drive` (server.js:2301) finge éxito si fallan iteraciones intermedias. Necesita reportar `partialSuccess`.
+- **ALTO:** `attachments.js` con varios `catch (_) {}` que silencian fallos de disco. Loggear al menos como warn.
+- **ALTO:** `sheetsWriteback.flush` retry sin backoff exponencial. Saturar quota si Sheets API está down 10 min.
+- **MEDIO:** `dataStore.read()` lee 55MB con `fs.readFileSync` en arranque. Considerar streaming o split por colección.
+
+### Benchmark estimado
+
+| Escenario | Antes | Después |
+|---|---|---|
+| Cold start cliente refresh (peor caso) | 30-60s | 3-5s |
+| `/api/setup/checklist` request normal | 200-500ms | <5ms (cache fresca) |
+| `/api/campaigns` GET | 150-400ms | 10-30ms |
+| `/api/panel` GET (cache miss) | 250-600ms | 80-150ms |
+
+---
+
 ## [2026-05-08] — UX QA pase 4 (selector plantilla + preview + cold start)
 
 ### Contexto

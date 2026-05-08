@@ -667,6 +667,8 @@ class DataStore {
       this._flushTimer = null;
       this._flushAsync();
     }, 1500);
+    /* P1 ROBUSTEZ 2026-05-08: .unref() para no bloquear graceful shutdown. */
+    this._flushTimer.unref?.();
   }
 
   /* Flush ASINCRONO — no bloquea event-loop. Critico cuando JSON >10MB.
@@ -710,6 +712,7 @@ class DataStore {
           this._flushTimer = null;
           this._flushAsync();
         }, 5000);
+        this._flushTimer.unref?.();
       }
     }
   }

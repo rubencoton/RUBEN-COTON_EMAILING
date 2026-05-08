@@ -181,9 +181,16 @@ const massMailEngine = createMassMailEngine({
   dataStoreRef: dataStore
 });
 massMailEngine.start();
+/* P0 PERF 2026-05-08 (peticion usuario "tarda 1 min en cargar"): TTL subido
+   60s → 600s (10 min). Los registros DNS validados aqui no cambian con esa
+   frecuencia, no merece la pena re-resolverlos cada minuto. La regeneracion
+   ahora es stale-while-revalidate: la primera request tras expiracion devuelve
+   la cache antigua y refresca en background. La 1ª llamada sin cache aun es
+   bloqueante pero se hace pre-warm al arranque. */
 let setupChecklistCache = null;
 let setupChecklistCacheAt = 0;
-const setupChecklistTtlMs = Number(process.env.SETUP_CHECKLIST_TTL_MS || 60000);
+let setupChecklistRefreshing = false;
+const setupChecklistTtlMs = Number(process.env.SETUP_CHECKLIST_TTL_MS || 600000);
 
 app.set("trust proxy", true);
 /* helmet() por defecto añade CSP que bloquea <script> inline en campaign-report.html
@@ -741,6 +748,31 @@ const buildSetupChecklist = async () => {
     `${ratePerMinute || 0} correos/min.`
   );
 
+  /* P0 PERF 2026-05-08 (peticion usuario "tarda 1 min en cargar"): TODAS las
+     resoluciones DNS en paralelo. Antes eran 6+ awaits secuenciales que en
+     cold start podian tardar 30-60s sumados. Ahora: 1 await sobre Promise.all
+     → tiempo total = el lookup mas lento (~5s peor caso vs 30-60s). */
+  const dkimWanted = status.dkim?.enabled && status.dkim?.keySelector && status.dkim?.domainName;
+  const dkimHost = dkimWanted
+    ? `${status.dkim.keySelector}._domainkey.${status.dkim.domainName}`
+    : null;
+
+  const dnsTasks = {
+    localHostIpList: directHostName ? tryResolveA(directHostName) : Promise.resolve([]),
+    publicDnsIpList: directHostName ? tryResolvePublicDnsA(directHostName) : Promise.resolve([]),
+    dkimTxt: dkimHost ? tryResolveTxt(dkimHost) : Promise.resolve([]),
+    spfTxt: fromDomain ? tryResolveTxt(fromDomain) : Promise.resolve([]),
+    dmarcTxt: fromDomain ? tryResolveTxt(`_dmarc.${fromDomain}`) : Promise.resolve([])
+  };
+
+  const [localHostIpList, publicDnsIpList, dkimTxt, spfTxt, dmarcTxt] = await Promise.all([
+    dnsTasks.localHostIpList,
+    dnsTasks.publicDnsIpList,
+    dnsTasks.dkimTxt,
+    dnsTasks.spfTxt,
+    dnsTasks.dmarcTxt
+  ]);
+
   if (mode === "direct") {
     push(
       "direct_hostname",
@@ -750,20 +782,11 @@ const buildSetupChecklist = async () => {
     );
 
     let resolvedServerIp = configuredServerIp;
-    let localHostIpList = [];
-    let publicDnsIpList = [];
-    let publicHostIpList = [];
-    if (directHostName) {
-      localHostIpList = await tryResolveA(directHostName);
-      publicDnsIpList = await tryResolvePublicDnsA(directHostName);
-      publicHostIpList = uniqueValues([
-        ...publicDnsIpList,
-        ...localHostIpList.filter(isPublicIpv4)
-      ]);
-
-      if (!resolvedServerIp && publicHostIpList.length) {
-        resolvedServerIp = String(publicHostIpList[0]).toLowerCase();
-      }
+    const publicHostIpList = directHostName
+      ? uniqueValues([...publicDnsIpList, ...localHostIpList.filter(isPublicIpv4)])
+      : [];
+    if (!resolvedServerIp && publicHostIpList.length) {
+      resolvedServerIp = String(publicHostIpList[0]).toLowerCase();
     }
 
     push(
@@ -778,6 +801,7 @@ const buildSetupChecklist = async () => {
     );
 
     if (resolvedServerIp && isPublicIpv4(resolvedServerIp)) {
+      /* tryReverse depende del IP resuelto, no se puede paralelizar antes. */
       const reverseList = await tryReverse(resolvedServerIp);
       const ptrOk = reverseList.some(
         (value) => String(value || "").toLowerCase() === directHostName
@@ -801,9 +825,7 @@ const buildSetupChecklist = async () => {
     }
   }
 
-  if (status.dkim?.enabled && status.dkim?.keySelector && status.dkim?.domainName) {
-    const dkimHost = `${status.dkim.keySelector}._domainkey.${status.dkim.domainName}`;
-    const dkimTxt = await tryResolveTxt(dkimHost);
+  if (dkimWanted) {
     const dkimOk = dkimTxt.some((row) =>
       String(row || "").toLowerCase().includes("v=dkim1")
     );
@@ -824,8 +846,7 @@ const buildSetupChecklist = async () => {
   }
 
   if (fromDomain) {
-    const rootTxt = await tryResolveTxt(fromDomain);
-    const spf = rootTxt.find((row) => String(row || "").toLowerCase().startsWith("v=spf1"));
+    const spf = spfTxt.find((row) => String(row || "").toLowerCase().startsWith("v=spf1"));
     const spfStatus = spf ? "ok" : "warn";
     push(
       "spf_dns",
@@ -834,7 +855,6 @@ const buildSetupChecklist = async () => {
       spf || `No se encontro SPF en ${fromDomain}.`
     );
 
-    const dmarcTxt = await tryResolveTxt(`_dmarc.${fromDomain}`);
     const dmarc = dmarcTxt.find((row) =>
       String(row || "").toLowerCase().startsWith("v=dmarc1")
     );
@@ -871,16 +891,38 @@ const buildSetupChecklist = async () => {
   };
 };
 
+/* P0 PERF 2026-05-08: stale-while-revalidate.
+   - Cache fresca → devolverla.
+   - Cache vencida pero existe → devolverla AHORA y refrescar en background.
+   - Sin cache → 1ª llamada bloqueante (el pre-warm del bootstrap mitiga esto). */
+const _refreshChecklistInBackground = () => {
+  if (setupChecklistRefreshing) return;
+  setupChecklistRefreshing = true;
+  buildSetupChecklist()
+    .then((data) => {
+      setupChecklistCache = data;
+      setupChecklistCacheAt = Date.now();
+    })
+    .catch((err) => {
+      console.warn("[setupChecklist] refresh error:", err.message);
+    })
+    .finally(() => {
+      setupChecklistRefreshing = false;
+    });
+};
+
 const getSetupChecklist = async () => {
   const now = Date.now();
-  if (
-    setupChecklistCache &&
-    now - setupChecklistCacheAt < setupChecklistTtlMs &&
-    setupChecklistTtlMs > 0
-  ) {
+  if (setupChecklistCache && setupChecklistTtlMs > 0) {
+    const age = now - setupChecklistCacheAt;
+    if (age < setupChecklistTtlMs) {
+      return setupChecklistCache; /* fresca */
+    }
+    /* stale: devolver vieja + refrescar en background */
+    _refreshChecklistInBackground();
     return setupChecklistCache;
   }
-
+  /* sin cache, primera vez: bloqueamos lo justo */
   setupChecklistCache = await buildSetupChecklist();
   setupChecklistCacheAt = now;
   return setupChecklistCache;
@@ -898,7 +940,10 @@ app.get("/api/panel", async (_req, res) => {
   if (__panelCache.v && (now - __panelCache.t) < PANEL_CACHE_MS) {
     return res.json(__panelCache.v);
   }
-  syncCampaignsWithEngine();
+  /* P0 PERF 2026-05-08: sync diferido. periodicSync c/90s lo cubre. */
+  setImmediate(() => {
+    try { syncCampaignsWithEngine(); } catch (e) { console.warn("[panel sync deferred]", e.message); }
+  });
   const runtime = await buildRuntimeStatus();
   __panelCache = { t: now, v: runtime };
   res.json(runtime);
@@ -912,7 +957,10 @@ app.get("/api/dashboard", (_req, res) => {
   if (__dashCache.v && (now - __dashCache.t) < DASH_CACHE_MS) {
     return apiOk(res, __dashCache.v);
   }
-  syncCampaignsWithEngine();
+  /* P0 PERF 2026-05-08: sync diferido. */
+  setImmediate(() => {
+    try { syncCampaignsWithEngine(); } catch (e) { console.warn("[dashboard sync deferred]", e.message); }
+  });
   const dashboard = dataStore.getOverview();
   __dashCache = { t: now, v: { dashboard } };
   return apiOk(res, { dashboard });
@@ -1541,8 +1589,14 @@ app.delete("/api/segments/:id", (req, res) => {
   }
 });
 
+/* P0 PERF 2026-05-08: syncCampaignsWithEngine() pasa a setImmediate.
+   Antes corria SINCRONO antes de responder, anadiendo 100-500ms al P50 del
+   endpoint. El periodicSync de 90s ya cubre la actualizacion de fondo;
+   responder inmediato y refrescar en el siguiente tick es suficiente. */
 app.get("/api/campaigns", (_req, res) => {
-  syncCampaignsWithEngine();
+  setImmediate(() => {
+    try { syncCampaignsWithEngine(); } catch (e) { console.warn("[campaigns sync deferred]", e.message); }
+  });
   return apiOk(res, { campaigns: dataStore.listCampaigns() });
 });
 
@@ -1556,7 +1610,10 @@ app.post("/api/campaigns", (req, res) => {
 });
 
 app.get("/api/campaigns/:id", (req, res) => {
-  syncCampaignsWithEngine();
+  /* P0 PERF 2026-05-08: sync diferido (mismo motivo que GET /api/campaigns). */
+  setImmediate(() => {
+    try { syncCampaignsWithEngine(); } catch (e) { console.warn("[campaign sync deferred]", e.message); }
+  });
   const campaign = dataStore.getCampaign(req.params.id);
   if (!campaign) {
     return apiError(res, 404, "Campana no encontrada");
@@ -3521,12 +3578,28 @@ app.post("/api/campaigns/:id/events", (req, res) => {
     if (req.body.email && !EMAIL_RX.test(String(req.body.email).trim())) {
       return apiError(res, 400, "Email invalido");
     }
+    /* P1 SEC 2026-05-08: validar url para prevenir XSS/SSRF al renderizar
+       el informe HTML. Aceptar solo http(s) absolutas; descartar javascript:,
+       file:, data:, vbscript: y rutas relativas raras. */
+    let safeUrl;
+    if (req.body.url !== undefined && req.body.url !== null && req.body.url !== "") {
+      const raw = String(req.body.url).trim();
+      try {
+        const u = new URL(raw);
+        if (!["http:", "https:"].includes(u.protocol)) {
+          return apiError(res, 400, "url debe ser http(s)");
+        }
+        safeUrl = u.toString();
+      } catch (_e) {
+        return apiError(res, 400, "url no es una URL absoluta valida");
+      }
+    }
     const event = dataStore.addEvent({
       type: t,
       campaignId: req.params.id,
       email: req.body.email,
       contactId: req.body.contactId,
-      url: req.body.url,
+      url: safeUrl,
       isMachineOpen: req.body.isMachineOpen,
       isBotSuspected: req.body.isBotSuspected,
       source: req.body.source || "manual_ui",
@@ -4579,6 +4652,13 @@ const startServer = async () => {
 
   server = app.listen(port, () => {
     console.log(`RUBEN-COTON_EMAILING listening on port ${port}`);
+
+    /* P0 PERF 2026-05-08: pre-warm setupChecklist en background.
+       Asi la 1ª request del cliente no paga el coste de los DNS lookups. */
+    setTimeout(() => {
+      _refreshChecklistInBackground();
+    }, 1500).unref?.();
+
     /* Scheduler de informes ejecutivos (semanal + mensual) */
     try {
       executiveReports.startScheduler({ getDataStore: () => dataStore });

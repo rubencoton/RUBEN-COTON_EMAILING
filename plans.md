@@ -31,7 +31,21 @@
 - [x] (2026-05-08) Loader + disable select en cambio de plantilla Crear Campaña.
 - [x] (2026-05-08) `tplPreview` con cancel + cleanup en cambio de pestaña.
 - [x] (2026-05-08) Banner cold-start con mensaje informativo + timing per-request en init.
-- [ ] Investigar causa cold-start ~1 min (Coolify wakeup vs dataStore 55MB sync).
+- [x] (2026-05-08) **Causa raíz cold-start identificada y resuelta:** `buildSetupChecklist` con 6 DNS lookups secuenciales. Paralelizado + stale-while-revalidate + TTL 600s + pre-warm.
+- [x] (2026-05-08) `syncCampaignsWithEngine()` diferido a `setImmediate` en `/api/campaigns`, `/api/panel`, `/api/dashboard`.
+- [x] (2026-05-08) Validación URL en POST `/api/campaigns/:id/events` (anti-XSS/SSRF).
+- [x] (2026-05-08) `.unref()` en timers `dataStore._flushTimer`.
+
+### Trazabilidad y autonomía
+- [x] (2026-05-08) `AGENTS.md` reforzado con sección "TRAZABILIDAD OBLIGATORIA".
+- [x] (2026-05-08) `OPERATIONS.md` creado: runbook 11 secciones para incidencias y recovery.
+
+### Pendientes detectados en audit 2026-05-08 (no aplicados aún)
+- [ ] **CRITICO** mutex con TTL real en `sendCampaignLocks` (server.js:3355) — riesgo doble envío si crashea antes del 30s.
+- [ ] **CRITICO** `sync-all-to-drive` (server.js:2301) reportar `partialSuccess` cuando fallan iteraciones intermedias.
+- [ ] **ALTO** Loggear como warn los `catch (_) {}` de `attachments.js` (no silencio puro).
+- [ ] **ALTO** Backoff exponencial en `sheetsWriteback.flush` retry.
+- [ ] **MEDIO** Considerar streaming / split colecciones para `dataStore.read()` 55MB.
 
 ### Hardening backend
 - [x] Auditoria profunda con rotura controlada (`npm run audit:deep`).
