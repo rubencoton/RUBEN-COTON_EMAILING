@@ -1382,31 +1382,9 @@ app.put("/api/templates/:id", (req, res) => {
 /* P1 FEAT 2026-05-08: DELETE = mover a papelera (estilo Gmail).
    Retención 30 días, después purga automática vía cron diario.
    Para purga inmediata, usar DELETE /api/templates/:id/permanent. */
-app.delete("/api/templates/:id", (req, res) => {
-  try {
-    const result = dataStore.deleteTemplate(req.params.id);
-    return apiOk(res, {
-      result,
-      message: result.purged
-        ? "Plantilla eliminada permanentemente"
-        : "Plantilla movida a la papelera (30 días para restaurar)"
-    });
-  } catch (error) {
-    const code = /no encontrada/i.test(error.message) ? 404 : 400;
-    return apiError(res, code, error.message || "No se pudo borrar plantilla");
-  }
-});
-
-/* P1 FEAT 2026-05-08: restaurar plantilla de la papelera. */
-app.post("/api/templates/:id/restore", (req, res) => {
-  try {
-    const template = dataStore.restoreTemplate(req.params.id);
-    return apiOk(res, { template, message: "Plantilla restaurada" });
-  } catch (error) {
-    const code = /no encontrada|no está/i.test(error.message) ? 404 : 400;
-    return apiError(res, code, error.message);
-  }
-});
+/* P1 FIX CRITICO (audit 2026-05-08): /trash y /restore DEBEN ir ANTES que
+   /:id porque Express matchea por orden. Si /:id está antes, captura "trash"
+   como id y la ruta de vaciar nunca se alcanza. */
 
 /* P1 FEAT 2026-05-08: vaciar papelera (purga TODAS las plantillas trashed).
    Limpia también los archivos físicos de adjuntos huérfanos. */
@@ -1437,6 +1415,32 @@ app.delete("/api/templates/trash", (req, res) => {
     });
   } catch (error) {
     return apiError(res, 500, error.message);
+  }
+});
+
+/* P1 FEAT 2026-05-08: restaurar plantilla de la papelera. */
+app.post("/api/templates/:id/restore", (req, res) => {
+  try {
+    const template = dataStore.restoreTemplate(req.params.id);
+    return apiOk(res, { template, message: "Plantilla restaurada" });
+  } catch (error) {
+    const code = /no encontrada|no está/i.test(error.message) ? 404 : 400;
+    return apiError(res, code, error.message);
+  }
+});
+
+app.delete("/api/templates/:id", (req, res) => {
+  try {
+    const result = dataStore.deleteTemplate(req.params.id);
+    return apiOk(res, {
+      result,
+      message: result.purged
+        ? "Plantilla eliminada permanentemente"
+        : "Plantilla movida a la papelera (30 días para restaurar)"
+    });
+  } catch (error) {
+    const code = /no encontrada/i.test(error.message) ? 404 : 400;
+    return apiError(res, code, error.message || "No se pudo borrar plantilla");
   }
 });
 
