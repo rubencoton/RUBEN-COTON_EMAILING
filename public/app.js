@@ -1079,7 +1079,10 @@ const renderCampaigns = (campaigns) => {
     const pct = base > 0 ? (value / base) * 100 : 0;
     let label, cls;
     if (kind === "sent") {
-      if (pct >= 75) { label = "CASI HECHO"; cls = "ok"; }
+      /* P1 FIX 2026-05-08 (peticion usuario): faltaba caso pct>=100.
+         Antes mostraba "CASI HECHO" incluso al 100% de envíos. */
+      if (pct >= 100) { label = "COMPLETADO"; cls = "ok"; }
+      else if (pct >= 75) { label = "CASI HECHO"; cls = "ok"; }
       else if (pct >= 50) { label = "AVANZANDO"; cls = "ok"; }
       else if (pct >= 25) { label = "EN MARCHA"; cls = "warn"; }
       else { label = "INICIANDO"; cls = "warn"; }
@@ -1444,6 +1447,8 @@ const refreshPanel = async () => {
      * Mismos benchmarks que renderCampaigns. */
     const evalRate = (kind, pct) => {
       if (kind === "sent") {
+        /* P1 FIX 2026-05-08: caso 100% → COMPLETADO. */
+        if (pct >= 100) return { label: "COMPLETADO", cls: "ok" };
         if (pct >= 75) return { label: "CASI HECHO", cls: "ok" };
         if (pct >= 50) return { label: "AVANZANDO", cls: "ok" };
         if (pct >= 25) return { label: "EN MARCHA", cls: "warn" };
