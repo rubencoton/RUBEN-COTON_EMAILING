@@ -118,6 +118,23 @@ const appStatusEl = qs("#appStatus");
 const dbStatusEl = qs("#dbStatus");
 const kpiContactsEl = qs("#kpiContacts");
 const kpiCampaignsEl = qs("#kpiCampaigns");
+
+/* P0 PERF 2026-05-08 (peticion usuario "que no se quede pillada"):
+   Skeleton loaders inmediatos al cargar la página. Sin esto el usuario ve
+   "--" o vacío hasta que el primer fetch resuelve (~200-500ms). Con
+   skeleton ve algo animándose y percibe que la app va rápido. */
+(() => {
+  const skeleton = '<span style="display:inline-block;width:32px;height:14px;background:linear-gradient(90deg,#e2e8f0 0%,#cbd5e1 50%,#e2e8f0 100%);background-size:200% 100%;animation:skeletonPulse 1.2s ease-in-out infinite;border-radius:4px;vertical-align:middle"></span>';
+  if (kpiContactsEl && (kpiContactsEl.textContent === "--" || !kpiContactsEl.textContent.trim())) kpiContactsEl.innerHTML = skeleton;
+  if (kpiCampaignsEl && (kpiCampaignsEl.textContent === "--" || !kpiCampaignsEl.textContent.trim())) kpiCampaignsEl.innerHTML = skeleton;
+  /* Animación CSS si no está ya. */
+  if (!document.getElementById("skeletonPulseStyle")) {
+    const st = document.createElement("style");
+    st.id = "skeletonPulseStyle";
+    st.textContent = "@keyframes skeletonPulse { 0% { background-position: 200% 50% } 100% { background-position: -200% 50% } }";
+    document.head.appendChild(st);
+  }
+})();
 const engineStatusEl = qs("#engineStatus");
 const engineQueueEl = qs("#engineQueue");
 const dashboardJsonEl = qs("#dashboardJson");
@@ -335,6 +352,10 @@ const activateTab = (tabId) => {
   tabPanels.forEach((panel) => {
     panel.classList.toggle("is-active", panel.dataset.panel === tabId);
   });
+  /* P0 PERF 2026-05-08: dispara evento custom para que listeners (lazy
+     loads, refrescos por sub-tab) reaccionen al cambio. Antes los 3
+     addEventListener("rubencoton:tab") nunca se disparaban. */
+  document.dispatchEvent(new CustomEvent("rubencoton:tab", { detail: { tab: tabId } }));
 };
 
 tabs.forEach((tab) => {
@@ -3487,19 +3508,41 @@ const init = async () => {
         "Hola, esta es una prueba técnica del sistema de mailing y envíos masivos.";
     }
 
-    await refreshPanel();
-    await Promise.all([
-      refreshContacts(),
+    /* P0 PERF 2026-05-08 (peticion usuario "que cargue rapido y no se quede
+       pillada"): TODA la inicialización en paralelo (antes refreshPanel
+       bloqueaba). refreshContacts es lazy (solo se llama cuando se abre la
+       pestaña contactos), ahorra una request inicial pesada con 56k contactos.
+       Promise.allSettled para que un fallo individual no rompa el init. */
+    const initStart = performance.now();
+    const results = await Promise.allSettled([
+      refreshPanel(),
       refreshTemplates(),
       refreshSegments(),
       refreshCampaigns(),
       refreshWorkflows(),
       refreshSetupChecklist()
+      /* refreshContacts() eliminado: lazy en activateTab('contacts') */
     ]);
+    const failed = results.filter(r => r.status === "rejected");
+    if (failed.length) {
+      console.warn(`[init] ${failed.length}/${results.length} requests fallaron:`, failed.map(r => r.reason?.message));
+    }
+    console.log(`[init] carga inicial completa en ${Math.round(performance.now() - initStart)}ms`);
   } catch (error) {
     dashboardJsonEl.textContent = `Error inicial: ${error.message}`;
   }
 };
+
+/* P0 PERF 2026-05-08: lazy load de contactos. Se carga solo cuando el
+   usuario abre la pestaña contactos por primera vez. Marca de cargado
+   para no repetir el fetch innecesariamente. */
+let __contactsLoadedOnce = false;
+document.addEventListener("rubencoton:tab", (ev) => {
+  if (ev.detail?.tab === "contacts" && !__contactsLoadedOnce) {
+    __contactsLoadedOnce = true;
+    refreshContacts().catch(() => { __contactsLoadedOnce = false; });
+  }
+});
 
 /* ── AI cascade status ── */
 const renderAiStatus = async () => {

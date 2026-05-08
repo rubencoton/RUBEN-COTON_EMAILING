@@ -886,17 +886,36 @@ const getSetupChecklist = async () => {
   return setupChecklistCache;
 };
 
+/* P0 PERF 2026-05-08 (peticion usuario "que cargue rapido"): cache 3s.
+   buildRuntimeStatus() llama a getOverview() que itera sobre 56k contactos
+   y eventos. Llamado en cada refreshPanel del frontend (cada 30s + al
+   cargar la app). Cache 3s reduce el coste 90% sin perder frescura
+   perceptible (motor envia max 10/min, no se notan cambios subseg). */
+let __panelCache = { t: 0, v: null };
+const PANEL_CACHE_MS = 3000;
 app.get("/api/panel", async (_req, res) => {
+  const now = Date.now();
+  if (__panelCache.v && (now - __panelCache.t) < PANEL_CACHE_MS) {
+    return res.json(__panelCache.v);
+  }
   syncCampaignsWithEngine();
   const runtime = await buildRuntimeStatus();
+  __panelCache = { t: now, v: runtime };
   res.json(runtime);
 });
 
+/* P0 PERF 2026-05-08: cache 3s también en /api/dashboard (mismo overview). */
+let __dashCache = { t: 0, v: null };
+const DASH_CACHE_MS = 3000;
 app.get("/api/dashboard", (_req, res) => {
+  const now = Date.now();
+  if (__dashCache.v && (now - __dashCache.t) < DASH_CACHE_MS) {
+    return apiOk(res, __dashCache.v);
+  }
   syncCampaignsWithEngine();
-  return apiOk(res, {
-    dashboard: dataStore.getOverview()
-  });
+  const dashboard = dataStore.getOverview();
+  __dashCache = { t: now, v: { dashboard } };
+  return apiOk(res, { dashboard });
 });
 
 /* Rate limit login: max 5 intentos por IP en 5 minutos */
