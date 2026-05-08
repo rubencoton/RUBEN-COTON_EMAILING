@@ -2375,7 +2375,28 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
     qs('.mode-tab[data-mode="html"]')?.click();
     qs('.mode-tab[data-mode="preview"]')?.click();
 
-    toast(`✅ Plantilla "${esc(tpl.name)}" importada. Vista previa cargada.`);
+    /* P1 FEAT 2026-05-08: marcar plantilla seleccionada para clonar
+       sus adjuntos cuando se cree la campaña. Y mostrar info al usuario
+       de los adjuntos que se heredarán. */
+    window.__inheritFromTemplate = tplId;
+    try {
+      const att = await api(`/api/templates/${tplId}/attachments`);
+      const files = att.files || [];
+      const list = qs("#campAttachList");
+      if (list && files.length) {
+        const totalMB = (att.totalSize / 1024 / 1024).toFixed(2);
+        const inheritHTML = files.map((f) => `
+          <li style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #fde68a;background:#fffbeb">
+            <span>⭐ <strong>${esc(f.name)}</strong> <small class="muted">(${(f.size/1024).toFixed(1)} KB) · de plantilla</small></span>
+            <small style="color:#92400e;font-weight:600">se heredará</small>
+          </li>`).join("");
+        list.innerHTML = inheritHTML + (list.innerHTML || "");
+        const totalEl = qs("#attachTotalSize");
+        if (totalEl) totalEl.innerHTML = `<strong>${totalMB} MB</strong> heredados de plantilla / 10 MB`;
+      }
+    } catch (_e) { /* silent */ }
+
+    toast(`✅ Plantilla "${esc(tpl.name)}" importada${tpl.previewText ? " + pre-header" : ""}. Vista previa cargada.`);
   } catch (e) {
     console.warn("Error cargando plantilla:", e.message);
     toast(`❌ Error cargando plantilla: ${esc(e.message)}`);
@@ -2513,6 +2534,19 @@ campaignForm?.addEventListener("submit", async (event) => {
       setProgress(70, "✓ Adjuntos subidos");
     } else {
       setProgress(60, "✓ Sin adjuntos");
+    }
+
+    /* P1 FEAT 2026-05-08: heredar adjuntos de la plantilla seleccionada
+       (si la hubo). Se copian de tpl_xxx/ a cmp_yyy/ vía endpoint.
+       Solo se ejecuta si el usuario eligió plantilla en el selector. */
+    if (campaignId && window.__inheritFromTemplate) {
+      try {
+        const r = await api(`/api/campaigns/${campaignId}/attachments/inherit-from-template/${window.__inheritFromTemplate}`, { method: "POST" });
+        if (r.copied > 0) attachSummary += ` ⭐ ${r.copied} adjunto(s) heredados de plantilla.`;
+      } catch (e) {
+        attachSummary += ` ⚠ No se heredaron adjuntos: ${e.message}`;
+      }
+      window.__inheritFromTemplate = null;
     }
 
     if (action === "send" && campaignId) {
@@ -2965,6 +2999,86 @@ const flushPendingAttachments = async (campaignId) => {
   window.__pendingAttachments = [];
   return { uploaded, errors };
 };
+
+/* ============================================================
+   P1 FEAT 2026-05-08: ADJUNTOS PARA PLANTILLAS
+   Mismo patrón que campañas pero contra /api/templates/:id/attachments.
+   La caja se muestra solo al EDITAR una plantilla existente (necesita id).
+   ============================================================ */
+const refreshTplAttachList = async () => {
+  const list = qs("#tplAttachList");
+  const totalEl = qs("#tplAttachTotalSize");
+  if (!list) return;
+  const id = qs("#templateEditingId")?.value;
+  if (!id) { list.innerHTML = ""; if (totalEl) totalEl.textContent = "0 MB / 10 MB"; return; }
+  try {
+    const data = await api(`/api/templates/${id}/attachments`);
+    const files = data.files || [];
+    const totalMB = (data.totalSize / 1024 / 1024).toFixed(2);
+    if (totalEl) totalEl.textContent = `${totalMB} MB / 10 MB`;
+    if (!files.length) {
+      list.innerHTML = '<li class="muted" style="padding:8px">Sin adjuntos.</li>';
+      return;
+    }
+    list.innerHTML = files.map((f) => `
+      <li style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb">
+        <span>📄 <strong>${esc(f.name)}</strong> <small class="muted">(${(f.size/1024).toFixed(1)} KB)</small></span>
+        <button type="button" class="mini-btn btn-danger" style="font-size:11px;padding:2px 8px" data-tpl-delete-attach="${esc(f.name)}">Quitar</button>
+      </li>
+    `).join("");
+    qsa("[data-tpl-delete-attach]").forEach((b) => b.addEventListener("click", async () => {
+      const id2 = qs("#templateEditingId")?.value;
+      if (!id2) return;
+      try {
+        await api(`/api/templates/${id2}/attachments/${encodeURIComponent(b.dataset.tplDeleteAttach)}`, { method: "DELETE" });
+        refreshTplAttachList();
+      } catch (e) { rubenCotonAlert({ title: "No se pudo borrar adjunto", body: humanizeError(e), icon: "❌", tone: "error" }); }
+    }));
+  } catch (e) { /* si no hay sesión, silent */ }
+};
+
+qs("#tplAttachBtn")?.addEventListener("click", () => qs("#tplAttachInput")?.click());
+qs("#tplAttachInput")?.addEventListener("change", async (e) => {
+  const id = qs("#templateEditingId")?.value;
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  if (!id) {
+    rubenCotonAlert({ title: "Guarda primero la plantilla", body: "Para añadir adjuntos, guarda la plantilla con un nombre y luego edítala.", icon: "ℹ️", tone: "info" });
+    return;
+  }
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`/api/templates/${id}/attachments`, { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || "error");
+    } catch (err) { rubenCotonAlert({ title: `No se pudo subir ${file.name}`, body: humanizeError(err), icon: "❌", tone: "error" }); break; }
+  }
+  refreshTplAttachList();
+});
+
+/* Mostrar/ocultar la caja de adjuntos según haya plantilla en edición. */
+const observerTplEditing = new MutationObserver(() => {
+  const id = qs("#templateEditingId")?.value;
+  const box = qs("#tplAttachBox");
+  if (box) box.style.display = id ? "" : "none";
+  if (id) refreshTplAttachList();
+});
+const editIdEl = qs("#templateEditingId");
+if (editIdEl) {
+  observerTplEditing.observe(editIdEl, { attributes: true, attributeFilter: ["value"] });
+  /* También al cambiar value vía .value = ... (no dispara mutation): polling 500ms */
+  let lastVal = editIdEl.value;
+  setInterval(() => {
+    if (editIdEl.value !== lastVal) {
+      lastVal = editIdEl.value;
+      const box = qs("#tplAttachBox");
+      if (box) box.style.display = lastVal ? "" : "none";
+      if (lastVal) refreshTplAttachList();
+    }
+  }, 500);
+}
 
 const loadAnalytics = async () => {
   const campaignId = analyticsCampaignSelect.value;

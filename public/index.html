@@ -31,6 +31,12 @@
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             CRM
           </button>
+          <!-- P1 FEAT 2026-05-08 (peticion usuario): Crear plantilla DEBAJO de CRM,
+               ANTES de Crear campana. Renombrado para coherencia con "Crear campana". -->
+          <button data-tab="templates" class="tab" type="button" title="Crear, editar y guardar plantillas reutilizables. Después podrás elegirlas al crear una campaña.">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            Crear plantilla
+          </button>
           <button data-tab="campaigns" class="tab" type="button" title="Crear y enviar una nueva campaña de email a una lista de contactos">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             Crear campaña
@@ -38,13 +44,6 @@
           <button data-tab="campaignStatus" class="tab" type="button" title="Ver el estado de tus campañas en curso: enviados, aperturas, clics. Pausar/reanudar/cancelar.">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Estado campañas
-          </button>
-          <!-- P1 FEAT 2026-05-08: pestaña Plantillas visible en menú lateral.
-               Antes estaba oculta. Ahora el usuario crea/edita/elimina
-               plantillas desde aquí (separado de Crear campaña). -->
-          <button data-tab="templates" class="tab" type="button" title="Crear, editar y guardar plantillas reutilizables. Se pueden usar después al crear campañas.">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-            Plantillas
           </button>
           <!-- Tabs ocultos pero activos (accesibles via links internos) -->
           <button data-tab="contacts" class="tab" type="button" style="display:none"></button>
@@ -150,7 +149,7 @@
         </section>
 
         <section class="panel tab-panel" data-panel="templates">
-          <h2>⭐ Plantillas</h2>
+          <h2>⭐ Crear plantilla</h2>
           <p class="muted" style="margin-top:-8px;margin-bottom:16px">
             Crea, edita y guarda tus correos estándar para reutilizarlos en campañas.
             Las plantillas eliminadas van a la <strong>papelera</strong> y se restauran
@@ -229,6 +228,22 @@
                 <div id="tplTextView" class="tpl-view">
                   <textarea name="text" rows="14" placeholder="Texto plano (alternativa sin HTML)"></textarea>
                 </div>
+                <!-- P1 FEAT 2026-05-08: adjuntos por plantilla. Visibles solo
+                     al EDITAR (cuando ya existe el id). Al crear, primero se
+                     guarda la plantilla y después aparece la caja. -->
+                <div id="tplAttachBox" style="margin-top:16px;padding:14px;border:1px solid var(--panel-border);border-radius:8px;background:#f9fafb;display:none">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <strong style="font-size:13px">📎 Adjuntos de la plantilla</strong>
+                    <span id="tplAttachTotalSize" class="muted" style="font-size:12px">0 MB / 10 MB</span>
+                  </div>
+                  <input type="file" id="tplAttachInput" style="display:none" multiple />
+                  <button type="button" id="tplAttachBtn" class="btn-secondary" style="width:100%;padding:10px;border:2px dashed #d1d5db;background:#fff;border-radius:8px;cursor:pointer;font-size:13px">
+                    + Añadir archivos a la plantilla (imágenes, PDF, docs…)
+                  </button>
+                  <ul id="tplAttachList" style="list-style:none;padding:0;margin:10px 0 0;font-size:12px"></ul>
+                  <p class="muted" style="font-size:11px;margin-top:6px">Máximo 10 MB total. Se copiarán automáticamente a las campañas que usen esta plantilla.</p>
+                </div>
+
                 <button type="submit" id="templateSubmitBtn">Guardar plantilla</button>
                 <p id="templateResult" class="mail-form-result">-</p>
               </form>

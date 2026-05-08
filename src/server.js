@@ -3138,6 +3138,86 @@ app.delete("/api/campaigns/:id/attachments/:name", (req, res) => {
   } catch (e) { return apiError(res, 500, e.message); }
 });
 
+/* ── P1 FEAT 2026-05-08: Adjuntos por PLANTILLA (mismos limites 10 MB) ──
+   El módulo attachments.js ya soporta cualquier ownerId (cmp_xxx, tpl_xxx)
+   porque solo crea una carpeta data/attachments/<safeId>/. Reutilizamos
+   los mismos endpoints cambiando el path. */
+app.get("/api/templates/:id/attachments", (req, res) => {
+  try {
+    const files = attachments.listAttachments(req.params.id);
+    const total = attachments.totalSize(req.params.id);
+    return apiOk(res, { files, totalSize: total, limit: attachments.TOTAL_LIMIT });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
+app.post("/api/templates/:id/attachments", attachments.upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return apiError(res, 400, "No se ha enviado archivo");
+    /* Validar que la plantilla existe (evita huérfanos por id mal escrito). */
+    const tpl = dataStore.getTemplate(req.params.id);
+    if (!tpl) return apiError(res, 404, "Plantilla no encontrada");
+    const info = await attachments.addAttachment(req.params.id, req.file);
+    const total = attachments.totalSize(req.params.id);
+    return apiOk(res, { ...info, totalSize: total });
+  } catch (e) { return apiError(res, 400, e.message); }
+});
+
+app.delete("/api/templates/:id/attachments/:name", (req, res) => {
+  try {
+    attachments.removeAttachment(req.params.id, req.params.name);
+    return apiOk(res, { removed: true });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
+/* P1 FEAT 2026-05-08: heredar adjuntos de plantilla → campaña.
+   Cuando el usuario crea una campaña a partir de plantilla, este endpoint
+   COPIA los archivos físicos de data/attachments/tpl_xxx/ a cmp_yyy/.
+   No mueve, copia: la plantilla puede usarse en otra campaña después. */
+app.post("/api/campaigns/:campaignId/attachments/inherit-from-template/:templateId", async (req, res) => {
+  try {
+    const { campaignId, templateId } = req.params;
+    const fsLib = require("fs");
+    const pathLib = require("path");
+    const tpl = dataStore.getTemplate(templateId);
+    if (!tpl) return apiError(res, 404, "Plantilla no encontrada");
+    const camp = dataStore.getCampaign(campaignId);
+    if (!camp) return apiError(res, 404, "Campaña no encontrada");
+
+    const tplFiles = attachments.listAttachments(templateId);
+    if (!tplFiles.length) return apiOk(res, { copied: 0, message: "La plantilla no tiene adjuntos" });
+
+    const ROOT = pathLib.join(__dirname, "..", "data", "attachments");
+    const safeTpl = String(templateId).replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeCmp = String(campaignId).replace(/[^a-zA-Z0-9_-]/g, "");
+    const srcDir = pathLib.join(ROOT, safeTpl);
+    const dstDir = pathLib.join(ROOT, safeCmp);
+    if (!fsLib.existsSync(dstDir)) fsLib.mkdirSync(dstDir, { recursive: true });
+
+    let copied = 0;
+    for (const f of tplFiles) {
+      try {
+        const srcPath = pathLib.join(srcDir, f.name);
+        const dstPath = pathLib.join(dstDir, f.name);
+        if (fsLib.existsSync(srcPath) && !fsLib.existsSync(dstPath)) {
+          fsLib.copyFileSync(srcPath, dstPath);
+          copied++;
+        }
+      } catch (e) {
+        console.warn(`[attachments] copy ${f.name}: ${e.message}`);
+      }
+    }
+    /* Validar que no superamos 10 MB tras copiar; si sí, revertir. */
+    if (attachments.totalSize(campaignId) > attachments.TOTAL_LIMIT) {
+      /* Borrar lo recién copiado. */
+      for (const f of tplFiles) {
+        try { fsLib.unlinkSync(pathLib.join(dstDir, f.name)); } catch (_) {}
+      }
+      return apiError(res, 413, "Heredar los adjuntos de la plantilla excedería el límite de 10 MB");
+    }
+    return apiOk(res, { copied, total: attachments.totalSize(campaignId) });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
 /* Endpoint de RESEND: resetea campaña failed a draft y la vuelve a enviar.
  * Útil tras restart del contenedor que dejó una campaña colgada. */
 app.post("/api/campaigns/:id/resend", (req, res) => {

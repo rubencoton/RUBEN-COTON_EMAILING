@@ -6,6 +6,52 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.5.0 — MENÚ REORDENADO + ADJUNTOS PLANTILLA + FIX UI
+
+### Petición usuario
+1. Reorganizar menú lateral: "Crear plantilla" entre CRM y "Crear campaña".
+2. Adjuntos en plantillas: al elegir plantilla en una campaña, los archivos
+   adjuntos vienen heredados automáticamente.
+3. Bug UI: campañas al 100% mostraban "CASI HECHO" en vez de "COMPLETADO".
+
+### Cambios
+
+#### `public/index.html`
+- Pestaña "Plantillas" renombrada a **"Crear plantilla"** y movida al
+  segundo lugar (después de CRM, antes de "Crear campaña").
+- Título del panel adaptado: "⭐ Crear plantilla".
+- Caja de adjuntos en formulario de plantilla (visible solo al editar
+  plantilla existente, porque necesita id).
+
+#### `src/server.js`
+- 4 endpoints nuevos:
+  - `GET /api/templates/:id/attachments` — lista
+  - `POST /api/templates/:id/attachments` — sube (max 10 MB total)
+  - `DELETE /api/templates/:id/attachments/:name` — borra
+  - `POST /api/campaigns/:cid/attachments/inherit-from-template/:tid` —
+    copia físicamente los adjuntos de plantilla a campaña (no mueve).
+    Valida 10 MB tras copiar; rollback si excede.
+
+Reusa `src/attachments.js` sin modificar (ya soportaba cualquier ownerId).
+
+#### `public/app.js`
+- `refreshTplAttachList()` — UI lista adjuntos plantilla.
+- Handler input `#tplAttachInput` con guardia "guarda primero la plantilla".
+- Observer + polling sobre `#templateEditingId` para mostrar/ocultar la caja.
+- Selector plantilla en campaña: ahora muestra adjuntos heredados con
+  badge "se heredará" antes de crear la campaña (informativo).
+- Submit campaña: tras guardar borrador, llama al endpoint inherit y
+  copia los adjuntos automáticamente. Reporta `⭐ N adjuntos heredados`.
+- **Fix bug**: `evalMetric` y `evalRate` añaden caso `pct >= 100` →
+  label "COMPLETADO" antes que "CASI HECHO".
+
+### Commits
+
+- `eacf43f` fix(ui): mostrar 'COMPLETADO' al 100%
+- `<HASH>`  feat(menu+adjuntos): plantilla en menu + adjuntos heredados
+
+---
+
 ## [2026-05-08] — v2.4.0 — PLANTILLAS PROPIAS + PAPELERA 30D + FEEDBACK API
 
 ### Contexto
