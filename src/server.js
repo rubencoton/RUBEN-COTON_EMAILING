@@ -355,7 +355,46 @@ const authRequired = (req, res, next) => {
 };
 
 app.use(authRequired);
-app.use(express.static(path.join(__dirname, "..", "public")));
+
+/* P0 PERF 2026-05-08 (peticion usuario "que cargue mas rapido"):
+ * 1. Compresión gzip/brotli para texto (HTML/CSS/JS/JSON). Reduce ~70%
+ *    el tamaño en wire. Incluido nativamente en Node sin deps via zlib.
+ * 2. Cache-Control diferenciado:
+ *    - assets/ (logo, favicon, fotos): 7 días (immutable, casi nunca cambian)
+ *    - app.js, styles.css: 5 min (cambian con deploys, no cachear muy largo)
+ *    - HTML (index, login, manual): no cachear (debe ser fresco). */
+const compression = (() => {
+  try { return require("compression"); } catch (_) { return null; }
+})();
+if (compression) {
+  app.use(compression({
+    /* No comprimir si Cloudflare/proxy ya lo hace (header detección) */
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) return false;
+      return compression.filter(req, res);
+    },
+    level: 6 /* balance velocidad/ratio */
+  }));
+  console.log("[perf] compression gzip activa");
+} else {
+  console.warn("[perf] paquete 'compression' no instalado, sin gzip");
+}
+
+app.use(express.static(path.join(__dirname, "..", "public"), {
+  setHeaders: (res, filePath) => {
+    const lower = filePath.toLowerCase();
+    if (lower.includes("/assets/") || /\.(png|jpg|jpeg|webp|svg|ico|woff2?)$/.test(lower)) {
+      /* Assets binarios cambian poco: cache largo. */
+      res.setHeader("Cache-Control", "public, max-age=604800"); /* 7 días */
+    } else if (lower.endsWith(".js") || lower.endsWith(".css")) {
+      /* Bundle JS/CSS: cache corto para que tras deploy se renueve rápido. */
+      res.setHeader("Cache-Control", "public, max-age=300, must-revalidate"); /* 5 min */
+    } else if (lower.endsWith(".html")) {
+      /* HTML siempre fresco. */
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
+    }
+  }
+}));
 
 const apiOk = (res, payload = {}) => res.json({ status: "ok", ...payload });
 const apiError = (res, statusCode, message, extra = {}) =>
