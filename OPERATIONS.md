@@ -13,7 +13,7 @@ Cómo diagnosticar, recuperar y mantener el sistema cuando algo se rompe. Sigue 
 | URL prod | `https://emailing.rubencoton.com` |
 | VPS | `187.77.166.84` (Hostinger) |
 | Coolify URL | `http://187.77.166.84:8000` |
-| App UUID Coolify | `mu245rbjcqd6jxx2ouyev8no` |
+| App UUID Coolify | `zal9cskfqsps8sbur3ypxxcw` |
 | Repo | `github.com/rubencoton/RUBEN-COTON_EMAILING` (privado) |
 | Branch deploy | `main` (autodeploy on push) |
 | Cuenta envío | `manager@rubencoton.com` (Workspace Business) |
@@ -31,12 +31,12 @@ Cómo diagnosticar, recuperar y mantener el sistema cuando algo se rompe. Sigue 
 1. ¿Coolify cold start? (esperar 60s tras la 1ª request).
 2. Comprobar contenedor:
    ```bash
-   curl -s "http://187.77.166.84:8000/api/v1/applications/mu245rbjcqd6jxx2ouyev8no/status" \
+   curl -s "http://187.77.166.84:8000/api/v1/applications/zal9cskfqsps8sbur3ypxxcw/status" \
      -H "Authorization: Bearer <COOLIFY_TOKEN>"
    ```
 3. Si "stopped" → forzar deploy:
    ```bash
-   curl -X POST "http://187.77.166.84:8000/api/v1/deploy?uuid=mu245rbjcqd6jxx2ouyev8no&force=true" \
+   curl -X POST "http://187.77.166.84:8000/api/v1/deploy?uuid=zal9cskfqsps8sbur3ypxxcw&force=true" \
      -H "Authorization: Bearer <COOLIFY_TOKEN>"
    ```
 4. Logs en vivo: Coolify UI → app `RUBEN-COTON_EMAILING` → Logs → buscar `Startup error`, `EADDRINUSE`, `ENOTFOUND`.
@@ -58,7 +58,7 @@ Cómo diagnosticar, recuperar y mantener el sistema cuando algo se rompe. Sigue 
    ```
 2. Si `__hardCounter` desincronizado → reinicio del contenedor:
    ```bash
-   curl -X POST "http://187.77.166.84:8000/api/v1/applications/mu245rbjcqd6jxx2ouyev8no/restart" \
+   curl -X POST "http://187.77.166.84:8000/api/v1/applications/zal9cskfqsps8sbur3ypxxcw/restart" \
      -H "Authorization: Bearer <COOLIFY_TOKEN>"
    ```
 3. Verificar ventana: `MAIL_SEND_WINDOW_START=8` y `END=20` en env Coolify.
@@ -154,15 +154,15 @@ Cómo diagnosticar, recuperar y mantener el sistema cuando algo se rompe. Sigue 
 
 ```bash
 # Estado app
-curl -s "http://187.77.166.84:8000/api/v1/applications/mu245rbjcqd6jxx2ouyev8no" \
+curl -s "http://187.77.166.84:8000/api/v1/applications/zal9cskfqsps8sbur3ypxxcw" \
   -H "Authorization: Bearer <COOLIFY_TOKEN>" | jq
 
 # Restart
-curl -X POST "http://187.77.166.84:8000/api/v1/applications/mu245rbjcqd6jxx2ouyev8no/restart" \
+curl -X POST "http://187.77.166.84:8000/api/v1/applications/zal9cskfqsps8sbur3ypxxcw/restart" \
   -H "Authorization: Bearer <COOLIFY_TOKEN>"
 
 # Force deploy último commit
-curl -X POST "http://187.77.166.84:8000/api/v1/deploy?uuid=mu245rbjcqd6jxx2ouyev8no&force=true" \
+curl -X POST "http://187.77.166.84:8000/api/v1/deploy?uuid=zal9cskfqsps8sbur3ypxxcw&force=true" \
   -H "Authorization: Bearer <COOLIFY_TOKEN>"
 
 # Health endpoint app
