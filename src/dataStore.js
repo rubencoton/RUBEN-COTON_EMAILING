@@ -660,12 +660,13 @@ class DataStore {
   _scheduleFlush() {
     this._dirty = true;
     if (this._flushTimer) return;
-    /* 5s debounce: agrupa rafagas de eventos de tracking. Si crash, perdemos
-     * <=5s de eventos de tracking — aceptable, no son critico financiero. */
+    /* P0 PERF 2026-05-08: 5s → 1.5s. Equilibrio entre agrupar bursts
+     * (5 mutates en <1s = 1 sola escritura disco) y perder poco en crash.
+     * Crítico ahora porque mutate() también usa este flush, no solo eventos. */
     this._flushTimer = setTimeout(() => {
       this._flushTimer = null;
       this._flushAsync();
-    }, 5000);
+    }, 1500);
   }
 
   /* Flush ASINCRONO — no bloquea event-loop. Critico cuando JSON >10MB.
@@ -803,7 +804,17 @@ class DataStore {
   mutate(mutator) {
     const store = this.read();
     const output = mutator(store);
-    this.write(store);
+    /* P0 PERF 2026-05-08 (peticion usuario "tarda en cargar, blip 8-13s"):
+       ANTES: this.write(store) síncrono → writeFileSync de 50MB bloqueando
+       el event-loop ~50-500ms cada mutate. Si caen N mutates en 1s
+       (periodicSync, runWorkflows, sync de jobs) → blip de varios segundos.
+       AHORA: actualizamos memoria síncrono (importante: contadores cap,
+       jobs, etc. necesitan ver el cambio inmediato) pero el flush a disco
+       lo programamos con _scheduleFlush (debounced 5s, async I/O).
+       Un crash pierde <=5s de mutaciones — aceptable. SIGTERM ya hace
+       _flushSync() para garantizar persistencia en shutdown ordenado. */
+    this.store = store;
+    this._scheduleFlush();
     /* P0 FIX 2026-05-07: invalidar índice de contactos al mutate.
      * El próximo getContactByEmail lo reconstruirá lazy. */
     this.invalidateContactsIndex();
