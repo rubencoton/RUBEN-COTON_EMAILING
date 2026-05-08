@@ -34,10 +34,19 @@ async function scanReplies() {
   if (!_dataStoreRef) return { ok: false, reason: "no_datastore" };
   const gmail = clients.gmail();
   try {
+    /* P0 FIX 2026-05-08 (peticion usuario "los rebotes me siguen saliendo"):
+       el filtro automatico del usuario en Gmail mueve los mailer-daemon a la
+       etiqueta personalizada "7-NOTIFICACIONES" y los SACA del INBOX.
+       La query antes era `in:inbox` → no los pillaba → 154+ acumulados.
+       Ahora ampliamos a:
+       - in:inbox (replies humanos siguen aqui)
+       - OR from:mailer-daemon/postmaster/etc (bounces dondequiera que esten,
+         excepto papelera/spam que ya estan fuera).
+       maxResults subido a 100 para limpiar acumulados rapido. */
     const list = await gmail.users.messages.list({
       userId: "me",
-      q: `in:inbox newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com`,
-      maxResults: 50
+      q: `(in:inbox OR from:mailer-daemon OR from:postmaster OR from:mail-daemon) newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com -in:trash -in:spam`,
+      maxResults: 100
     });
     const msgs = list.data.messages || [];
     if (!msgs.length) return { ok: true, scanned: 0, registered: 0 };
@@ -284,11 +293,13 @@ let _firstTimer = null;
 function start({ dataStore }) {
   if (_ticker || _firstTimer) return; /* idempotente */
   _dataStoreRef = dataStore;
-  /* Primera corrida pasados 2 minutos (deja arrancar otras rutinas) */
+  /* P0 FIX 2026-05-08 (peticion usuario): primera corrida en 20s en vez de
+     2min. Si la app reinicia y hay bounces acumulados (etiqueta NOTIFICACIONES
+     fuera de inbox), queremos limpiarlos lo antes posible para no saturar. */
   _firstTimer = setTimeout(() => {
     _firstTimer = null;
     guardedScan().then((r) => r && console.log("[replyTracker] first scan:", JSON.stringify(r))).catch(() => {});
-  }, 2 * 60 * 1000);
+  }, 20 * 1000);
   _firstTimer.unref?.();
   _ticker = setInterval(() => {
     guardedScan().then((r) => {
