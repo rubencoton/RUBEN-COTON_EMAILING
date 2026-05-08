@@ -101,6 +101,8 @@ function humanizeError(err) {
   if (/403|forbidden|prohibid/.test(m)) return "No tienes permiso para hacer esto.";
   if (/404|no encontrad|not found/.test(m)) return "No se encontro lo que buscabas.";
   if (/410|deshabilitada|disabled/.test(m)) return "Esta funcion esta desactivada.";
+  /* P1 FIX UX#10 (audit 2026-05-08): 413 Payload Too Large + 10 MB */
+  if (/413|payload too large|10\s*mb|exceder|exced/.test(m)) return "Demasiado peso. Limite 10 MB por campana/plantilla. Quita o comprime archivos.";
   if (/429|rate|quota|limit/.test(m)) return "Has alcanzado el limite. Espera unos minutos.";
   if (/500|internal/.test(m)) return "Algo fallo en el servidor. Intenta de nuevo en un momento.";
   if (/503|unavailable/.test(m)) return "Servicio no disponible. Reintenta en 1 minuto.";
@@ -542,6 +544,13 @@ window.tplDelete = async (id, name) => {
   try {
     const r = await api(`/api/templates/${id}`, { method: "DELETE" });
     toast(r.message || "Plantilla movida a la papelera");
+    /* P1 FIX UX#4 (audit 2026-05-08): si la plantilla que mandamos a papelera
+       coincide con la que está en edición, cancelar la edición en curso para
+       evitar que la caja de adjuntos quede en estado fantasma. */
+    const currentEditId = qs("#templateEditingId")?.value;
+    if (currentEditId === id) {
+      qs("#templateEditCancel")?.click();
+    }
     await refreshSyncAndRender();
     await refreshTemplatesTrash();
   } catch (e) { rubenCotonAlert({ title: "No se pudo borrar", body: humanizeError(e), icon: "❌", tone: "error" }); }
@@ -613,23 +622,32 @@ const refreshTemplatesTrash = async () => {
   }
 };
 
-/* P1 FEAT 2026-05-08: switch sub-tabs "Mis plantillas" / "Papelera". */
-qsa(".tpl-section-tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.tplSection;
-    qsa(".tpl-section-tab").forEach((b) => {
-      const isActive = b === btn;
-      b.classList.toggle("is-active", isActive);
-      b.style.color = isActive ? "#FF6B00" : "#6b7280";
-      b.style.borderBottomColor = isActive ? "#FF6B00" : "transparent";
-    });
-    const activeEl = qs("#tplSectionActive");
-    const trashEl = qs("#tplSectionTrash");
-    if (activeEl) activeEl.style.display = target === "active" ? "" : "none";
-    if (trashEl) trashEl.style.display = target === "trash" ? "" : "none";
-    if (target === "trash") refreshTemplatesTrash();
+/* P1 FEAT 2026-05-08: switch sub-tabs "Mis plantillas" / "Papelera".
+   P1 FIX UX#7 (audit 2026-05-08): persistir sub-tab activa en localStorage
+   para que tras refresh el usuario vuelva a la sub-tab donde estaba. */
+const TPL_SUBTAB_KEY = "ui:tplSubTab";
+const __activateTplSubTab = (target) => {
+  qsa(".tpl-section-tab").forEach((b) => {
+    const isActive = b.dataset.tplSection === target;
+    b.classList.toggle("is-active", isActive);
+    b.style.color = isActive ? "#FF6B00" : "#6b7280";
+    b.style.borderBottomColor = isActive ? "#FF6B00" : "transparent";
   });
+  const activeEl = qs("#tplSectionActive");
+  const trashEl = qs("#tplSectionTrash");
+  if (activeEl) activeEl.style.display = target === "active" ? "" : "none";
+  if (trashEl) trashEl.style.display = target === "trash" ? "" : "none";
+  try { localStorage.setItem(TPL_SUBTAB_KEY, target); } catch (_) {}
+  if (target === "trash") refreshTemplatesTrash();
+};
+qsa(".tpl-section-tab").forEach((btn) => {
+  btn.addEventListener("click", () => __activateTplSubTab(btn.dataset.tplSection));
 });
+/* Restaurar sub-tab al cargar (si hay valor guardado). */
+try {
+  const saved = localStorage.getItem(TPL_SUBTAB_KEY);
+  if (saved === "trash") __activateTplSubTab("trash");
+} catch (_) {}
 
 /* Refrescar papelera al entrar en la pestaña Plantillas (nº actualizado en counter). */
 document.addEventListener("rubencoton:tab", (ev) => {
@@ -638,6 +656,21 @@ document.addEventListener("rubencoton:tab", (ev) => {
 
 window.tplEdit = async (id) => {
   try {
+    /* P1 FIX UX#5 (audit 2026-05-08): si hay otra edición en curso con
+       cambios en el editor HTML, pedir confirmación antes de sobrescribir.
+       Detecta cambios comparando id editando + contenido del editor. */
+    const currentEditId = qs("#templateEditingId")?.value;
+    const currentHtml = (qs("#tplHtmlEditor")?.value || "").trim();
+    if (currentEditId && currentEditId !== id && currentHtml) {
+      const ok = await rubenCotonConfirm({
+        title: "¿Descartar cambios?",
+        icon: "⚠️",
+        subtitle: "Tienes cambios sin guardar",
+        body: "Si abres otra plantilla, los cambios actuales se perderán.<br><br>¿Continuar?",
+        confirmText: "Sí, descartar"
+      });
+      if (!ok) return;
+    }
     const data = await api(`/api/templates/${id}`);
     const t = data.template;
     if (!t) throw new Error("Plantilla no encontrada");
@@ -1089,13 +1122,19 @@ const renderCampaigns = (campaigns) => {
    * - Estado (abajo, con color: excelente/bueno/normal/por mejorar)
    *
    * Benchmarks ajustados a sector publico (concejalias). */
-  const evalMetric = (kind, value, base) => {
+  const evalMetric = (kind, value, base, statusOverride) => {
     const pct = base > 0 ? (value / base) * 100 : 0;
     let label, cls;
     if (kind === "sent") {
       /* P1 FIX 2026-05-08 (peticion usuario): faltaba caso pct>=100.
          Antes mostraba "CASI HECHO" incluso al 100% de envíos. */
-      if (pct >= 100) { label = "COMPLETADO"; cls = "ok"; }
+      /* P1 BLINDAJE 2026-05-08: si la campaña está marcada como "completed"
+         o "sent" en BBDD, forzar COMPLETADO independientemente del cálculo
+         (evita edge cases de redondeo o discrepancia entre value/base). */
+      if (statusOverride === "completed" || statusOverride === "sent") {
+        label = "COMPLETADO"; cls = "ok";
+      }
+      else if (pct >= 100) { label = "COMPLETADO"; cls = "ok"; }
       else if (pct >= 75) { label = "CASI HECHO"; cls = "ok"; }
       else if (pct >= 50) { label = "AVANZANDO"; cls = "ok"; }
       else if (pct >= 25) { label = "EN MARCHA"; cls = "warn"; }
@@ -1134,8 +1173,8 @@ const renderCampaigns = (campaigns) => {
    * número pequeño arriba, etiqueta abajo. Alturas fijas en cada bloque
    * para que entre filas todos los números, porcentajes y etiquetas
    * queden a la misma altura horizontal (alineación columnar perfecta). */
-  const cellMetric = (n, kind, value, base) => {
-    const e = evalMetric(kind, value, base);
+  const cellMetric = (n, kind, value, base, statusOverride) => {
+    const e = evalMetric(kind, value, base, statusOverride);
     const colors = {
       ok: "background:#d1fae5;color:#065f46",
       warn: "background:#fef3c7;color:#92400e",
@@ -1193,7 +1232,7 @@ const renderCampaigns = (campaigns) => {
         </td>
         <td style="text-align:center;vertical-align:middle">${statusBadge(c.status, c.queuePosition)}</td>
         <td style="text-align:center;vertical-align:middle;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${total.toLocaleString("es-ES")}</td>
-        <td style="vertical-align:middle">${cellMetric(sent, "sent", sent, total)}</td>
+        <td style="vertical-align:middle">${cellMetric(sent, "sent", sent, total, c.status)}</td>
         <td style="vertical-align:middle">${cellMetric(opens, "open", opens, sent)}</td>
         <td style="vertical-align:middle">${cellMetric(clicks, "click", clicks, sent)}</td>
         <td style="vertical-align:middle">${cellMetric(clicks, "ctor", clicks, opens)}</td>
@@ -1459,9 +1498,12 @@ const refreshPanel = async () => {
 
     /* Evalúa una métrica → { label, cls } con cls ∈ {ok, warn, bad}.
      * Mismos benchmarks que renderCampaigns. */
-    const evalRate = (kind, pct) => {
+    const evalRate = (kind, pct, statusOverride) => {
       if (kind === "sent") {
         /* P1 FIX 2026-05-08: caso 100% → COMPLETADO. */
+        /* P1 BLINDAJE 2026-05-08: si status=completed/sent en BBDD, forzar
+           COMPLETADO independientemente de redondeos del porcentaje. */
+        if (statusOverride === "completed" || statusOverride === "sent") return { label: "COMPLETADO", cls: "ok" };
         if (pct >= 100) return { label: "COMPLETADO", cls: "ok" };
         if (pct >= 75) return { label: "CASI HECHO", cls: "ok" };
         if (pct >= 50) return { label: "AVANZANDO", cls: "ok" };
@@ -1570,9 +1612,9 @@ const refreshPanel = async () => {
      * (igual patrón que en la pestaña "Estado campañas"). Aunque la celda
      * "Campaña" tenga texto multilínea, los números, porcentajes y
      * etiquetas siempre están a la misma altura. */
-    const cellMetric = (kind, num, base) => {
+    const cellMetric = (kind, num, base, statusOverride) => {
       const pct = pctOf(num, base);
-      const e = evalRate(kind, pct);
+      const e = evalRate(kind, pct, statusOverride);
       return `
         <td style="padding:10px 6px;vertical-align:middle">
           <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;line-height:1.1;gap:4px">
@@ -1654,7 +1696,7 @@ const refreshPanel = async () => {
                     return `<span style="background:${statusColor(c.status)};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block">${statusLabel(c.status)}</span>`;
                   })()}
                 </td>
-                ${cellMetric("sent",   sent,    total)}
+                ${cellMetric("sent",   sent,    total, c.status)}
                 ${cellMetric("open",   opened,  sent)}
                 ${cellMetric("click",  clicked, sent)}
                 ${cellMetric("ctor",   clicked, opened)}
@@ -2254,14 +2296,37 @@ document.addEventListener("submit", (e) => {
 templateForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const editingId = qs("#templateEditingId")?.value || "";
-  templateResult.textContent = editingId ? "Actualizando borrador…" : "Guardando borrador…";
   const formData = new FormData(templateForm);
   const payload = {
     name: String(formData.get("name") || "").trim(),
     subject: String(formData.get("subject") || "").trim(),
+    previewText: String(formData.get("previewText") || "").trim(),
     html: String(formData.get("html") || "").trim(),
     text: String(formData.get("text") || "").trim()
   };
+
+  /* P1 FIX UX#3 (audit 2026-05-08): validación frontend ANTES de enviar.
+     Antes el backend rechazaba con error genérico; ahora el usuario ve
+     qué campo falta sin esperar al roundtrip. */
+  if (!payload.name) {
+    templateResult.textContent = "❌ Falta el nombre de la plantilla";
+    templateResult.style.color = "#dc2626";
+    qs('#templateForm input[name="name"]')?.focus();
+    return;
+  }
+  if (!payload.subject) {
+    templateResult.textContent = "❌ Falta el asunto";
+    templateResult.style.color = "#dc2626";
+    qs('#templateForm input[name="subject"]')?.focus();
+    return;
+  }
+  if (!payload.html && !payload.text) {
+    templateResult.textContent = "❌ Falta contenido (HTML o texto plano)";
+    templateResult.style.color = "#dc2626";
+    return;
+  }
+  templateResult.style.color = "";
+  templateResult.textContent = editingId ? "Actualizando plantilla…" : "Guardando plantilla…";
 
   try {
     if (editingId) {
@@ -2269,20 +2334,21 @@ templateForm?.addEventListener("submit", async (event) => {
         method: "PUT",
         body: JSON.stringify(payload)
       });
-      templateResult.textContent = "OK: borrador actualizado (pasa a estado borrador para revalidar)";
+      templateResult.textContent = "✅ Plantilla actualizada (vuelve a estado borrador para revalidar).";
     } else {
       await api("/api/templates", {
         method: "POST",
         body: JSON.stringify(payload)
       });
-      templateResult.textContent = "OK: borrador guardado. Revisa y pulsa 'Validar' para usarlo en campañas.";
+      templateResult.textContent = "✅ Plantilla guardada. Pulsa 'Validar' para usarla en campañas.";
     }
 
     /* Reset + salir de modo edición */
     qs("#templateEditCancel")?.click();
     await refreshTemplates();
   } catch (error) {
-    templateResult.textContent = `Error: ${error.message}`;
+    templateResult.textContent = `❌ Error: ${error.message}`;
+    templateResult.style.color = "#dc2626";
   }
 });
 
@@ -2353,17 +2419,40 @@ const populateCampaignTemplateSelect = async () => {
       sel.appendChild(opt);
     });
     if (current) sel.value = current;
-  } catch (e) { /* silent */ }
+  } catch (e) {
+    /* P1 FIX UX#9 (audit 2026-05-08): antes el catch era silent y el
+       usuario no se enteraba si las plantillas no cargaban. Ahora dejamos
+       una opción que indica el error para que sepa por qué no hay plantillas. */
+    sel.innerHTML = `<option value="">— Error cargando plantillas: ${esc(e.message || "?")} —</option>`;
+    console.warn("[populateCampaignTemplateSelect]", e.message);
+  }
 };
+/* Helper: limpia los adjuntos heredados visuales del listado de campaña.
+   P1 FIX UX#1+2 (audit 2026-05-08): cada `<li>` heredado se marca con
+   data-inherited="1" para poder limpiar SOLO esos sin afectar pendientes. */
+const __clearInheritedAttachUI = () => {
+  const list = qs("#campAttachList");
+  if (!list) return;
+  list.querySelectorAll('[data-inherited="1"]').forEach((el) => el.remove());
+  /* Si quedó vacío y no hay pendientes, restaurar mensaje neutral. */
+  const totalEl = qs("#attachTotalSize");
+  if (!list.children.length && !(window.__pendingAttachments || []).length) {
+    if (totalEl) totalEl.textContent = "0 MB / 10 MB";
+  }
+};
+
 qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
   const tplId = ev.target.value;
   /* P1 FIX BUG #4 (audit 2026-05-08): si el usuario deselecciona la plantilla,
-     resetear el flag de herencia. Sin esto, se heredarían adjuntos de una
-     plantilla que ya no está seleccionada cuando se cree la campaña. */
+     resetear el flag de herencia + limpiar lista visual de heredados. */
   if (!tplId) {
     window.__inheritFromTemplate = null;
+    __clearInheritedAttachUI();
     return;
   }
+  /* P1 FIX UX#1: al cambiar de plantilla, limpiar heredados anteriores
+     antes de añadir los nuevos. Sin esto, se acumulaban A+B+C visualmente. */
+  __clearInheritedAttachUI();
   try {
     const r = await api(`/api/templates/${tplId}`);
     const tpl = r.template;
@@ -2384,10 +2473,16 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
     if (htmlInput) htmlInput.value = tpl.html        || "";
     if (textInput) textInput.value = tpl.text        || "";
     /* Editor Gmail: si la plantilla trae HTML, intenta extraer body,
-       si no, mete el HTML completo (el navegador limpia <html>/<head>). */
-    if (gmailEd && tpl.html) {
-      const bodyMatch = tpl.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      gmailEd.innerHTML = bodyMatch ? bodyMatch[1] : tpl.html;
+       si no, mete el HTML completo (el navegador limpia <html>/<head>).
+       P1 FIX UX#6 (audit 2026-05-08): siempre limpiar gmailEditor PRIMERO,
+       aunque la plantilla nueva no traiga HTML, para no mezclar contenido
+       de plantillas anteriores. */
+    if (gmailEd) {
+      gmailEd.innerHTML = "";
+      if (tpl.html) {
+        const bodyMatch = tpl.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        gmailEd.innerHTML = bodyMatch ? bodyMatch[1] : tpl.html;
+      }
     }
 
     /* Saltar automáticamente al modo "Vista previa" para que el usuario
@@ -2409,7 +2504,7 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
       if (list && files.length) {
         const totalMB = (att.totalSize / 1024 / 1024).toFixed(2);
         const inheritHTML = files.map((f) => `
-          <li style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #fde68a;background:#fffbeb">
+          <li data-inherited="1" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #fde68a;background:#fffbeb">
             <span>⭐ <strong>${esc(f.name)}</strong> <small class="muted">(${(f.size/1024).toFixed(1)} KB) · de plantilla</small></span>
             <small style="color:#92400e;font-weight:600">se heredará</small>
           </li>`).join("");

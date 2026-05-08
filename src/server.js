@@ -1350,10 +1350,28 @@ app.post("/api/templates/:id/restore", (req, res) => {
   }
 });
 
-/* P1 FEAT 2026-05-08: borrado permanente inmediato (sin pasar por papelera). */
+/* P1 FEAT 2026-05-08: borrado permanente inmediato (sin pasar por papelera).
+   P1 FIX UX (audit 2026-05-08): borrar también la carpeta física de adjuntos
+   de la plantilla para no dejar huérfanos en data/attachments/. */
 app.delete("/api/templates/:id/permanent", (req, res) => {
   try {
-    const removed = dataStore.purgeTemplate(req.params.id);
+    const id = req.params.id;
+    const removed = dataStore.purgeTemplate(id);
+    /* Limpiar carpeta de adjuntos huérfana. */
+    try {
+      const fsLib = require("fs");
+      const pathLib = require("path");
+      const safe = String(id).replace(/[^a-zA-Z0-9_-]/g, "");
+      const dir = pathLib.join(__dirname, "..", "data", "attachments", safe);
+      if (fsLib.existsSync(dir)) {
+        for (const f of fsLib.readdirSync(dir)) {
+          try { fsLib.unlinkSync(pathLib.join(dir, f)); } catch (_) {}
+        }
+        try { fsLib.rmdirSync(dir); } catch (_) {}
+      }
+    } catch (e) {
+      console.warn(`[templates] limpiando adjuntos de ${id}: ${e.message}`);
+    }
     return apiOk(res, { removed, message: "Plantilla eliminada permanentemente" });
   } catch (error) {
     const code = /no encontrada/i.test(error.message) ? 404 : 400;
@@ -4555,24 +4573,45 @@ periodicSync.unref?.();
  * Estilo Gmail: tras 30 días en papelera, eliminación automática real.
  * Corre cada 6 horas (no es urgente) para distribuir el coste. */
 const TEMPLATES_TRASH_RETENTION_DAYS = Number(process.env.TEMPLATES_TRASH_RETENTION_DAYS) || 30;
-const trashPurgeInterval = setInterval(() => {
+
+/* P1 FIX UX (audit 2026-05-08): tras purgar plantillas, limpiar también
+   sus carpetas de adjuntos físicas para no acumular huérfanos en disco. */
+const _cleanupOrphanAttachments = (purgedIds) => {
+  if (!purgedIds || !purgedIds.length) return;
+  const fsLib = require("fs");
+  const pathLib = require("path");
+  for (const id of purgedIds) {
+    try {
+      const safe = String(id).replace(/[^a-zA-Z0-9_-]/g, "");
+      const dir = pathLib.join(__dirname, "..", "data", "attachments", safe);
+      if (!fsLib.existsSync(dir)) continue;
+      for (const f of fsLib.readdirSync(dir)) {
+        try { fsLib.unlinkSync(pathLib.join(dir, f)); } catch (_) {}
+      }
+      try { fsLib.rmdirSync(dir); } catch (_) {}
+    } catch (_) { /* swallow */ }
+  }
+};
+
+const _runTrashPurge = () => {
   try {
-    const purged = dataStore.purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS);
-    if (purged > 0) {
-      console.log(`[trash] purgadas ${purged} plantillas en papelera >${TEMPLATES_TRASH_RETENTION_DAYS} días`);
+    const result = dataStore.purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS);
+    /* Compatibilidad: result puede ser número (versión vieja) u objeto {count,ids} */
+    const count = typeof result === "number" ? result : (result?.count || 0);
+    const ids = typeof result === "object" ? (result.ids || []) : [];
+    if (count > 0) {
+      console.log(`[trash] purgadas ${count} plantillas en papelera >${TEMPLATES_TRASH_RETENTION_DAYS} días`);
+      _cleanupOrphanAttachments(ids);
     }
   } catch (e) {
     console.error("[trash] error purgando plantillas:", e.message);
   }
-}, 6 * 60 * 60 * 1000); /* 6 horas */
+};
+
+const trashPurgeInterval = setInterval(_runTrashPurge, 6 * 60 * 60 * 1000); /* 6 horas */
 trashPurgeInterval.unref?.();
 /* Primera ejecución al arrancar (limpia lo acumulado tras restart largo). */
-setTimeout(() => {
-  try {
-    const purged = dataStore.purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS);
-    if (purged > 0) console.log(`[trash] purga inicial: ${purged} plantillas`);
-  } catch (_e) { /* swallow */ }
-}, 30 * 1000).unref?.();
+setTimeout(_runTrashPurge, 30 * 1000).unref?.();
 
 /* Sheets sync — solo L-V 8:00-20:00 Europe/Madrid, cada 30 min */
 const SHEETS_AUTOSYNC_ENABLED = String(process.env.SHEETS_AUTOSYNC_ENABLED || "true").toLowerCase() !== "false";

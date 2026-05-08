@@ -1505,18 +1505,21 @@ class DataStore {
   }
 
   /* P1 FEAT 2026-05-08: purga automática plantillas en papelera más
-     antiguas que `days`. Llamado por cron diario. Retorna nº purgadas. */
+     antiguas que `days`. Llamado por cron diario.
+     P1 FIX UX (audit 2026-05-08): retorna los IDs purgados además del
+     número, para que el caller pueda limpiar también las carpetas
+     físicas de adjuntos huérfanos. */
   purgeOldTrashedTemplates(days = 30) {
     return this.mutate((store) => {
       const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-      let purged = 0;
+      const purgedIds = [];
       store.templates = store.templates.filter((tpl) => {
         if (!tpl.trashed) return true;
         const trashedAt = tpl.trashedAt ? new Date(tpl.trashedAt).getTime() : Date.now();
-        if (trashedAt < cutoff) { purged++; return false; }
+        if (trashedAt < cutoff) { purgedIds.push(tpl.id); return false; }
         return true;
       });
-      return purged;
+      return { count: purgedIds.length, ids: purgedIds };
     });
   }
 

@@ -67,12 +67,31 @@ const listAttachments = (campaignId) => {
   }
 };
 
+/* P1 FIX PERF audit 2026-05-08: validar tamaño físico ANTES de Jimp.read
+   para evitar OOM con imágenes 4K+ (un PNG 4000x3000 = 48 MB bitmap RGBA,
+   un JPG 8K decodificado puede pasar de 200 MB).
+   Si la imagen es muy grande en disco, no intentamos decodificarla:
+   simplemente la dejamos tal cual (peor compresión pero la app no muere). */
+const MAX_IMG_DECODE_BYTES = 5 * 1024 * 1024; /* 5 MB de archivo encodeado */
 const compressImage = async (filePath) => {
   try {
+    const fileSize = fs.statSync(filePath).size;
+    if (fileSize > MAX_IMG_DECODE_BYTES) {
+      console.warn(`[attachments] imagen ${path.basename(filePath)} de ${(fileSize/1024/1024).toFixed(1)}MB salta compresión (>5MB en disco) para evitar OOM`);
+      return fileSize;
+    }
     const img = await Jimp.read(filePath);
     const ext = path.extname(filePath).toLowerCase();
+    /* Si la imagen tiene resolución absurda en píxeles (>4000x4000),
+       evitamos resize porque ya consumió RAM al decodificar. Avisamos. */
+    const w = img.bitmap.width;
+    const h = img.bitmap.height;
+    if (w * h > 16 * 1000 * 1000) {
+      console.warn(`[attachments] imagen ${w}x${h}px gigante, salta resize`);
+      return fileSize;
+    }
     /* Redimensionar si >1920px */
-    if (img.bitmap.width > 1920) {
+    if (w > 1920) {
       img.resize({ w: 1920 });
     }
     if (ext === ".jpg" || ext === ".jpeg") {
@@ -81,8 +100,9 @@ const compressImage = async (filePath) => {
       await img.write(filePath);
     }
     return fs.statSync(filePath).size;
-  } catch (_) {
-    return fs.statSync(filePath).size;
+  } catch (e) {
+    console.warn(`[attachments] compressImage ${path.basename(filePath)}: ${e.message}`);
+    try { return fs.statSync(filePath).size; } catch (_) { return 0; }
   }
 };
 

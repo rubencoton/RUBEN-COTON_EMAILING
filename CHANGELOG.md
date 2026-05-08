@@ -6,6 +6,87 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.7.0 — TRIPLE AUDIT: 12 FIXES (UX + SEGURIDAD + PERFORMANCE)
+
+### Contexto
+
+Tras petición usuario "auditar todo desde distintos puntos de vista de
+análisis profundo", se lanzaron **3 auditorías paralelas** con perspectivas
+distintas (seguridad/concurrencia, performance/memoria, UX/edge cases).
+
+Resultado: **6 críticos + 7 altos + 10+ medios** detectados. Aplicados los
+12 fixes más impactantes con foco en plantillas (según directiva).
+
+### 🐛 Bug "CASI HECHO al 100%" — blindaje EXTRA
+
+#### `public/app.js`
+- `evalMetric` y `evalRate` ahora aceptan `statusOverride`. Si la campaña
+  tiene status `completed` o `sent`, se fuerza label "COMPLETADO"
+  independientemente del cálculo `value/base`. Evita edge cases de
+  redondeo o datos desincronizados.
+- Aplicado en las 2 vistas que pintan campañas (Estado campañas + Inicio).
+
+### 🟠 UX (foco plantillas)
+
+#### `public/app.js`
+- **UX#1+2** Adjuntos heredados se acumulaban al cambiar de plantilla A→B.
+  Fix: cada `<li>` heredado se marca `data-inherited="1"`. Helper
+  `__clearInheritedAttachUI()` limpia solo esos antes de añadir nuevos.
+  Llamado también al elegir "— Empezar desde cero —".
+- **UX#3** Form plantilla sin validación frontend. Backend rechazaba con
+  error genérico. Ahora valida nombre/asunto/contenido vacíos antes de
+  enviar y enfoca el campo que falta.
+- **UX#4** Si la plantilla en edición se mueve a papelera, la caja de
+  adjuntos quedaba en estado fantasma. Fix: `tplDelete` cancela la
+  edición automáticamente si coincide con `editingId`.
+- **UX#5** Editar otra plantilla con cambios sin guardar machacaba en
+  silencio. Fix: confirm bonito "¿Descartar cambios?" si hay editingId
+  + html no vacío en el editor.
+- **UX#6** `gmailEditor` no se limpiaba al cambiar de plantilla. Si la
+  plantilla nueva no traía HTML, quedaba el contenido de la anterior.
+  Fix: `gmailEd.innerHTML = ""` siempre antes de inyectar el nuevo.
+- **UX#7** Sub-tab activa (Mis plantillas/Papelera) no persistía tras
+  refresh. Fix: localStorage con clave `ui:tplSubTab`. Restaura al cargar.
+- **UX#10** Error 413 (>10 MB heredando) sin mensaje claro. Fix: añadido
+  patrón en `humanizeError` → "Demasiado peso. Límite 10 MB. Quita o
+  comprime archivos."
+- **UX#9** `populateCampaignTemplateSelect` fallaba en silencio. Ahora
+  muestra opción "— Error cargando plantillas: <msg> —" en el desplegable.
+
+### 🚀 Performance (P0)
+
+#### `src/attachments.js`
+- **PERF#2** Jimp cargaba imágenes sin límite de resolución. Un PNG 4K
+  decodificado puede ocupar 200 MB en RAM (riesgo OOM con cap 1.2 GB).
+  Fix: skip de compresión si archivo >5 MB en disco. Skip de resize
+  si resolución >16 megapíxeles. Logs warning en lugar de OOM.
+
+### 🟡 UX adicional
+
+#### `src/server.js` + `src/dataStore.js`
+- **Adjuntos huérfanos al purge**. Cuando se purga una plantilla
+  (definitivamente o por cron 30d), su carpeta `data/attachments/tpl_xxx/`
+  quedaba con archivos huérfanos. Fix: `purgeOldTrashedTemplates` ahora
+  retorna `{count, ids}`. El cron y el endpoint `/permanent` usan los
+  ids para borrar las carpetas físicas correspondientes.
+
+### Pendiente para próxima iteración
+
+Findings detectados pero NO aplicados aún (refactors mayores):
+- 🔴 `mutate()` síncrono bloquea event-loop con 50 MB JSON (PERF crítico).
+  Requiere migrar `syncCampaignByJob` al patrón debounced `_scheduleFlush`.
+- 🟠 `recipientsSnapshot` duplica 56k contactos por campaña. Refactor
+  para almacenar solo delta (emails pendientes/fallidos).
+- 🟠 XSS via `onclick` inline con nombres de plantilla. Refactor mayor
+  a `dataset` + `addEventListener`. Mitigado parcialmente por `esc()`.
+- 🟠 Sin sincronización entre 2 ventanas abiertas. Requiere WebSocket.
+
+### Commits
+
+- `<HASH>` fix(audit-x3): 12 fixes UX/SEC/PERF + blindaje status COMPLETADO
+
+---
+
 ## [2026-05-08] — v2.6.0 — ROBUSTEZ TOTAL: 7 BUGS DEL AUDIT + LÍMITES INPUT
 
 ### Contexto
