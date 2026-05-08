@@ -40,6 +40,9 @@
 - [x] (2026-05-08) `AGENTS.md` reforzado con sección "TRAZABILIDAD OBLIGATORIA".
 - [x] (2026-05-08) `OPERATIONS.md` creado: runbook 11 secciones para incidencias y recovery.
 
+### Cambios funcionales 2026-05-08 (post-hardening)
+- [x] (2026-05-08) `importContacts` deduplica por (email+source) en vez de email global. Sheets se reflejan literales — un email en 2 pestañas → 2 contactos.
+
 ### Pendientes detectados en audit 2026-05-08 (estado tras hardening)
 - [x] (2026-05-08) **CRITICO** `sendCampaignLocks`: ya tenía TTL 60s + purgeSendLocks. Añadido `.unref()` en cleanup setTimeout.
 - [x] (2026-05-08) **CRITICO** `sync-all-to-drive`: status 502 si todas fallan + `partialSuccess` flag y contadores `uploaded/failed/total`.

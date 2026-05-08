@@ -1181,7 +1181,17 @@ class DataStore {
             return;
           }
 
-          const existing = store.contacts.find((contact) => contact.email === email);
+          /* P0 CAMBIO 2026-05-08 (peticion usuario "que sea LITERAL como el Sheet"):
+             antes deduplicabamos por email global -> Concejalia X que estaba en
+             pestana FESTEJOS y CULTURA pasaba a ser 1 solo contacto, perdiendo
+             trazabilidad de que estaba en ambas. Ahora dedup por (email+source):
+             distintas pestanas (sources distintos) generan contactos distintos.
+             Misma pestana se sigue actualizando como antes.
+             Implicacion asumida por el usuario: si una campana incluye dos
+             segmentos solapados, el mismo email puede recibir 2 copias. */
+          const existing = store.contacts.find((contact) =>
+            contact.email === email && contact.source === source
+          );
 
           if (existing && mode === "create_only_new") {
             report.duplicates += 1;

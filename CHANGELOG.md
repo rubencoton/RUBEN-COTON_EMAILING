@@ -6,6 +6,36 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — Importación literal del Sheet (sin dedup por email global)
+
+### Contexto
+
+Petición usuario: "lo que hay en la hoja de cálculo que sea literal tal y como está, los contactos, y si hay duplicados pues también vale". Antes el sistema deduplicaba por email global → un contacto que aparecía en pestaña FESTEJOS y CULTURA quedaba como UNA sola entrada en BD. Eso impedía:
+
+1. Ver Merge status correctamente en cada pestaña.
+2. Que el contacto recibiera 1 copia por cada pestaña/segmento donde apareciera.
+
+### Cambiado
+
+#### `src/dataStore.js` — `importContacts` línea 1184
+
+- Antes: `find((contact) => contact.email === email)` → match por email global.
+- Ahora: `find((contact) => contact.email === email && contact.source === source)` → match por (email, source).
+- Distintas pestañas tienen distinto `source` (ej: `sheets:festivales:urban_s` vs `sheets:festivales:pop_l`), por lo que generan contactos distintos.
+- La misma pestaña (mismo source) sigue updateando como antes — no hay duplicación dentro de la misma pestaña.
+
+### Implicaciones asumidas
+
+- ⚠️ Una campaña que combina dos segmentos solapados puede enviar 2 emails al mismo destinatario. Decisión consciente del usuario.
+- ⚠️ Bounce/unsubscribe: el evento se aplica al contacto que lo originó. Otros duplicados con el mismo email mantienen su estado hasta que también reboten.
+- 📊 Store crece de ~93k a ~130k contactos al hacer resync (los duplicados entre pestañas dejan de fusionarse).
+
+### Tras el deploy
+
+Resync forzada de Sheets para repoblar el store con la nueva lógica. Los contactos existentes se mantienen (mismo source = update); los nuevos por solapamiento se crean.
+
+---
+
 ## [2026-05-08] — Hardening completo: críticos + altos del audit aplicados
 
 ### Contexto
