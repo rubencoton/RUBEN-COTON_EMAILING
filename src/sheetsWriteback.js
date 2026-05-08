@@ -33,6 +33,11 @@ const { getOAuthClient } = require("./googleHub");
 
 const FLUSH_INTERVAL_MS = Number(process.env.WRITEBACK_FLUSH_MS || 1500);
 const MAX_BATCH_REQUESTS = 100;
+/* P1 ROBUSTEZ 2026-05-08: backoff exponencial cuando Sheets API responde
+   con 429/503 (quota o servicio caido). Antes el reschedule era siempre
+   FLUSH_INTERVAL_MS (1.5s), generando spam de errores y saturando quota
+   si Sheets estaba 10 min down. Ahora: 1.5s, 3s, 6s, 12s... hasta 5 min. */
+const BACKOFF_MAX_MS = 5 * 60 * 1000;
 
 /* Cola en memoria. Cada item: {sheetId, gid, tabName, row, col, status, email, at} */
 const queue = [];
@@ -41,6 +46,17 @@ let _flushTimer = null;
  * un flush() lento (>1.5s en Sheets API), dos flushes concurrentes harían
  * queue.shift() simultáneo → mismo item escrito 2 veces. */
 let _flushing = false;
+/* P1 ROBUSTEZ 2026-05-08: contador de fallos transitorios consecutivos.
+   Se incrementa en 429/503/quota; se resetea cuando un flush escribe ≥1
+   celda con éxito. Determina el delay del proximo schedule. */
+let _consecutiveTransientFailures = 0;
+const _nextBackoffDelay = () => {
+  if (_consecutiveTransientFailures <= 0) return FLUSH_INTERVAL_MS;
+  const exp = Math.min(BACKOFF_MAX_MS, FLUSH_INTERVAL_MS * Math.pow(2, _consecutiveTransientFailures));
+  /* jitter ±20% para no sincronizar todos los reintentos */
+  const jitter = exp * (0.8 + Math.random() * 0.4);
+  return Math.round(jitter);
+};
 
 /* P0 FIX 2026-05-06 (saturacion VPS por 411 errores/min):
  * circuit breaker. Si un sheet+gid devuelve "after last column in grid",
@@ -140,10 +156,17 @@ const enqueue = (sheetMeta, status, email = "") => {
 
 const scheduleFlush = () => {
   if (_flushTimer) return;
+  /* P1 ROBUSTEZ 2026-05-08: delay calculado segun backoff exponencial.
+     Si la API esta sana, sigue siendo el FLUSH_INTERVAL_MS de siempre. */
+  const delay = _nextBackoffDelay();
+  if (_consecutiveTransientFailures > 0) {
+    console.log(`[writeback] backoff: proximo flush en ${Math.round(delay/1000)}s (fallos consecutivos: ${_consecutiveTransientFailures})`);
+  }
   _flushTimer = setTimeout(() => {
     _flushTimer = null;
     flush().catch((e) => console.warn("[writeback] flush err:", e.message));
-  }, FLUSH_INTERVAL_MS);
+  }, delay);
+  _flushTimer.unref?.();
 };
 
 const flush = async () => {
@@ -226,9 +249,12 @@ const flush = async () => {
           }
         } else {
           console.warn(`[writeback] batchUpdate fallo en ${sheetId.slice(0,12)}: ${e.message}`);
-          /* Re-encolar para reintento si es 429/503 transitorios */
+          /* P1 ROBUSTEZ 2026-05-08: re-encolar + ACTIVAR backoff exponencial
+             si es 429/503/quota transitorio. Antes reintentaba a 1.5s
+             generando spam si Sheets estaba caido. */
           if (/429|503|quota/i.test(e.message)) {
             for (const it of items) queue.push(it);
+            _consecutiveTransientFailures++;
           }
         }
       }
@@ -236,6 +262,12 @@ const flush = async () => {
 
     if (totalUpdated > 0) {
       console.log(`[writeback] ${totalUpdated} celdas Merge status actualizadas (cola pendiente: ${queue.length})`);
+      /* P1 ROBUSTEZ 2026-05-08: reset backoff al primer exito real.
+         Cualquier escritura confirmada significa que la API responde. */
+      if (_consecutiveTransientFailures > 0) {
+        console.log(`[writeback] backoff reset (fallos consecutivos previos: ${_consecutiveTransientFailures})`);
+        _consecutiveTransientFailures = 0;
+      }
     }
 
     return { flushed: totalUpdated, pending: queue.length };

@@ -40,12 +40,12 @@
 - [x] (2026-05-08) `AGENTS.md` reforzado con sección "TRAZABILIDAD OBLIGATORIA".
 - [x] (2026-05-08) `OPERATIONS.md` creado: runbook 11 secciones para incidencias y recovery.
 
-### Pendientes detectados en audit 2026-05-08 (no aplicados aún)
-- [ ] **CRITICO** mutex con TTL real en `sendCampaignLocks` (server.js:3355) — riesgo doble envío si crashea antes del 30s.
-- [ ] **CRITICO** `sync-all-to-drive` (server.js:2301) reportar `partialSuccess` cuando fallan iteraciones intermedias.
-- [ ] **ALTO** Loggear como warn los `catch (_) {}` de `attachments.js` (no silencio puro).
-- [ ] **ALTO** Backoff exponencial en `sheetsWriteback.flush` retry.
-- [ ] **MEDIO** Considerar streaming / split colecciones para `dataStore.read()` 55MB.
+### Pendientes detectados en audit 2026-05-08 (estado tras hardening)
+- [x] (2026-05-08) **CRITICO** `sendCampaignLocks`: ya tenía TTL 60s + purgeSendLocks. Añadido `.unref()` en cleanup setTimeout.
+- [x] (2026-05-08) **CRITICO** `sync-all-to-drive`: status 502 si todas fallan + `partialSuccess` flag y contadores `uploaded/failed/total`.
+- [x] (2026-05-08) **ALTO** `attachments.js`: cleanups silenciosos ahora con `console.warn` (cap excedido, huérfano, rollback).
+- [x] (2026-05-08) **ALTO** `sheetsWriteback.flush`: backoff exponencial 1.5s → 5min con jitter, reset al primer éxito.
+- [ ] **MEDIO** Considerar streaming / split colecciones para `dataStore.read()` 55MB. Postergado hasta migración Postgres.
 
 ### Hardening backend
 - [x] Auditoria profunda con rotura controlada (`npm run audit:deep`).

@@ -163,16 +163,22 @@ const addAttachment = async (campaignId, file) => {
       /* Verificar limite total (DENTRO del lock para evitar race) */
       const total = totalSize(campaignId);
       if (total > TOTAL_LIMIT) {
-        try { fs.unlinkSync(dest); } catch (_) {}
+        /* P1 ROBUSTEZ 2026-05-08: si el cleanup falla (disco lleno, permisos),
+           dejar warn para detectar el problema antes de que se acumule basura. */
+        try { fs.unlinkSync(dest); }
+        catch (cleanupErr) { console.warn(`[attachments] cleanup tras cap excedido fallo en ${dest}: ${cleanupErr.message}`); }
         const mb = (total / 1024 / 1024).toFixed(2);
         throw new Error(`Limite de 10 MB superado (total seria ${mb} MB). Elimina archivos o comprime antes.`);
       }
       _invalidateListCache(campaignId); /* PERF: cache fresco tras subir */
       return { name, size: fs.statSync(dest).size };
     } catch (e) {
-      /* P0 FIX 2026-05-07: limpiar archivo huérfano si fallo después del write */
+      /* P0 FIX 2026-05-07: limpiar archivo huérfano si fallo después del write.
+         P1 ROBUSTEZ 2026-05-08: warn si el cleanup falla, para detectar
+         disco lleno/permisos antes de que se acumulen huérfanos. */
       if (written) {
-        try { if (fs.existsSync(dest)) fs.unlinkSync(dest); } catch (_) {}
+        try { if (fs.existsSync(dest)) fs.unlinkSync(dest); }
+        catch (cleanupErr) { console.warn(`[attachments] cleanup huerfano fallo en ${dest}: ${cleanupErr.message}`); }
       }
       throw e;
     }
@@ -213,9 +219,12 @@ const inheritFromOwner = async (srcOwnerId, dstOwnerId) => {
       }
       const total = totalSize(dstOwnerId);
       if (total > TOTAL_LIMIT) {
-        /* Revertir lo recién copiado. */
+        /* Revertir lo recién copiado.
+           P1 ROBUSTEZ 2026-05-08: warn si el rollback falla — quedan
+           huerfanos en el destino que ya no caben en el cap. */
         for (const name of copiedNames) {
-          try { fs.unlinkSync(path.join(dstDir, name)); } catch (_) {}
+          try { fs.unlinkSync(path.join(dstDir, name)); }
+          catch (cleanupErr) { console.warn(`[attachments] rollback inherit (${dstOwnerId}/${name}) fallo: ${cleanupErr.message}`); }
         }
         const mb = (total / 1024 / 1024).toFixed(2);
         throw new Error(`Heredar los adjuntos excedería los 10 MB (sería ${mb} MB).`);
@@ -223,9 +232,11 @@ const inheritFromOwner = async (srcOwnerId, dstOwnerId) => {
       _invalidateListCache(dstOwnerId); /* PERF: cache fresco tras heredar */
       return { copied: copiedNames.length, total };
     } catch (e) {
-      /* Cleanup defensivo de huérfanos si algo falló a mitad. */
+      /* Cleanup defensivo de huérfanos si algo falló a mitad.
+         P1 ROBUSTEZ 2026-05-08: warn si el cleanup falla. */
       for (const name of copiedNames) {
-        try { fs.unlinkSync(path.join(dstDir, name)); } catch (_) {}
+        try { fs.unlinkSync(path.join(dstDir, name)); }
+        catch (cleanupErr) { console.warn(`[attachments] cleanup error inherit (${dstOwnerId}/${name}) fallo: ${cleanupErr.message}`); }
       }
       throw e;
     }

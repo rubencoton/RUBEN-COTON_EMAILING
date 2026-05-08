@@ -6,6 +6,40 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — Hardening completo: críticos + altos del audit aplicados
+
+### Contexto
+
+Tras la auditoría de la sesión anterior (mismo día), aplicar los 4 fixes priorizados marcados como `CRÍTICO` y `ALTO` en `plans.md`. Petición usuario: "haz lo que consideres, dime solo cuando esté operativo, limpio y listo".
+
+### 🔒 Robustez
+
+#### `src/server.js` — POST `/api/campaigns/:id/send`
+- **`.unref()` en setTimeout cleanup del lock.** El TTL 60s del Map + `purgeSendLocks()` en cada request son la red de seguridad si el proceso muere antes del timeout.
+
+#### `src/server.js` — POST `/api/campaigns/sync-all-to-drive`
+- **Status code y respuesta honestos:**
+  - 0 OK de N>0 → `502 Bad Gateway` con muestra de errores (Drive caído o quota agotada).
+  - Parcial → `200 OK` con flag `partialSuccess: true` + contadores `uploaded` / `failed` / `total`.
+  - Antes devolvía siempre `200 OK` aunque fallaran todas las cargas, ocultando el problema al cliente.
+
+#### `src/attachments.js`
+- **Logging en cleanups antes silenciosos** (cap excedido, huérfano tras error de write, rollback inheritFromOwner). Sin esto, fallos de disco lleno o permisos se acumulaban sin trace.
+
+#### `src/sheetsWriteback.js` — backoff exponencial
+- **Antes:** ante 429/503/quota, reintento siempre a 1.5s → spam de errores y saturación de quota si Sheets API estaba caída ≥10 min.
+- **Ahora:** contador `_consecutiveTransientFailures` que escala el delay 1.5s → 3s → 6s → 12s → ... → 5 min máximo, con jitter ±20%. Reset automático al primer flush con escrituras OK.
+- `_flushTimer` con `.unref()` añadido.
+
+### 📋 Trazabilidad
+
+- `CHANGELOG.md` + `plans.md` actualizados con items completados.
+
+### 🔍 Restantes (priorizados, MEDIO)
+- [ ] Streaming/split colecciones para `dataStore.read()` 55MB en cold start. Refactor mayor — postergado hasta migración Postgres.
+
+---
+
 ## [2026-05-08] — Audit profundo perf + autonomía + trazabilidad
 
 ### Contexto

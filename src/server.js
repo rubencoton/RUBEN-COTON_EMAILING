@@ -2399,8 +2399,25 @@ app.post("/api/campaigns/sync-all-to-drive", async (_req, res) => {
         results.push({ id: campaign.id, name: campaign.name, ok: false, error: err.message });
       }
     }
+    /* P1 ROBUSTEZ 2026-05-08: status code y mensaje claros segun resultado.
+       Antes devolvia 200 OK incluso si TODAS las cargas fallaron, ocultando
+       el problema al cliente. Ahora:
+       - 0 OK de N>0 -> 502 Bad Gateway con detalle (Drive caido o quota).
+       - parcial    -> 207-style en body (apiOk con partialSuccess=true).
+       - todo OK    -> apiOk normal. */
     const okCount = results.filter((r) => r.ok).length;
-    return apiOk(res, { uploaded: okCount, total: results.length, results });
+    const failCount = results.length - okCount;
+    if (results.length > 0 && okCount === 0) {
+      const sample = results.slice(0, 3).map((r) => `${r.id}:${r.error || "?"}`).join(" | ");
+      return apiError(res, 502, `Sync a Drive falló en TODAS (${failCount}/${results.length}). Muestra: ${sample}`);
+    }
+    return apiOk(res, {
+      uploaded: okCount,
+      failed: failCount,
+      total: results.length,
+      partialSuccess: failCount > 0,
+      results
+    });
   } catch (e) {
     console.error("[drive sync-all] ERROR:", e);
     return apiError(res, 500, e.message);
@@ -3540,12 +3557,16 @@ app.post("/api/campaigns/:id/send", (req, res) => {
     return apiError(res, 400, error.message || "No se pudo enviar campana");
   } finally {
     /* P0 FIX 2026-05-05: si hubo error, liberar el lock inmediato (no 30s
-     * de bloqueo fantasma). Solo dejar el debounce 30s en cierre limpio. */
+     * de bloqueo fantasma). Solo dejar el debounce 30s en cierre limpio.
+     * P1 ROBUSTEZ 2026-05-08: .unref() en el setTimeout para no bloquear
+     * graceful shutdown durante esos 30s. El TTL del Map (60s) +
+     * purgeSendLocks() en la siguiente request son la red de seguridad
+     * si el proceso muere antes de disparar el setTimeout. */
     if (lockSet) {
       if (res.statusCode >= 400) {
         sendCampaignLocks.delete(campaignId);
       } else {
-        setTimeout(() => sendCampaignLocks.delete(campaignId), 30000);
+        setTimeout(() => sendCampaignLocks.delete(campaignId), 30000).unref?.();
       }
     }
   }
