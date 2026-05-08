@@ -258,6 +258,26 @@ const checklistToText = (payload) => {
  * Si fetch falla por network (cold start, container arrancando), reintenta
  * 3 veces con backoff exponencial (1s, 2s, 4s). El usuario no ve el error
  * - solo espera un poco en lugar de ver "Error de API". */
+/* P1 BLINDAJE 2026-05-08: api() con retry automático + feedback visual.
+ * Antes los reintentos eran silenciosos, el usuario veía la app "colgada".
+ * Ahora muestra un banner discreto "Reconectando…" al primer reintento
+ * y lo oculta al recuperar. Si los 3 intentos fallan, muestra error claro. */
+const __apiBanner = (() => {
+  let el = null;
+  const ensure = () => {
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "apiReconnectBanner";
+    el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;display:none;animation:abFadeIn 0.18s ease-out";
+    document.body.appendChild(el);
+    return el;
+  };
+  return {
+    show: (msg) => { try { const e = ensure(); e.textContent = msg; e.style.display = "block"; } catch(_){} },
+    hide: () => { try { if (el) el.style.display = "none"; } catch(_){} }
+  };
+})();
+
 const api = async (url, options = {}, retryCount = 0) => {
   const MAX_RETRIES = 3;
   let response;
@@ -272,10 +292,13 @@ const api = async (url, options = {}, retryCount = 0) => {
   } catch (networkErr) {
     /* Fetch fallo por red (timeout, conexion rota, cold start). Reintentar. */
     if (retryCount < MAX_RETRIES) {
+      __apiBanner.show(`🔄 Reconectando con el servidor… (intento ${retryCount + 1}/${MAX_RETRIES})`);
       const delayMs = 1000 * Math.pow(2, retryCount); /* 1s, 2s, 4s */
       await new Promise((r) => setTimeout(r, delayMs));
       return api(url, options, retryCount + 1);
     }
+    __apiBanner.show("⚠️ Sin conexión con el servidor. Revisa tu Wi-Fi.");
+    setTimeout(() => __apiBanner.hide(), 5000);
     throw new Error("Sin conexion. Verifica tu Wi-Fi y reintenta.");
   }
 
@@ -286,6 +309,7 @@ const api = async (url, options = {}, retryCount = 0) => {
 
   /* Cold start del backend devuelve 502/503/504 mientras arranca. Reintentar. */
   if ([502, 503, 504].includes(response.status) && retryCount < MAX_RETRIES) {
+    __apiBanner.show(`🔄 Servidor arrancando… (${retryCount + 1}/${MAX_RETRIES})`);
     const delayMs = 1500 * Math.pow(2, retryCount);
     await new Promise((r) => setTimeout(r, delayMs));
     return api(url, options, retryCount + 1);
@@ -295,6 +319,9 @@ const api = async (url, options = {}, retryCount = 0) => {
   if (!response.ok) {
     throw new Error(data.message || "Error de API");
   }
+
+  /* Éxito tras reintento: ocultar banner. */
+  if (retryCount > 0) __apiBanner.hide();
 
   return data;
 };
@@ -399,7 +426,7 @@ const renderTemplates = (templates) => {
           <button class="btn-sm" onclick="tplPreview('${template.id}')" title="Ver cómo queda">👁 Ver</button>
           <button class="btn-sm" onclick="tplEdit('${template.id}')" title="Editar contenido">✎ Editar</button>
           ${validateBtn}
-          <button class="btn-sm btn-danger" onclick="tplDelete('${template.id}','${esc(template.name).replace(/'/g, "\\'")}')" title="Eliminar borrador">🗑</button>
+          <button class="btn-sm btn-danger" onclick="tplDelete('${template.id}','${esc(template.name).replace(/'/g, "\\'")}')" title="Mover a la papelera (30 días para restaurar)">🗑 Eliminar</button>
         </td>
       </tr>
     `;
@@ -499,13 +526,115 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/* P1 FEAT 2026-05-08: tplDelete ahora MUEVE A PAPELERA (no borra real).
+   Estilo Gmail: 30 días para restaurar antes de purga automática.
+   Para borrar ya, ir a Papelera y eliminar permanentemente desde allí. */
 window.tplDelete = async (id, name) => {
-  if (!confirm(`¿Borrar el borrador "${name}"? Esta acción no se puede deshacer.`)) return;
+  const ok = await rubenCotonConfirm({
+    title: "Mover a la papelera",
+    icon: "🗑",
+    subtitle: name,
+    body: `Vas a mover <strong>"${esc(name)}"</strong> a la papelera.<br><br>` +
+          `Tienes <strong>30 días</strong> para restaurarla antes de que se borre definitivamente.`,
+    confirmText: "Mover a papelera"
+  });
+  if (!ok) return;
   try {
-    await api(`/api/templates/${id}`, { method: "DELETE" });
+    const r = await api(`/api/templates/${id}`, { method: "DELETE" });
+    toast(r.message || "Plantilla movida a la papelera");
     await refreshSyncAndRender();
+    await refreshTemplatesTrash();
   } catch (e) { rubenCotonAlert({ title: "No se pudo borrar", body: humanizeError(e), icon: "❌", tone: "error" }); }
 };
+
+/* P1 FEAT 2026-05-08: restaurar plantilla desde la papelera. */
+window.tplRestore = async (id, name) => {
+  try {
+    await api(`/api/templates/${id}/restore`, { method: "POST" });
+    toast(`✅ "${name}" restaurada`);
+    await refreshSyncAndRender();
+    await refreshTemplatesTrash();
+  } catch (e) { rubenCotonAlert({ title: "No se pudo restaurar", body: humanizeError(e), icon: "❌", tone: "error" }); }
+};
+
+/* P1 FEAT 2026-05-08: borrado permanente desde la papelera. */
+window.tplPurge = async (id, name) => {
+  const ok = await rubenCotonConfirm({
+    title: "Eliminar permanentemente",
+    icon: "⚠️",
+    subtitle: name,
+    body: `Vas a eliminar <strong>"${esc(name)}"</strong> definitivamente.<br><br>` +
+          `Esta acción <strong>no se puede deshacer</strong>.`,
+    confirmText: "Eliminar para siempre"
+  });
+  if (!ok) return;
+  try {
+    await api(`/api/templates/${id}/permanent`, { method: "DELETE" });
+    toast(`✓ "${name}" eliminada permanentemente`);
+    await refreshTemplatesTrash();
+  } catch (e) { rubenCotonAlert({ title: "No se pudo eliminar", body: humanizeError(e), icon: "❌", tone: "error" }); }
+};
+
+/* P1 FEAT 2026-05-08: render de la tabla de papelera. */
+const refreshTemplatesTrash = async () => {
+  const tbody = qs("#templatesTrashTable tbody");
+  const counter = qs("#tplTrashCount");
+  if (!tbody) return;
+  try {
+    const r = await api("/api/templates?trashed=1");
+    const trashed = r.templates || [];
+    if (counter) counter.textContent = trashed.length ? `(${trashed.length})` : "";
+    if (!trashed.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">Papelera vacía 🗑</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    tbody.innerHTML = trashed.map((t) => {
+      const trashedAt = t.trashedAt ? new Date(t.trashedAt) : null;
+      const fechaTrash = trashedAt ? trashedAt.toLocaleString("es-ES") : "-";
+      const elapsedDays = trashedAt ? Math.floor((now - trashedAt.getTime()) / (24*60*60*1000)) : 0;
+      const remaining = Math.max(0, 30 - elapsedDays);
+      const remainingColor = remaining <= 3 ? "#dc2626" : remaining <= 7 ? "#f59e0b" : "#6b7280";
+      const safeName = esc(t.name).replace(/'/g, "\\'");
+      return `
+      <tr>
+        <td><strong>${esc(t.name)}</strong></td>
+        <td>${esc(t.subject)}</td>
+        <td style="font-size:0.85rem;color:#666">${fechaTrash}</td>
+        <td style="font-weight:600;color:${remainingColor}">${remaining} día${remaining !== 1 ? "s" : ""}</td>
+        <td class="tpl-actions">
+          <button class="btn-sm btn-success" onclick="tplRestore('${t.id}','${safeName}')" title="Restaurar a Mis plantillas">↩ Restaurar</button>
+          <button class="btn-sm btn-danger" onclick="tplPurge('${t.id}','${safeName}')" title="Eliminar para siempre">🗑 Eliminar ya</button>
+        </td>
+      </tr>`;
+    }).join("");
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center;padding:30px;color:#dc2626">Error: ${esc(e.message)}</td></tr>`;
+  }
+};
+
+/* P1 FEAT 2026-05-08: switch sub-tabs "Mis plantillas" / "Papelera". */
+qsa(".tpl-section-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tplSection;
+    qsa(".tpl-section-tab").forEach((b) => {
+      const isActive = b === btn;
+      b.classList.toggle("is-active", isActive);
+      b.style.color = isActive ? "#FF6B00" : "#6b7280";
+      b.style.borderBottomColor = isActive ? "#FF6B00" : "transparent";
+    });
+    const activeEl = qs("#tplSectionActive");
+    const trashEl = qs("#tplSectionTrash");
+    if (activeEl) activeEl.style.display = target === "active" ? "" : "none";
+    if (trashEl) trashEl.style.display = target === "trash" ? "" : "none";
+    if (target === "trash") refreshTemplatesTrash();
+  });
+});
+
+/* Refrescar papelera al entrar en la pestaña Plantillas (nº actualizado en counter). */
+document.addEventListener("rubencoton:tab", (ev) => {
+  if (ev.detail?.tab === "templates") refreshTemplatesTrash();
+});
 
 window.tplEdit = async (id) => {
   try {

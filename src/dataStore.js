@@ -1244,14 +1244,21 @@ class DataStore {
     });
   }
 
-  listTemplates() {
+  /* P1 FEAT 2026-05-08: opción { trashed: true|false } para filtrar
+     plantillas por estado de papelera. Por defecto (sin opts) devuelve
+     SOLO las activas (trashed !== true), retrocompatible con código viejo. */
+  listTemplates(opts = {}) {
     const store = this.read();
-    /* Normalizar registros antiguos sin status para retrocompatibilidad */
-    return sortByCreatedDesc(store.templates).map((tpl) => ({
-      ...tpl,
-      status: tpl.status || "borrador",
-      validatedAt: tpl.validatedAt || null
-    }));
+    const wantTrashed = opts.trashed === true;
+    return sortByCreatedDesc(store.templates)
+      .filter((tpl) => Boolean(tpl.trashed) === wantTrashed)
+      .map((tpl) => ({
+        ...tpl,
+        status: tpl.status || "borrador",
+        validatedAt: tpl.validatedAt || null,
+        trashed: Boolean(tpl.trashed),
+        trashedAt: tpl.trashedAt || null
+      }));
   }
 
   /* Inserta / actualiza los borradores estandar RUBEN COTON.
@@ -1424,14 +1431,65 @@ class DataStore {
     });
   }
 
+  /* P1 FEAT 2026-05-08: deleteTemplate ahora MUEVE A PAPELERA (no borra real).
+     Estilo Gmail: 30 días en papelera antes de purga automática.
+     - Si la plantilla NO está en papelera: la marca trashed=true, trashedAt=ahora.
+     - Si YA está en papelera (segundo delete): la borra de verdad (purga manual). */
   deleteTemplate(id) {
     return this.mutate((store) => {
-      const idx = store.templates.findIndex((item) => item.id === id);
-      if (idx === -1) {
+      const tpl = store.templates.find((item) => item.id === id);
+      if (!tpl) {
         throw new Error("Plantilla no encontrada");
       }
+      if (tpl.trashed) {
+        /* Segundo delete = purga inmediata. */
+        const idx = store.templates.findIndex((item) => item.id === id);
+        const [removed] = store.templates.splice(idx, 1);
+        return clone({ ...removed, purged: true });
+      }
+      tpl.trashed = true;
+      tpl.trashedAt = nowIso();
+      tpl.updatedAt = nowIso();
+      return clone({ ...tpl, purged: false });
+    });
+  }
+
+  /* P1 FEAT 2026-05-08: restaura plantilla de la papelera. */
+  restoreTemplate(id) {
+    return this.mutate((store) => {
+      const tpl = store.templates.find((item) => item.id === id);
+      if (!tpl) throw new Error("Plantilla no encontrada");
+      if (!tpl.trashed) throw new Error("La plantilla no está en la papelera");
+      tpl.trashed = false;
+      tpl.trashedAt = null;
+      tpl.updatedAt = nowIso();
+      return clone(tpl);
+    });
+  }
+
+  /* P1 FEAT 2026-05-08: purga manual definitiva (eliminar permanentemente). */
+  purgeTemplate(id) {
+    return this.mutate((store) => {
+      const idx = store.templates.findIndex((item) => item.id === id);
+      if (idx === -1) throw new Error("Plantilla no encontrada");
       const [removed] = store.templates.splice(idx, 1);
       return clone(removed);
+    });
+  }
+
+  /* P1 FEAT 2026-05-08: purga automática plantillas en papelera más
+     antiguas que `days`. Llamado por cron diario. Retorna nº purgadas. */
+  purgeOldTrashedTemplates(days = 30) {
+    return this.mutate((store) => {
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      let purged = 0;
+      store.templates = store.templates.filter((tpl) => {
+        if (!tpl.trashed) return true;
+        const trashedAt = tpl.trashedAt ? new Date(tpl.trashedAt).getTime() : Date.now();
+        if (trashedAt < cutoff) { purged++; return false; }
+        return true;
+      });
+      return purged;
     });
   }
 

@@ -6,6 +6,72 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.4.0 — PLANTILLAS PROPIAS + PAPELERA 30D + FEEDBACK API
+
+### Contexto
+
+Petición usuario:
+1. Sección "Plantillas" propia en menú lateral (separada de Crear campaña).
+2. Botón eliminar plantilla + papelera estilo Gmail (30 días retención).
+3. Pre-header en plantillas (no solo en campañas).
+4. Blindar app frente a errores de carga API (feedback visual).
+
+Bonus: limpieza UX de bounces (replyTracker 10min → 2min, ya v2.3.1).
+
+### 🟢 P1 — Sección "Plantillas" en menú lateral
+
+#### `public/index.html`
+- Pestaña "⭐ Plantillas" **visible en sidebar** (antes oculta con
+  `display:none`). Icono SVG documento, tooltip explicativo.
+- Título del panel cambiado: "Borradores" → "⭐ Plantillas".
+- Form: input `name` con placeholder más claro ("Nombre de la plantilla
+  ej: 'Festejos · Concejales'") + nuevo input `previewText` (pre-header).
+- Sub-tabs internas: **"⭐ Mis plantillas"** / **"🗑 Papelera"**.
+  Counter en pestaña Papelera con nº de plantillas trasheadas.
+
+### 🟢 P1 — Papelera plantillas (estilo Gmail, 30d)
+
+#### `src/dataStore.js`
+- `listTemplates({ trashed: true|false })` → filtra por estado papelera.
+  Retrocompatible (sin opts = solo activas).
+- `deleteTemplate(id)` → ya NO borra de verdad. Marca `trashed=true,
+  trashedAt=now`. Si llamado 2 veces sobre misma plantilla → purga real.
+- `restoreTemplate(id)` → resetea `trashed=false`.
+- `purgeTemplate(id)` → borrado real definitivo (botón "Eliminar ya").
+- `purgeOldTrashedTemplates(days)` → purga lo más antiguo que `days`.
+
+#### `src/server.js`
+- `GET /api/templates?trashed=1` → lista papelera.
+- `DELETE /api/templates/:id` → mueve a papelera (mensaje claro).
+- `POST /api/templates/:id/restore` → restaura.
+- `DELETE /api/templates/:id/permanent` → purga inmediata.
+- **Cron diario** (cada 6h, primera vez 30s tras arranque) que llama a
+  `purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS=30)`.
+
+#### `public/app.js`
+- `tplDelete()` → modal bonito con texto "30 días para restaurar".
+- `tplRestore(id, name)` → restaura desde papelera (toast verde).
+- `tplPurge(id, name)` → modal "no se puede deshacer" + DELETE permanent.
+- `refreshTemplatesTrash()` → render tabla papelera con columnas:
+  Nombre, Asunto, Eliminada, **Quedan X días** (rojo si <=3, amarillo
+  si <=7), Acciones (↩ Restaurar / 🗑 Eliminar ya).
+- Switch sub-tabs visual: borde rojo bajo la activa.
+
+### 🟢 P1 — Blindaje errores carga API
+
+#### `public/app.js`
+- `api()` ya tenía retry 3x con backoff. **Ahora con feedback visual**:
+  banner discreto en la parte superior "🔄 Reconectando con el servidor…
+  (intento N/3)" durante el reintento. Al recuperar, se oculta.
+- Si falla los 3 intentos: banner rojo "⚠️ Sin conexión" durante 5s.
+- Cold start del backend (502/503/504) muestra "🔄 Servidor arrancando…"
+
+### Commits
+
+- `<HASH>` feat(plantillas): seccion propia + papelera 30d + feedback API
+
+---
+
 ## [2026-05-08] — v2.3.0 — BLINDAJE DEPLOY + GRACEFUL SHUTDOWN
 
 ### Contexto

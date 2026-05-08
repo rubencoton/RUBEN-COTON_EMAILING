@@ -1289,8 +1289,11 @@ app.get("/api/folders", (_req, res) => {
   }
 });
 
-app.get("/api/templates", (_req, res) => {
-  return apiOk(res, { templates: dataStore.listTemplates() });
+/* P1 FEAT 2026-05-08: filtro ?trashed=1 para listar papelera. Sin param
+   o ?trashed=0 devuelve solo activas (retrocompatible). */
+app.get("/api/templates", (req, res) => {
+  const wantTrashed = req.query.trashed === "1" || req.query.trashed === "true";
+  return apiOk(res, { templates: dataStore.listTemplates({ trashed: wantTrashed }) });
 });
 
 app.get("/api/templates/:id", (req, res) => {
@@ -1318,13 +1321,43 @@ app.put("/api/templates/:id", (req, res) => {
   }
 });
 
+/* P1 FEAT 2026-05-08: DELETE = mover a papelera (estilo Gmail).
+   Retención 30 días, después purga automática vía cron diario.
+   Para purga inmediata, usar DELETE /api/templates/:id/permanent. */
 app.delete("/api/templates/:id", (req, res) => {
   try {
-    const removed = dataStore.deleteTemplate(req.params.id);
-    return apiOk(res, { removed });
+    const result = dataStore.deleteTemplate(req.params.id);
+    return apiOk(res, {
+      result,
+      message: result.purged
+        ? "Plantilla eliminada permanentemente"
+        : "Plantilla movida a la papelera (30 días para restaurar)"
+    });
   } catch (error) {
     const code = /no encontrada/i.test(error.message) ? 404 : 400;
     return apiError(res, code, error.message || "No se pudo borrar plantilla");
+  }
+});
+
+/* P1 FEAT 2026-05-08: restaurar plantilla de la papelera. */
+app.post("/api/templates/:id/restore", (req, res) => {
+  try {
+    const template = dataStore.restoreTemplate(req.params.id);
+    return apiOk(res, { template, message: "Plantilla restaurada" });
+  } catch (error) {
+    const code = /no encontrada|no está/i.test(error.message) ? 404 : 400;
+    return apiError(res, code, error.message);
+  }
+});
+
+/* P1 FEAT 2026-05-08: borrado permanente inmediato (sin pasar por papelera). */
+app.delete("/api/templates/:id/permanent", (req, res) => {
+  try {
+    const removed = dataStore.purgeTemplate(req.params.id);
+    return apiOk(res, { removed, message: "Plantilla eliminada permanentemente" });
+  } catch (error) {
+    const code = /no encontrada/i.test(error.message) ? 404 : 400;
+    return apiError(res, code, error.message);
   }
 });
 
@@ -4453,6 +4486,29 @@ const periodicSync = setInterval(() => {
 }, 60000);
 /* P1 FIX 2026-05-07: .unref() para no bloquear graceful shutdown */
 periodicSync.unref?.();
+
+/* P1 FEAT 2026-05-08: cron diario purga plantillas en papelera >30 días.
+ * Estilo Gmail: tras 30 días en papelera, eliminación automática real.
+ * Corre cada 6 horas (no es urgente) para distribuir el coste. */
+const TEMPLATES_TRASH_RETENTION_DAYS = Number(process.env.TEMPLATES_TRASH_RETENTION_DAYS) || 30;
+const trashPurgeInterval = setInterval(() => {
+  try {
+    const purged = dataStore.purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS);
+    if (purged > 0) {
+      console.log(`[trash] purgadas ${purged} plantillas en papelera >${TEMPLATES_TRASH_RETENTION_DAYS} días`);
+    }
+  } catch (e) {
+    console.error("[trash] error purgando plantillas:", e.message);
+  }
+}, 6 * 60 * 60 * 1000); /* 6 horas */
+trashPurgeInterval.unref?.();
+/* Primera ejecución al arrancar (limpia lo acumulado tras restart largo). */
+setTimeout(() => {
+  try {
+    const purged = dataStore.purgeOldTrashedTemplates(TEMPLATES_TRASH_RETENTION_DAYS);
+    if (purged > 0) console.log(`[trash] purga inicial: ${purged} plantillas`);
+  } catch (_e) { /* swallow */ }
+}, 30 * 1000).unref?.();
 
 /* Sheets sync — solo L-V 8:00-20:00 Europe/Madrid, cada 30 min */
 const SHEETS_AUTOSYNC_ENABLED = String(process.env.SHEETS_AUTOSYNC_ENABLED || "true").toLowerCase() !== "false";

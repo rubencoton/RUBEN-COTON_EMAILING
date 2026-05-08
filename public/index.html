@@ -39,8 +39,14 @@
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Estado campañas
           </button>
+          <!-- P1 FEAT 2026-05-08: pestaña Plantillas visible en menú lateral.
+               Antes estaba oculta. Ahora el usuario crea/edita/elimina
+               plantillas desde aquí (separado de Crear campaña). -->
+          <button data-tab="templates" class="tab" type="button" title="Crear, editar y guardar plantillas reutilizables. Se pueden usar después al crear campañas.">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            Plantillas
+          </button>
           <!-- Tabs ocultos pero activos (accesibles via links internos) -->
-          <button data-tab="templates" class="tab" type="button" style="display:none"></button>
           <button data-tab="contacts" class="tab" type="button" style="display:none"></button>
           <button data-tab="segments" class="tab" type="button" style="display:none"></button>
           <button data-tab="analytics" class="tab" type="button" style="display:none"></button>
@@ -144,22 +150,37 @@
         </section>
 
         <section class="panel tab-panel" data-panel="templates">
-          <h2>Borradores</h2>
+          <h2>⭐ Plantillas</h2>
           <p class="muted" style="margin-top:-8px;margin-bottom:16px">
-            Crea, edita y guarda tus correos estándar. Todos los borradores
-            se pueden usar en campañas; marca como <strong>validado</strong>
-            los que ya has revisado para distinguirlos en el selector.
+            Crea, edita y guarda tus correos estándar para reutilizarlos en campañas.
+            Las plantillas eliminadas van a la <strong>papelera</strong> y se restauran
+            durante 30 días (luego se borran solas, estilo Gmail).
           </p>
-          <div class="split-grid">
+
+          <!-- P1 FEAT 2026-05-08: sub-tabs "Mis plantillas" / "Papelera" -->
+          <div class="tpl-section-tabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid #e5e7eb">
+            <button type="button" class="tpl-section-tab is-active" data-tpl-section="active"
+                    style="padding:10px 18px;border:none;background:none;cursor:pointer;font-weight:600;border-bottom:3px solid #FF6B00;color:#FF6B00">
+              ⭐ Mis plantillas
+            </button>
+            <button type="button" class="tpl-section-tab" data-tpl-section="trash"
+                    style="padding:10px 18px;border:none;background:none;cursor:pointer;font-weight:600;border-bottom:3px solid transparent;color:#6b7280">
+              🗑 Papelera <span id="tplTrashCount" class="muted" style="font-size:11px"></span>
+            </button>
+          </div>
+
+          <div class="split-grid" id="tplSectionActive">
             <div>
               <form id="templateForm" class="mail-form">
                 <input type="hidden" id="templateEditingId" value="" />
                 <div id="templateEditBanner" class="template-edit-banner" style="display:none">
-                  <span>Editando borrador</span>
+                  <span>Editando plantilla</span>
                   <button type="button" id="templateEditCancel" class="template-edit-cancel">Cancelar</button>
                 </div>
-                <input name="name" type="text" placeholder="Nombre del borrador" required />
+                <input name="name" type="text" placeholder="Nombre de la plantilla (ej: 'Festejos · Concejales')" required />
                 <input name="subject" type="text" placeholder="Asunto" required />
+                <!-- P1 FEAT 2026-05-08: pre-header en plantillas -->
+                <input name="previewText" type="text" placeholder="Pre-header (texto gris junto al asunto, recomendado <90 caracteres)" maxlength="120" />
                 <div class="template-editor-tabs">
                   <button type="button" class="tpl-tab" data-tpl-view="ai">🤖 Crear con IA</button>
                   <button type="button" class="tpl-tab is-active" data-tpl-view="code">Código HTML</button>
@@ -208,12 +229,12 @@
                 <div id="tplTextView" class="tpl-view">
                   <textarea name="text" rows="14" placeholder="Texto plano (alternativa sin HTML)"></textarea>
                 </div>
-                <button type="submit" id="templateSubmitBtn">Guardar borrador</button>
+                <button type="submit" id="templateSubmitBtn">Guardar plantilla</button>
                 <p id="templateResult" class="mail-form-result">-</p>
               </form>
             </div>
             <div>
-              <h3>Tus borradores</h3>
+              <h3>Tus plantillas</h3>
               <p class="muted" style="margin-top:-4px;margin-bottom:10px;font-size:0.85rem">
                 <span class="status-pill status-borrador">borrador</span> Pendiente de revisión ·
                 <span class="status-pill status-validado">validado</span> Ya revisado (se puede usar igualmente en campañas)
@@ -231,6 +252,28 @@
                 <tbody></tbody>
               </table>
             </div>
+          </div>
+
+          <!-- P1 FEAT 2026-05-08: vista PAPELERA (oculta por defecto). -->
+          <div id="tplSectionTrash" style="display:none">
+            <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px">
+              🗑 Las plantillas en papelera se eliminan <strong>automáticamente tras 30 días</strong>.
+              Puedes restaurarlas o eliminarlas permanentemente antes.
+            </div>
+            <table class="table" id="templatesTrashTable">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Asunto</th>
+                  <th>Eliminada</th>
+                  <th>Quedan</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" class="muted" style="text-align:center;padding:30px">Cargando…</td></tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
