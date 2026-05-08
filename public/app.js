@@ -358,9 +358,11 @@ const api = async (url, options = {}, retryCount = 0) => {
 
   /* Cold start del backend devuelve 502/503/504 mientras arranca. Reintentar. */
   if ([502, 503, 504].includes(response.status) && retryCount < MAX_RETRIES) {
-    /* P1 FIX 2026-05-08: banner solo desde 2º intento (silencio en blips). */
+    /* P1 FIX 2026-05-08: banner solo desde 2º intento (silencio en blips).
+       Mensaje informativo: el cold start de Coolify puede tardar hasta 60s
+       cuando el contenedor estaba dormido — antes el banner sugería problema. */
     if (retryCount >= 1) {
-      __apiBanner.show(`🔄 Servidor arrancando…`);
+      __apiBanner.show(`🔄 Servidor arrancando (puede tardar hasta 1 min en cold start)…`);
     }
     const delayMs = retryCount === 0 ? 500 : 1500 * Math.pow(2, retryCount - 1);
     await new Promise((r) => setTimeout(r, delayMs));
@@ -583,12 +585,23 @@ window.tplUnvalidate = async (id) => {
   } catch (e) { rubenCotonAlert({ title: "No se pudo desvalidar", body: humanizeError(e), icon: "❌", tone: "error" }); }
 };
 
+/* P2 FIX 2026-05-08 (peticion usuario "si me muevo se queda cargando bug"):
+   estado global de la preview en curso para poder cancelarla cuando el
+   usuario cambia de pestaña o invoca otra preview. Sin esto, dos clicks
+   seguidos en "Ver" creaban dos loadingHint y solo uno se ocultaba. */
+let __tplPreviewActive = null;
+
 window.tplPreview = async (id) => {
-  /* P1 FEAT 2026-05-08 (peticion usuario "tarda mucho, pon que carga"):
-     loadingHint flotante visible mientras carga. Se oculta al terminar. */
+  /* Cancelar preview anterior si seguía en vuelo (multi-click + cold start). */
+  if (__tplPreviewActive) {
+    try { __tplPreviewActive.cancel(); } catch (_) {}
+  }
   const lh = loadingHint("Cargando vista previa…");
+  const ctx = { cancelled: false, cancel() { this.cancelled = true; lh.hide(); } };
+  __tplPreviewActive = ctx;
   try {
     const data = await api(`/api/templates/${id}`);
+    if (ctx.cancelled) return; /* el usuario cambió de pestaña / pidió otra */
     const t = data.template;
     if (!t) throw new Error("Plantilla no encontrada");
 
@@ -612,11 +625,24 @@ window.tplPreview = async (id) => {
     frame.srcdoc = t.html || "<p style='padding:40px;font-family:sans-serif;color:#999;text-align:center'>Este borrador no tiene HTML. Solo texto plano.</p>";
     modal.style.display = "flex";
   } catch (e) {
-    rubenCotonAlert({ title: "No se pudo previsualizar", body: humanizeError(e), icon: "❌", tone: "error" });
+    if (!ctx.cancelled) {
+      rubenCotonAlert({ title: "No se pudo previsualizar", body: humanizeError(e), icon: "❌", tone: "error" });
+    }
   } finally {
-    lh.hide();
+    if (!ctx.cancelled) lh.hide();
+    if (__tplPreviewActive === ctx) __tplPreviewActive = null;
   }
 };
+
+/* P2 FIX 2026-05-08: si el usuario cambia de pestaña con una preview
+   en vuelo, abortarla para no dejar spinner huérfano ni abrir el modal
+   en pestaña equivocada. */
+document.addEventListener("rubencoton:tab", () => {
+  if (__tplPreviewActive) {
+    try { __tplPreviewActive.cancel(); } catch (_) {}
+    __tplPreviewActive = null;
+  }
+});
 
 /* Cerrar modal preview con ESC o clic fuera */
 qs("#tplPreviewModalClose")?.addEventListener("click", () => {
@@ -2977,7 +3003,8 @@ const __clearInheritedAttachUI = () => {
 };
 
 qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
-  const tplId = ev.target.value;
+  const sel = ev.target;
+  const tplId = sel.value;
   /* P1 FIX BUG #4 (audit 2026-05-08): si el usuario deselecciona la plantilla,
      resetear el flag de herencia + limpiar lista visual de heredados. */
   if (!tplId) {
@@ -2988,6 +3015,13 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
   /* P1 FIX UX#1: al cambiar de plantilla, limpiar heredados anteriores
      antes de añadir los nuevos. Sin esto, se acumulaban A+B+C visualmente. */
   __clearInheritedAttachUI();
+  /* P0 FIX 2026-05-08 (peticion usuario "no carga nada, parece bug"):
+     loadingHint flotante + disable select mientras carga la plantilla.
+     Antes el usuario seleccionaba y no veía NADA hasta el toast final
+     (~varios segundos en cold start) → percepción de bug. */
+  const __lh = loadingHint("Cargando plantilla…");
+  sel.disabled = true;
+  sel.style.opacity = "0.6";
   try {
     const r = await api(`/api/templates/${tplId}`);
     const tpl = r.template;
@@ -3053,6 +3087,11 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
   } catch (e) {
     console.warn("Error cargando plantilla:", e.message);
     toast(`❌ Error cargando plantilla: ${esc(e.message)}`);
+  } finally {
+    /* P0 FIX 2026-05-08: siempre liberar UI aunque falle el fetch. */
+    __lh.hide();
+    sel.disabled = false;
+    sel.style.opacity = "";
   }
 });
 /* Refrescar lista al cambiar a la pestaña campañas */
@@ -3890,15 +3929,24 @@ const init = async () => {
        pillada"): TODA la inicialización en paralelo (antes refreshPanel
        bloqueaba). refreshContacts es lazy (solo se llama cuando se abre la
        pestaña contactos), ahorra una request inicial pesada con 56k contactos.
-       Promise.allSettled para que un fallo individual no rompa el init. */
+       Promise.allSettled para que un fallo individual no rompa el init.
+       P1 DIAG 2026-05-08: timing per-request para identificar cuál de las 6
+       es la lenta (sospecha cold start Coolify). Aparece en console. */
     const initStart = performance.now();
+    const timed = (name, fn) => {
+      const t0 = performance.now();
+      return fn().then(
+        (v) => { console.log(`[init] ${name}: ${Math.round(performance.now() - t0)}ms`); return v; },
+        (e) => { console.warn(`[init] ${name}: FAIL en ${Math.round(performance.now() - t0)}ms — ${e?.message}`); throw e; }
+      );
+    };
     const results = await Promise.allSettled([
-      refreshPanel(),
-      refreshTemplates(),
-      refreshSegments(),
-      refreshCampaigns(),
-      refreshWorkflows(),
-      refreshSetupChecklist()
+      timed("panel", refreshPanel),
+      timed("templates", refreshTemplates),
+      timed("segments", refreshSegments),
+      timed("campaigns", refreshCampaigns),
+      timed("workflows", refreshWorkflows),
+      timed("setupChecklist", refreshSetupChecklist)
       /* refreshContacts() eliminado: lazy en activateTab('contacts') */
     ]);
     const failed = results.filter(r => r.status === "rejected");

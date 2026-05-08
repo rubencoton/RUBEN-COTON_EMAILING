@@ -6,6 +6,35 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — UX QA pase 4 (selector plantilla + preview + cold start)
+
+### Contexto
+
+Tras prueba en producción del usuario detectando 3 bugs UX:
+
+1. **P0** — Al elegir plantilla en Crear Campaña no parecía pasar nada (sin loader, sin feedback) durante el fetch.
+2. **P1** — Carga inicial percibida de hasta 1 min con banner "Servidor arrancando" sin contexto del cold start de Coolify.
+3. **P2** — Vista previa de plantilla quedaba con spinner huérfano si el usuario cambiaba de pestaña o pulsaba "Ver" en otra plantilla mientras cargaba.
+
+### 🐛 Corregido
+
+#### `public/app.js`
+
+- **P0 — Loader visible al cambiar plantilla en Crear Campaña**
+  El handler `change` del `#campaignTemplateSelect` ahora muestra `loadingHint("Cargando plantilla…")` y deshabilita el select (con `opacity:0.6`) durante el fetch. Liberación garantizada en `finally`.
+- **P2 — `tplPreview` con cleanup y abort**
+  Estado global `__tplPreviewActive` con `cancel()`. Si llega un nuevo click "Ver" o el usuario cambia de pestaña (`rubencoton:tab`), la preview anterior se cancela: oculta su `loadingHint` y descarta el render del modal. Evita modales en pestaña equivocada y spinners huérfanos.
+- **P1 — Banner cold-start informativo**
+  El mensaje "Servidor arrancando" ahora dice también "(puede tardar hasta 1 min en cold start)" para que el usuario entienda que es Coolify, no un fallo.
+- **P1 — Diagnóstico per-request en init**
+  Wrapper `timed(name, fn)` alrededor de las 6 promesas paralelas del init. Cada una loggea su tiempo individual en console (`[init] templates: 320ms`, etc.) para identificar la request lenta.
+
+### 🔍 Pendiente investigar
+
+- Causa raíz cold-start ~1 min: probable combinación de Coolify wakeup + `dataStore.read()` síncrono de store.json (~55MB). Ver telemetría per-request en próximas sesiones.
+
+---
+
 ## [2026-05-08] — v2.7.0 — TRIPLE AUDIT: 12 FIXES (UX + SEGURIDAD + PERFORMANCE)
 
 ### Contexto

@@ -27,6 +27,13 @@
 
 ## HITO 5 - HARDENING (EN CURSO)
 
+### UX QA (sesiones manuales producción)
+- [x] (2026-05-08) Loader + disable select en cambio de plantilla Crear Campaña.
+- [x] (2026-05-08) `tplPreview` con cancel + cleanup en cambio de pestaña.
+- [x] (2026-05-08) Banner cold-start con mensaje informativo + timing per-request en init.
+- [ ] Investigar causa cold-start ~1 min (Coolify wakeup vs dataStore 55MB sync).
+
+### Hardening backend
 - [x] Auditoria profunda con rotura controlada (`npm run audit:deep`).
 - [x] Fix login + estaticos sin autenticacion (pantalla de acceso estable).
 - [x] Fix cookie segura adaptable por entorno (`APP_AUTH_COOKIE_SECURE`).
