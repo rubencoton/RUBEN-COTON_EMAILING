@@ -33,18 +33,19 @@ async function scanReplies() {
   if (!_dataStoreRef) return { ok: false, reason: "no_datastore" };
   const gmail = clients.gmail();
   try {
-    /* P0 FIX 2026-05-08 (peticion usuario "los rebotes me siguen saliendo"):
-       el filtro automatico del usuario en Gmail mueve los mailer-daemon a la
-       etiqueta personalizada "7-NOTIFICACIONES" y los SACA del INBOX.
-       La query antes era `in:inbox` → no los pillaba → 154+ acumulados.
-       Ahora ampliamos a:
-       - in:inbox (replies humanos siguen aqui)
-       - OR from:mailer-daemon/postmaster/etc (bounces dondequiera que esten,
-         excepto papelera/spam que ya estan fuera).
-       maxResults subido a 100 para limpiar acumulados rapido. */
+    /* P0 FIX 2026-05-08 (peticion usuario):
+       Iter 1: in:inbox solo → no pillaba bounces fuera del inbox (etiqueta
+               personalizada del usuario los movia).
+       Iter 2: ampliado a (in:inbox OR from:mailer-daemon OR from:postmaster).
+       Iter 3 (esta): QUITADO -in:spam. Muchos bounces caen en SPAM (filtros
+               de Gmail los marcan como tal, especialmente los de servidores
+               raros). Antes los excluiamos y se acumulaban en spam (90+).
+               Ahora los procesamos tambien desde spam → trash. Las respuestas
+               humanas siguen filtradas porque solo movemos a papelera si
+               isConfirmedBounce(senderEmail, subject, autoSubHeader). */
     const list = await gmail.users.messages.list({
       userId: "me",
-      q: `(in:inbox OR from:mailer-daemon OR from:postmaster OR from:mail-daemon) newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com -in:trash -in:spam`,
+      q: `(in:inbox OR from:mailer-daemon OR from:postmaster OR from:mail-daemon) newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com -in:trash`,
       maxResults: 200 /* P0 2026-05-08: 100→200 para limpiar acumulados rápido */
     });
     const msgs = list.data.messages || [];
