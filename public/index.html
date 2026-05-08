@@ -321,24 +321,30 @@
             </div>
           </div>
 
-          <!-- SUB-TAB: MIS PLANTILLAS (lista, sin estado) -->
+          <!-- SUB-TAB: MIS PLANTILLAS (lista, sin estado).
+               P1 FEAT 2026-05-08: header sticky + sort por columna + búsqueda rápida. -->
           <div id="tplSectionActive" style="display:none">
-            <h3 style="margin-bottom:10px">Tus plantillas operativas</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+              <h3 style="margin:0">Tus plantillas operativas</h3>
+              <input id="templatesSearch" type="search" placeholder="🔍 Buscar por nombre o asunto…" style="padding:8px 14px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:13px;min-width:280px;flex:0 1 320px">
+            </div>
             <p class="muted" style="margin-top:0;margin-bottom:14px;font-size:13px">
-              Estas son las plantillas que aparecen en el desplegable al crear campañas.
-              Puedes <strong>verlas, editarlas o moverlas a la papelera</strong>.
+              Aparecen en el desplegable al crear campañas. Puedes <strong>verlas, editarlas o moverlas a la papelera</strong>.
+              <span style="font-size:11px;opacity:0.8">· Click en una cabecera para ordenar.</span>
             </p>
-            <table class="table" id="templatesTable">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Asunto</th>
-                  <th>Actualizada</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div style="max-height:580px;overflow:auto;border:1px solid var(--panel-border);border-radius:8px">
+              <table class="table" id="templatesTable" style="margin:0;border-radius:0;border:0">
+                <thead>
+                  <tr>
+                    <th class="tpl-sort" data-tpl-sort="name" style="cursor:pointer;user-select:none;position:sticky;top:0;background:#f9fafb;z-index:5;box-shadow:0 1px 0 #e5e7eb">Nombre <span class="tpl-sort-arrow">⇅</span></th>
+                    <th class="tpl-sort" data-tpl-sort="subject" style="cursor:pointer;user-select:none;position:sticky;top:0;background:#f9fafb;z-index:5;box-shadow:0 1px 0 #e5e7eb">Asunto <span class="tpl-sort-arrow">⇅</span></th>
+                    <th class="tpl-sort" data-tpl-sort="updated" style="cursor:pointer;user-select:none;position:sticky;top:0;background:#f9fafb;z-index:5;box-shadow:0 1px 0 #e5e7eb">Actualizada <span class="tpl-sort-arrow">⇅</span></th>
+                    <th style="position:sticky;top:0;background:#f9fafb;z-index:5;box-shadow:0 1px 0 #e5e7eb">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
 
           <!-- P1 FEAT 2026-05-08: vista PAPELERA (oculta por defecto). -->

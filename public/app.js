@@ -426,11 +426,71 @@ const renderContacts = (contacts) => {
 window.__contactsPrev = () => { if (contactsPage > 0) { contactsPage--; refreshContacts(); } };
 window.__contactsNext = () => { if (state.contactsHasMore) { contactsPage++; refreshContacts(); } };
 
+/* P1 FEAT 2026-05-08 (peticion usuario): estado de ordenacion + filtro de
+   busqueda para Mis plantillas. */
+const __tplListState = { sortKey: "updated", sortDir: "desc", search: "" };
+
 const renderTemplates = (templates) => {
   /* P1 REFACTOR 2026-05-08 (peticion usuario): eliminada la columna Estado.
      Todas las plantillas guardadas son operativas (no hay borrador/validado).
-     Botón "Validar" eliminado. Solo quedan Ver / Editar / Eliminar. */
-  templatesTableBody.innerHTML = templates
+     Botón "Validar" eliminado. Solo quedan Ver / Editar / Eliminar.
+     P1 FEAT 2026-05-08: aplicar busqueda + ordenacion en cliente. */
+  let list = Array.isArray(templates) ? templates.slice() : [];
+
+  /* Filtro por nombre o asunto (case-insensitive) */
+  const q = __tplListState.search.trim().toLowerCase();
+  if (q) {
+    list = list.filter((t) => {
+      const n = String(t.name || "").toLowerCase();
+      const s = String(t.subject || "").toLowerCase();
+      return n.includes(q) || s.includes(q);
+    });
+  }
+
+  /* Ordenacion por nombre / asunto / fecha actualizada */
+  const dir = __tplListState.sortDir === "asc" ? 1 : -1;
+  list.sort((a, b) => {
+    let va, vb;
+    if (__tplListState.sortKey === "name") {
+      va = String(a.name || "").toLowerCase();
+      vb = String(b.name || "").toLowerCase();
+    } else if (__tplListState.sortKey === "subject") {
+      va = String(a.subject || "").toLowerCase();
+      vb = String(b.subject || "").toLowerCase();
+    } else { /* updated (default) */
+      va = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      vb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    }
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+
+  /* Indicadores visuales en headers */
+  qsa(".tpl-sort").forEach((th) => {
+    const k = th.dataset.tplSort;
+    const arrow = th.querySelector(".tpl-sort-arrow");
+    if (!arrow) return;
+    if (k === __tplListState.sortKey) {
+      arrow.textContent = __tplListState.sortDir === "asc" ? "▲" : "▼";
+      th.style.color = "#FF6B00";
+    } else {
+      arrow.textContent = "⇅";
+      th.style.color = "";
+    }
+  });
+
+  /* Si la búsqueda no devuelve nada, mostrar mensaje claro. */
+  if (q && list.length === 0) {
+    templatesTableBody.innerHTML = `<tr><td colspan="4" class="muted" style="text-align:center;padding:30px">Sin resultados para "${esc(q)}". Prueba con otro nombre o asunto.</td></tr>`;
+    return;
+  }
+  if (list.length === 0) {
+    templatesTableBody.innerHTML = '<tr><td colspan="4" class="muted" style="text-align:center;padding:30px">Aún no tienes plantillas. Ve a "Crear plantilla" para empezar.</td></tr>';
+    return;
+  }
+
+  templatesTableBody.innerHTML = list
     .map((template) => {
       const fechaBase = template.updatedAt || template.createdAt;
       const fecha = fechaBase ? new Date(fechaBase).toLocaleString("es-ES") : "-";
@@ -679,6 +739,31 @@ qs("#tplEmptyTrashBtn")?.addEventListener("click", async () => {
   } catch (e) {
     rubenCotonAlert({ title: "No se pudo vaciar", body: humanizeError(e), icon: "❌", tone: "error" });
   }
+});
+
+/* P1 FEAT 2026-05-08: ordenacion al click en header + busqueda en vivo.
+   Reusan state.templates en memoria → no hace falta volver a la API. */
+qsa(".tpl-sort").forEach((th) => {
+  th.addEventListener("click", () => {
+    const k = th.dataset.tplSort;
+    if (__tplListState.sortKey === k) {
+      __tplListState.sortDir = __tplListState.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      __tplListState.sortKey = k;
+      __tplListState.sortDir = k === "updated" ? "desc" : "asc";
+    }
+    if (Array.isArray(state.templates)) renderTemplates(state.templates);
+  });
+});
+
+/* Busqueda con debounce 150ms para no re-renderizar en cada tecla. */
+let __tplSearchTimer = null;
+qs("#templatesSearch")?.addEventListener("input", (ev) => {
+  __tplListState.search = ev.target.value || "";
+  if (__tplSearchTimer) clearTimeout(__tplSearchTimer);
+  __tplSearchTimer = setTimeout(() => {
+    if (Array.isArray(state.templates)) renderTemplates(state.templates);
+  }, 150);
 });
 
 /* Refrescar papelera al entrar en la pestaña Plantillas (nº actualizado en counter). */
