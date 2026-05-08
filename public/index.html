@@ -316,6 +316,13 @@
                 <input name="subject" type="text" placeholder="Asunto del email (lo que ve el destinatario)" required />
                 <!-- Pre-header (preview text): aparece junto al asunto en gris en la bandeja de entrada -->
                 <input name="previewText" type="text" placeholder="Pre-header (texto gris junto al asunto, recomendado <90 caracteres)" maxlength="120" />
+                <!-- P1 FEAT 2026-05-08: selector de plantilla. Al elegir una, autorrellena asunto/preview/HTML/text. -->
+                <div style="display:flex;gap:8px;align-items:center;margin:6px 0">
+                  <label for="campaignTemplateSelect" style="font-size:13px;color:#666;flex-shrink:0">⭐ Plantilla:</label>
+                  <select name="templateId" id="campaignTemplateSelect" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;background:#fff">
+                    <option value="">— Empezar desde cero —</option>
+                  </select>
+                </div>
 
                 <!-- Selector de modo de composición -->
                 <div class="mode-selector">
@@ -497,6 +504,10 @@
                   <button type="submit" name="action" value="draft" class="btn-draft">
                     💾 <strong>Guardar como borrador</strong>
                     <small>No envía. Podrás lanzarla luego desde "Estado campañas".</small>
+                  </button>
+                  <button type="submit" name="action" value="template" class="btn-draft" style="background:#fff8e1;border-color:#fbbf24">
+                    ⭐ <strong>Guardar como plantilla</strong>
+                    <small>Reutilizable en futuras campañas (sin enviar).</small>
                   </button>
                   <button type="submit" name="action" value="send" class="btn-launch">
                     🚀 <strong>Lanzar campaña ahora</strong>

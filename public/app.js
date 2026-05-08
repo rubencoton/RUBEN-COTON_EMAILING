@@ -2185,11 +2185,83 @@ const ensureSegmentForTag = async (tagSlug, displayName) => {
   return r.segment?.id || r.id;
 };
 
+/* P1 FEAT 2026-05-08: poblar el selector de plantilla del formulario campaña.
+ * Cuando el usuario elige una, autorrellena asunto/preview/HTML/text. */
+const populateCampaignTemplateSelect = async () => {
+  const sel = qs("#campaignTemplateSelect");
+  if (!sel) return;
+  try {
+    const r = await api("/api/templates");
+    const tpls = (r.templates || []).filter(t => t.status === "validada" || t.status === "borrador");
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Empezar desde cero —</option>';
+    tpls.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = `${t.status === "validada" ? "✅" : "📝"} ${t.name}`;
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  } catch (e) { /* silent */ }
+};
+qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
+  const tplId = ev.target.value;
+  if (!tplId) return;
+  try {
+    const r = await api(`/api/templates/${tplId}`);
+    const tpl = r.template;
+    if (!tpl) return;
+    const subj = qs('#campaignForm input[name="subject"]');
+    const prev = qs('#campaignForm input[name="previewText"]');
+    const htmlInput = qs('#campaignForm textarea[name="html"]');
+    const textInput = qs('#campaignForm textarea[name="text"]');
+    if (subj && !subj.value) subj.value = tpl.subject || "";
+    if (prev && !prev.value) prev.value = tpl.previewText || "";
+    if (htmlInput && !htmlInput.value) htmlInput.value = tpl.html || "";
+    if (textInput && !textInput.value) textInput.value = tpl.text || "";
+    /* Refrescar preview si está visible */
+    if (typeof updateTplPreview === "function") updateTplPreview();
+  } catch (e) { console.warn("Error cargando plantilla:", e.message); }
+});
+/* Refrescar lista al cambiar a la pestaña campañas */
+document.addEventListener("rubencoton:tab", (ev) => {
+  if (ev.detail?.tab === "campaigns") populateCampaignTemplateSelect();
+});
+populateCampaignTemplateSelect(); /* primera carga */
+
 campaignForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  /* Detectar accion: draft (guardar sin enviar) o send (guardar + lanzar) */
-  const action = event.submitter?.value === "send" ? "send" : "draft";
+  /* P1 FEAT 2026-05-08: 3 acciones — draft, template (guardar como plantilla), send */
+  const action = event.submitter?.value === "send" ? "send"
+                : event.submitter?.value === "template" ? "template"
+                : "draft";
+
+  /* Acción "Guardar como plantilla": crea POST /api/templates con datos del form */
+  if (action === "template") {
+    const formData = new FormData(campaignForm);
+    const name = String(formData.get("name") || "").trim();
+    const subject = String(formData.get("subject") || "").trim();
+    const previewText = String(formData.get("previewText") || "").trim();
+    const html = String(formData.get("html") || "").trim();
+    const text = String(formData.get("text") || "").trim();
+    if (!name) { toast("Pon un nombre para la plantilla"); return; }
+    if (!subject) { toast("Pon un asunto"); return; }
+    if (!html && !text) { toast("Escribe el contenido (HTML o texto)"); return; }
+    try {
+      const r = await api("/api/templates", {
+        method: "POST",
+        body: JSON.stringify({ name, subject, previewText, html, text })
+      });
+      toast(`✅ Plantilla "${esc(name)}" guardada`);
+      await populateCampaignTemplateSelect();
+      const sel = qs("#campaignTemplateSelect");
+      if (sel && r.template?.id) sel.value = r.template.id;
+    } catch (e) {
+      toast(`❌ Error: ${esc(e.message)}`);
+    }
+    return;
+  }
 
   /* Si lanza ya, pedir confirmacion explicita con modal bonito integrado. */
   if (action === "send") {

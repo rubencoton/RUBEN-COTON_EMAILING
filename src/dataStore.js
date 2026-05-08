@@ -1346,6 +1346,7 @@ class DataStore {
     return this.mutate((store) => {
       const name = String(input.name || "").trim();
       const subject = String(input.subject || "").trim();
+      const previewText = String(input.previewText || "").trim();
       const html = String(input.html || "").trim();
       const text = String(input.text || "").trim();
 
@@ -1363,6 +1364,7 @@ class DataStore {
         id: createId("tpl"),
         name,
         subject,
+        previewText, /* P1 FEAT 2026-05-08: pre-header en plantillas */
         html,
         text,
         status: "borrador",
@@ -1392,6 +1394,9 @@ class DataStore {
         const subject = String(input.subject).trim();
         if (!subject) throw new Error("Asunto obligatorio");
         tpl.subject = subject;
+      }
+      if (input.previewText !== undefined) {
+        tpl.previewText = String(input.previewText || "").trim();
       }
       if (input.html !== undefined) {
         tpl.html = String(input.html).trim();
