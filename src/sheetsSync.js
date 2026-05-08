@@ -139,7 +139,7 @@ const syncState = {
 /* ─── Email column detection (case-insensitive) ─── */
 const EMAIL_HEADERS = ["email", "correo", "correo electrónico", "correo electronico", "e-mail", "correo electrónico"];
 const NAME_HEADERS = ["nombre contacto", "nombre completo", "nombre de contacto"];
-const COMPANY_HEADERS = ["nombre", "nombre festival", "nombre discografica", "nombre discográfica", "medio o empresa", "nombre influencer", "nombre grupo", "nombre discoteca"];
+const COMPANY_HEADERS = ["nombre", "nombre empresa", "nombre festival", "nombre discografica", "nombre discográfica", "medio o empresa", "nombre influencer", "nombre grupo", "nombre discoteca"];
 const PHONE_HEADERS = ["telefono", "teléfono"];
 const PROVINCE_HEADERS = ["provincia"];
 const CCAA_HEADERS = ["ccaa", "c.c.a.", "comunidad autónoma", "comunidad autonoma"];
