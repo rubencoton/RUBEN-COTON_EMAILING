@@ -2261,6 +2261,7 @@ campaignForm?.addEventListener("submit", async (event) => {
       body: JSON.stringify({
         name: String(formData.get("name") || "").trim(),
         subject: String(formData.get("subject") || "").trim(),
+        previewText: String(formData.get("previewText") || "").trim(),
         templateId: String(formData.get("templateId") || "").trim() || null,
         segmentId,
         listFilter,

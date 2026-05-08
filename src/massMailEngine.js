@@ -1122,10 +1122,16 @@ const createMassMailEngine = (config) => {
         /* Garantizar preheader en el HTML (primer texto visible en la bandeja
          * de Gmail/Outlook tras el asunto). Si el HTML no tiene uno, inyectamos
          * un span oculto con las primeras palabras del text. Crítico para
-         * engagement (muchas aperturas = mejor reputación). */
+         * engagement (muchas aperturas = mejor reputación).
+         * P1 FEAT 2026-05-08: si el job trae previewText explícito (configurado
+         * por el usuario al crear la campaña), usar ese en lugar del auto-extraído
+         * del text body. */
         let htmlBody = job.html;
         if (htmlBody && !/preheader|preview-text/i.test(htmlBody)) {
-          const preheaderText = (textBody || "").replace(/\s+/g, " ").trim().slice(0, 100);
+          const explicitPreview = String(job.previewText || "").replace(/\s+/g, " ").trim();
+          const preheaderText = explicitPreview
+            ? explicitPreview.slice(0, 120)
+            : (textBody || "").replace(/\s+/g, " ").trim().slice(0, 100);
           if (preheaderText) {
             const escPh = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
             const preheaderHtml = `<div class="preheader" style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;mso-hide:all;overflow:hidden;font-size:1px;line-height:1px">${escPh(preheaderText)}</div>`;

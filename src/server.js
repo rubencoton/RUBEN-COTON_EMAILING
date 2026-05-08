@@ -3245,6 +3245,7 @@ app.post("/api/campaigns/:id/send", (req, res) => {
         campaignId, /* propagar para tracking pixel + click wrap */
         name: resolved.campaign.name,
         subject: resolved.campaign.subject,
+        previewText: resolved.campaign.previewText, /* P1 FEAT 2026-05-08: pre-header */
         html: resolved.campaign.html,
         text: resolved.campaign.text,
         fromName: resolved.campaign.fromName,

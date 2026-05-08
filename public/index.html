@@ -314,6 +314,8 @@
               <form id="campaignForm" class="mail-form">
                 <input name="name" type="text" placeholder="Nombre interno de la campaña" required />
                 <input name="subject" type="text" placeholder="Asunto del email (lo que ve el destinatario)" required />
+                <!-- Pre-header (preview text): aparece junto al asunto en gris en la bandeja de entrada -->
+                <input name="previewText" type="text" placeholder="Pre-header (texto gris junto al asunto, recomendado <90 caracteres)" maxlength="120" />
 
                 <!-- Selector de modo de composición -->
                 <div class="mode-selector">
