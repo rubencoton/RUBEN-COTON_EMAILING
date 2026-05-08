@@ -18,12 +18,11 @@
 
 const { clients, isGoogleReady } = require("./googleHub");
 
-/* P1 UX 2026-05-08 (petición usuario): bajado de 10min → 2min para que
- * los bounces (Mail Delivery Subsystem) se vayan a papelera con menos
- * latencia. Antes, se acumulaban 30+ bounces en INBOX entre scan y scan
- * saturando la bandeja de manager@. Coste: ~30 llamadas/h a Gmail API,
- * muy por debajo del rate limit (250 quota units/usuario/seg). */
-const CHECK_INTERVAL_MS = Number(process.env.REPLY_TRACKER_INTERVAL_MS) || 2 * 60 * 1000; /* 2 min */
+/* P0 UX 2026-05-08 (peticion usuario "que vaya mas rapido"):
+ * Iteración 3: bajado de 2min → 1min. Coste: ~60 calls/h a Gmail API,
+ * muy por debajo del rate limit Google (250 quota units/usuario/seg).
+ * Asi los bounces que entran nuevos se mueven a papelera en max 60s. */
+const CHECK_INTERVAL_MS = Number(process.env.REPLY_TRACKER_INTERVAL_MS) || 60 * 1000; /* 1 min */
 const LOOKBACK_DAYS = Number(process.env.REPLY_TRACKER_LOOKBACK_DAYS) || 7;
 
 let _ticker = null;
@@ -46,7 +45,7 @@ async function scanReplies() {
     const list = await gmail.users.messages.list({
       userId: "me",
       q: `(in:inbox OR from:mailer-daemon OR from:postmaster OR from:mail-daemon) newer_than:${LOOKBACK_DAYS}d -from:manager@rubencoton.com -in:trash -in:spam`,
-      maxResults: 100
+      maxResults: 200 /* P0 2026-05-08: 100→200 para limpiar acumulados rápido */
     });
     const msgs = list.data.messages || [];
     if (!msgs.length) return { ok: true, scanned: 0, registered: 0 };

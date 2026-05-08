@@ -50,17 +50,33 @@ const totalSize = (campaignId) => {
   }
 };
 
+/* P0 PERF 2026-05-08 (peticion usuario "que vaya mas rapido"): cache TTL 10s.
+   listAttachments hacía readdirSync + N statSync por cada llamada (1+N syscalls).
+   El frontend lo llama al refrescar tabs. Cache local invalida al
+   add/remove/inheritFromOwner. */
+const _listCache = new Map(); /* ownerId -> {t, v} */
+const _LIST_CACHE_TTL = 10 * 1000;
+const _invalidateListCache = (ownerId) => { _listCache.delete(String(ownerId)); };
+
 const listAttachments = (campaignId) => {
+  const key = String(campaignId);
+  const cached = _listCache.get(key);
+  if (cached && (Date.now() - cached.t) < _LIST_CACHE_TTL) return cached.v;
   try {
     const dir = dirFor(campaignId);
-    if (!fs.existsSync(dir)) return [];
-    return fs.readdirSync(dir).map((name) => {
+    if (!fs.existsSync(dir)) {
+      _listCache.set(key, { t: Date.now(), v: [] });
+      return [];
+    }
+    const v = fs.readdirSync(dir).map((name) => {
       try {
         const p = path.join(dir, name);
         const s = fs.statSync(p);
         return { name, size: s.size, modifiedAt: s.mtime.toISOString() };
       } catch (_) { return null; }
     }).filter(Boolean).sort((a, b) => a.modifiedAt.localeCompare(b.modifiedAt));
+    _listCache.set(key, { t: Date.now(), v });
+    return v;
   } catch (e) {
     console.warn(`[attachments] listAttachments ${campaignId}: ${e.message}`);
     return [];
@@ -151,6 +167,7 @@ const addAttachment = async (campaignId, file) => {
         const mb = (total / 1024 / 1024).toFixed(2);
         throw new Error(`Limite de 10 MB superado (total seria ${mb} MB). Elimina archivos o comprime antes.`);
       }
+      _invalidateListCache(campaignId); /* PERF: cache fresco tras subir */
       return { name, size: fs.statSync(dest).size };
     } catch (e) {
       /* P0 FIX 2026-05-07: limpiar archivo huérfano si fallo después del write */
@@ -167,6 +184,7 @@ const removeAttachment = (campaignId, filename) => {
     const safe = sanitizeFilename(filename);
     const p = path.join(dirFor(campaignId), safe);
     if (fs.existsSync(p)) fs.unlinkSync(p);
+    _invalidateListCache(campaignId); /* PERF: cache fresco tras borrar */
   } catch (e) {
     console.warn(`[attachments] removeAttachment ${campaignId}/${filename}: ${e.message}`);
   }
@@ -202,6 +220,7 @@ const inheritFromOwner = async (srcOwnerId, dstOwnerId) => {
         const mb = (total / 1024 / 1024).toFixed(2);
         throw new Error(`Heredar los adjuntos excedería los 10 MB (sería ${mb} MB).`);
       }
+      _invalidateListCache(dstOwnerId); /* PERF: cache fresco tras heredar */
       return { copied: copiedNames.length, total };
     } catch (e) {
       /* Cleanup defensivo de huérfanos si algo falló a mitad. */

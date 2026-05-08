@@ -807,6 +807,10 @@ class DataStore {
     /* P0 FIX 2026-05-07: invalidar índice de contactos al mutate.
      * El próximo getContactByEmail lo reconstruirá lazy. */
     this.invalidateContactsIndex();
+    /* P0 PERF 2026-05-08: invalidar cache plantillas tras cualquier mutate.
+     * Coste: 2 asignaciones a null. Beneficio: cache de listTemplates nunca
+     * sirve datos stale tras crear/editar/borrar. */
+    this._invalidateTplCache();
     return output;
   }
 
@@ -1246,11 +1250,22 @@ class DataStore {
 
   /* P1 FEAT 2026-05-08: opción { trashed: true|false } para filtrar
      plantillas por estado de papelera. Por defecto (sin opts) devuelve
-     SOLO las activas (trashed !== true), retrocompatible con código viejo. */
+     SOLO las activas (trashed !== true), retrocompatible con código viejo.
+     P0 PERF 2026-05-08 (peticion usuario "que vaya mas rapido"): cache
+     in-memory con TTL 3s. Las plantillas cambian poco (CRUD manual del
+     usuario) pero el endpoint GET /api/templates se llama frecuentemente
+     desde el frontend (selectores, refrescos). Sin cache hacemos sort+map
+     en cada llamada O(N). Cache invalida en cualquier mutate(). */
   listTemplates(opts = {}) {
-    const store = this.read();
     const wantTrashed = opts.trashed === true;
-    return sortByCreatedDesc(store.templates)
+    const cacheKey = wantTrashed ? "_tplsCacheTrash" : "_tplsCacheActive";
+    const now = Date.now();
+    const cached = this[cacheKey];
+    /* TTL 3s. Mutaciones invalidan cache (ver _invalidateTplCache). */
+    if (cached && (now - cached.t) < 3000) return cached.v;
+
+    const store = this.read();
+    const result = sortByCreatedDesc(store.templates)
       .filter((tpl) => Boolean(tpl.trashed) === wantTrashed)
       .map((tpl) => ({
         ...tpl,
@@ -1259,6 +1274,14 @@ class DataStore {
         trashed: Boolean(tpl.trashed),
         trashedAt: tpl.trashedAt || null
       }));
+    this[cacheKey] = { t: now, v: result };
+    return result;
+  }
+
+  /* Invalidar cache de plantillas tras cualquier escritura. */
+  _invalidateTplCache() {
+    this._tplsCacheActive = null;
+    this._tplsCacheTrash = null;
   }
 
   /* Inserta / actualiza los borradores estandar RUBEN COTON.

@@ -500,13 +500,38 @@ const createMassMailEngine = (config) => {
   if (warmupEnabled && !persistedState.warmupStartDate) {
     persistedState.warmupStartDate = new Date().toISOString().slice(0, 10);
   }
+  /* P0 PERF 2026-05-08 (peticion usuario "que vaya mas rapido"): saveState
+     ahora con DEBOUNCE de 1.5s + escritura ASYNC. Antes era writeFileSync
+     síncrono en cada envío (10/min). El debounce agrupa múltiples envíos
+     en una sola escritura, y el async no bloquea el event-loop.
+     Mantiene atomicidad tmp+rename. */
+  let _saveStateTimer = null;
+  let _saveStatePending = false;
+  const _flushState = async () => {
+    _saveStatePending = false;
+    try {
+      const tmpFile = STATE_FILE + ".tmp." + process.pid;
+      const payload = JSON.stringify({
+        sendTimestamps,
+        warmupStartDate: persistedState.warmupStartDate
+      }, null, 2);
+      await fsLib.promises.writeFile(tmpFile, payload, "utf-8");
+      await fsLib.promises.rename(tmpFile, STATE_FILE); /* atómico en POSIX */
+    } catch (_e) { /* ok */ }
+  };
   const saveState = () => {
-    /* P0 BLINDAJE 2026-05-08: escritura atómica tmp+rename.
-       Antes: writeFileSync directo → si el proceso muere mid-write,
-       mail-state.json queda truncado/corrupto y al reiniciar el cap
-       counter podía contar mal y permitir superar 1650/24h.
-       Ahora: escribimos a .tmp y rename atómico. Si crashea mid-write,
-       el archivo principal queda intacto. */
+    _saveStatePending = true;
+    if (_saveStateTimer) return;
+    _saveStateTimer = setTimeout(() => {
+      _saveStateTimer = null;
+      if (_saveStatePending) _flushState();
+    }, 1500);
+    _saveStateTimer.unref?.();
+  };
+  /* Flush sincrono para shutdown (graceful). */
+  const flushStateSync = () => {
+    if (!_saveStatePending) return;
+    if (_saveStateTimer) { clearTimeout(_saveStateTimer); _saveStateTimer = null; }
     try {
       const tmpFile = STATE_FILE + ".tmp." + process.pid;
       const payload = JSON.stringify({
@@ -514,7 +539,8 @@ const createMassMailEngine = (config) => {
         warmupStartDate: persistedState.warmupStartDate
       }, null, 2);
       fsLib.writeFileSync(tmpFile, payload, "utf-8");
-      fsLib.renameSync(tmpFile, STATE_FILE); /* atómico en POSIX */
+      fsLib.renameSync(tmpFile, STATE_FILE);
+      _saveStatePending = false;
     } catch (_e) { /* ok */ }
   };
 
@@ -1505,8 +1531,10 @@ const createMassMailEngine = (config) => {
     while (processing && (Date.now() - start) < maxDrainMs) {
       await new Promise(r => setTimeout(r, 50));
     }
-    /* Persistir estado final del cap counter antes de morir. */
-    try { saveState(); } catch (_e) { /* ok */ }
+    /* Persistir estado final del cap counter antes de morir.
+       P0 PERF 2026-05-08: usar flushStateSync (no debounced) en shutdown
+       para garantizar que el archivo está al día antes de exit. */
+    try { flushStateSync(); } catch (_e) { /* ok */ }
     return { drained: !processing, waitedMs: Date.now() - start };
   };
 
