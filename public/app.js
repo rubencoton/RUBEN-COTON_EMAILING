@@ -1189,14 +1189,27 @@ const getCampaignScorecard = (c) => {
   if (clicked >= 5 && replyRate === 0) {
     issues.push({ priority: 5, msg: `💬 Nadie respondió. Pídelo al final: "¿Qué te parece? Responde a este mismo correo"` });
   }
-  if (sent < 50 && total < 100) {
+  /* P1 FIX BUG (peticion usuario "audita"): cuando hay pocos envios (sent<50)
+     pero la lista es grande (total>=100), antes ningun issue se disparaba
+     -> caia al mensaje "Bien hecho" aunque la nota fuera baja. CONTRADICTORIO.
+     Ahora: detecto el caso "todavia se esta evaluando" y muestro mensaje
+     neutro ANTES del fallback "all good". */
+  const fewSends = sent < 50;
+  if (fewSends && total >= 100) {
+    issues.push({ priority: 7, msg: `⏳ Aún hay pocos envíos (${sent} de ${total}). La nota se actualizará según se envíen más correos` });
+  } else if (sent < 50 && total < 100) {
     issues.push({ priority: 6, msg: `📊 Lista pequeña (${total} contactos). Con tan pocos envíos, los datos no son fiables todavía` });
   }
 
   issues.sort((a, b) => a.priority - b.priority);
+  /* P1 FIX: solo mostrar "Bien hecho" si NO hay issues Y hay envíos
+     suficientes (sent >= 50). Si hay pocos envíos sin issues graves,
+     los issues que añadimos arriba ya cubren el mensaje. */
   const diagnostic = issues.length
     ? issues.slice(0, 2).map(i => i.msg).join(" · ")
-    : "✅ ¡Bien hecho! Esta campaña funciona muy bien — repite la fórmula";
+    : (sent >= 50
+        ? "✅ ¡Bien hecho! Esta campaña funciona muy bien — repite la fórmula"
+        : `⏳ Aún hay pocos envíos (${sent}). La nota se actualizará según se envíen más correos`);
 
   return { score, score10, grade, gradeColor, gradeBg, diagnostic, inProgress, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
 };
