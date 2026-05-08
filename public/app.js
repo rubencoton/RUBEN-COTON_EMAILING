@@ -2211,17 +2211,41 @@ qs("#campaignTemplateSelect")?.addEventListener("change", async (ev) => {
     const r = await api(`/api/templates/${tplId}`);
     const tpl = r.template;
     if (!tpl) return;
-    const subj = qs('#campaignForm input[name="subject"]');
-    const prev = qs('#campaignForm input[name="previewText"]');
-    const htmlInput = qs('#campaignForm textarea[name="html"]');
+
+    /* P1 FEAT 2026-05-08 (revisado): IMPORTAR plantilla = sobrescribir todos
+       los campos del email + cargar editor Gmail + saltar a Vista previa
+       para que el usuario vea visualmente el resultado.
+       Si quiere "empezar desde cero", debe elegir esa opción del select. */
+    const subj      = qs('#campaignForm input[name="subject"]');
+    const prev      = qs('#campaignForm input[name="previewText"]');
+    const htmlInput = qs("#campHtmlEditor");          /* textarea pegar HTML */
     const textInput = qs('#campaignForm textarea[name="text"]');
-    if (subj && !subj.value) subj.value = tpl.subject || "";
-    if (prev && !prev.value) prev.value = tpl.previewText || "";
-    if (htmlInput && !htmlInput.value) htmlInput.value = tpl.html || "";
-    if (textInput && !textInput.value) textInput.value = tpl.text || "";
-    /* Refrescar preview si está visible */
-    if (typeof updateTplPreview === "function") updateTplPreview();
-  } catch (e) { console.warn("Error cargando plantilla:", e.message); }
+    const gmailEd   = qs("#gmailEditor");             /* contenteditable WYSIWYG */
+
+    if (subj)      subj.value      = tpl.subject     || "";
+    if (prev)      prev.value      = tpl.previewText || "";
+    if (htmlInput) htmlInput.value = tpl.html        || "";
+    if (textInput) textInput.value = tpl.text        || "";
+    /* Editor Gmail: si la plantilla trae HTML, intenta extraer body,
+       si no, mete el HTML completo (el navegador limpia <html>/<head>). */
+    if (gmailEd && tpl.html) {
+      const bodyMatch = tpl.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      gmailEd.innerHTML = bodyMatch ? bodyMatch[1] : tpl.html;
+    }
+
+    /* Saltar automáticamente al modo "Vista previa" para que el usuario
+       vea CÓMO QUEDA visualmente el email importado.
+       Truco: pasar primero por "html" para que la lógica interna de showMode
+       fije lastEditMode="html" y NO sobrescriba htmlEditor.value desde Gmail
+       (el HTML de la plantilla puede traer DOCTYPE/head/styles que se perderían). */
+    qs('.mode-tab[data-mode="html"]')?.click();
+    qs('.mode-tab[data-mode="preview"]')?.click();
+
+    toast(`✅ Plantilla "${esc(tpl.name)}" importada. Vista previa cargada.`);
+  } catch (e) {
+    console.warn("Error cargando plantilla:", e.message);
+    toast(`❌ Error cargando plantilla: ${esc(e.message)}`);
+  }
 });
 /* Refrescar lista al cambiar a la pestaña campañas */
 document.addEventListener("rubencoton:tab", (ev) => {
