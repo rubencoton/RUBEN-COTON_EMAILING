@@ -6,6 +6,97 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — v2.3.0 — BLINDAJE DEPLOY + GRACEFUL SHUTDOWN
+
+### Contexto
+
+Auditoría adicional de blindaje en sistema de deploy y resiliencia ante caídas.
+9 riesgos identificados (3🔴 / 3🟠 / 3🟡), 7 fixes aplicados sin tocar
+comportamiento del motor en caliente. Aplicados con producción enviando.
+
+### 🔴 P0 — Resiliencia ante deploy / SIGTERM
+
+#### `src/massMailEngine.js`
+- **`saveState()` ahora es atómica** (tmp + rename). Antes: `writeFileSync`
+  directo → si el proceso moría mid-write, `mail-state.json` quedaba
+  truncado/corrupto y el cap counter podía permitir superar 1650/24h.
+  Ahora: escribimos a `.tmp.<pid>` y `renameSync` atómico (POSIX).
+- **`stop()` ahora es ASYNC y drena el ciclo en curso** (max 10s).
+  Antes: `clearTimeout` y muerte inmediata. Si justo entonces un email
+  se enviaba (Gmail API call en vuelo), el proceso moría a los 200ms y el
+  email quedaba en estado indeterminado. Ahora esperamos a que
+  `processing=false` y guardamos el state final antes de exit.
+
+#### `src/server.js`
+- **Rastreo de conexiones HTTP activas** (`activeConnections` Set). Sin
+  esto, `server.close()` esperaba indefinidamente a las conexiones
+  keep-alive del reverse proxy de Coolify. Resultado anterior:
+  `gracefulShutdown` nunca completaba, Coolify mandaba SIGKILL.
+- **`gracefulShutdown` reescrito**:
+  1. Para de aceptar nuevas conexiones (`server.close()`).
+  2. Cierra keep-alive existentes (`conn.end()` + destroy a los 2s).
+  3. Drena el motor (`await massMailEngine.stop({ maxDrainMs: 10000 })`).
+  4. Cierra pool DB si existiera.
+  5. Hard-kill de seguridad a los 25s (Coolify SIGKILL a los 30s).
+- **Flag `shuttingDown`**: previene re-entrada si SIGTERM llega 2 veces.
+
+### 🟠 P1 — Container hardening
+
+#### `docker-compose.yml`
+- **`mem_limit: 1200m`** + `memswap_limit: 1200m`: previene que la app
+  consuma toda la RAM del VPS si hay leak. Docker mata y reinicia.
+- **`stop_grace_period: 30s`**: da tiempo al `gracefulShutdown` a drenar
+  antes de SIGKILL.
+- **Healthcheck con `wget` ligero** (alpine ya lo trae) en vez de spawn
+  de proceso Node completo cada 30s (~15MB RAM × 2880 veces/día).
+
+#### `Dockerfile`
+- Comentario alineando `--max-old-space-size=1024` con `mem_limit=1200m`.
+  V8 lanza OOM con stack trace antes de que Docker mate "a oscuras".
+
+### 🟡 P2 — Seguridad y docs
+
+#### `COOLIFY_SETUP.md`
+- Reemplazada contraseña real `+artesbuho26` por placeholder
+  `<tu-password-aqui>` + nota de NO comitear jamás.
+
+### ⚠️ ACCIÓN MANUAL PENDIENTE EN COOLIFY UI
+
+Para activar **zero-downtime real** (arrancar nuevo container y esperar
+healthcheck OK antes de matar el viejo), hay que ir a:
+
+> Coolify → emailing-app → Settings → "Deployment Strategy"
+
+y cambiar a **"Run new before old stops"** (o equivalente "Rolling").
+
+Sin esto: hay ~10-30s de downtime entre stop del viejo y healthcheck OK
+del nuevo. El bloque `deploy:` de docker-compose v3 NO aplica porque
+Coolify usa docker compose normal (no Swarm).
+
+### ⚠️ ROTAR PASSWORD
+
+La contraseña `+artesbuho26` quedó en el git history. Cuando se pueda,
+rotarla desde Coolify → Environment Variables → `APP_ACCESS_PASSWORD`.
+
+### Lo que NO se cambió (decisión consciente)
+
+- **Persistir snapshot de jobs al dataStore** (riesgo #2 del audit):
+  refactor mayor que afecta el motor en caliente. Borrador para próxima
+  iteración. Mientras tanto: el watchdog interno relanza el ticker si
+  se cuelga, y los recipients no enviados quedan en cola tras restart
+  (porque la cola se reconstruye desde campaign.recipients en dataStore).
+- **Dockerfile USER no-root** (riesgo #5): requiere chown del volumen
+  `app-data` que ya existe en producción. Para hacer correctamente sin
+  perder permisos, necesita migración planificada. Borrador.
+
+### Commits
+
+- `<HASH>` feat(blindaje): saveState atómica, stop() async drain, conn tracking
+- `<HASH>` chore(docker): mem_limit 1200m + stop_grace 30s + healthcheck wget
+- `<HASH>` docs(seguridad): password placeholder + nota rotación
+
+---
+
 ## [2026-05-08] — v2.2.0 — UX CAMPAÑAS + PLANTILLAS REUTILIZABLES
 
 ### Contexto

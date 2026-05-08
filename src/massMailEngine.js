@@ -501,11 +501,20 @@ const createMassMailEngine = (config) => {
     persistedState.warmupStartDate = new Date().toISOString().slice(0, 10);
   }
   const saveState = () => {
+    /* P0 BLINDAJE 2026-05-08: escritura atómica tmp+rename.
+       Antes: writeFileSync directo → si el proceso muere mid-write,
+       mail-state.json queda truncado/corrupto y al reiniciar el cap
+       counter podía contar mal y permitir superar 1650/24h.
+       Ahora: escribimos a .tmp y rename atómico. Si crashea mid-write,
+       el archivo principal queda intacto. */
     try {
-      fsLib.writeFileSync(STATE_FILE, JSON.stringify({
+      const tmpFile = STATE_FILE + ".tmp." + process.pid;
+      const payload = JSON.stringify({
         sendTimestamps,
         warmupStartDate: persistedState.warmupStartDate
-      }, null, 2), "utf-8");
+      }, null, 2);
+      fsLib.writeFileSync(tmpFile, payload, "utf-8");
+      fsLib.renameSync(tmpFile, STATE_FILE); /* atómico en POSIX */
     } catch (_e) { /* ok */ }
   };
 
@@ -1479,12 +1488,26 @@ const createMassMailEngine = (config) => {
     }
   };
 
-  const stop = () => {
-    if (!ticker) {
-      return;
+  /* P0 BLINDAJE 2026-05-08: stop() ahora ASYNC y espera al envío en curso.
+     Antes: clearTimeout y muerte inmediata. Si justo en ese momento un email
+     se estaba enviando (Gmail API call en vuelo), el proceso moría a los
+     ~200ms y el email podía quedar en estado indeterminado (Google lo recibe
+     pero nuestro counter no se actualiza, o nuestro counter sí pero el envío
+     falla). Ahora esperamos hasta MAX_DRAIN_MS a que processing=false. */
+  const stop = async (opts) => {
+    const maxDrainMs = (opts && opts.maxDrainMs) || 10000;
+    if (ticker) {
+      clearTimeout(ticker);
+      ticker = null;
     }
-    clearTimeout(ticker);
-    ticker = null;
+    /* Esperar a que processNext() en curso termine. */
+    const start = Date.now();
+    while (processing && (Date.now() - start) < maxDrainMs) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+    /* Persistir estado final del cap counter antes de morir. */
+    try { saveState(); } catch (_e) { /* ok */ }
+    return { drained: !processing, waitedMs: Date.now() - start };
   };
 
   const enqueueJob = (payload) => {

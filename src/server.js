@@ -4493,27 +4493,80 @@ if (sheetsSync.getSheetIds().length > 0 && SHEETS_AUTOSYNC_ENABLED) {
   console.log(`[sheetsSync] Auto-sync DESACTIVADO (SHEETS_AUTOSYNC_ENABLED=${SHEETS_AUTOSYNC_ENABLED}, hojas=${sheetsSync.getSheetIds().length})`);
 }
 
-const gracefulShutdown = async () => {
+/* P0 BLINDAJE 2026-05-08: rastreo de conexiones HTTP activas para poder
+ * cerrarlas en shutdown. Sin esto, server.close() espera indefinidamente
+ * a que las conexiones keep-alive (Coolify reverse proxy las mantiene
+ * abiertas) se cierren solas. Resultado: gracefulShutdown nunca completa,
+ * Coolify manda SIGKILL a los 30s, perdemos el ciclo en curso.
+ *
+ * El listener se engancha cuando server esté listo (app.listen es async).
+ * Polling defensivo: cada 200ms hasta encontrar server, max 30 intentos. */
+const activeConnections = new Set();
+let connTrackerInstalled = false;
+const installConnTracker = () => {
+  if (connTrackerInstalled || !server) return;
+  server.on("connection", (conn) => {
+    activeConnections.add(conn);
+    conn.on("close", () => activeConnections.delete(conn));
+  });
+  connTrackerInstalled = true;
+};
+{
+  let attempts = 0;
+  const t = setInterval(() => {
+    attempts++;
+    if (server) { installConnTracker(); clearInterval(t); }
+    else if (attempts >= 30) clearInterval(t);
+  }, 200);
+  t.unref?.();
+}
+
+let shuttingDown = false;
+const gracefulShutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal || "signal"} recibido, drenando…`);
   clearInterval(periodicSync);
-  if (server) {
-    server.close(async () => {
-      massMailEngine.stop();
-      if (pool) {
-        await pool.end();
+
+  /* Hard-timeout de seguridad: si el shutdown se cuelga, salimos a los 25s.
+     Coolify por defecto manda SIGKILL a los 30s, así nos adelantamos. */
+  const hardKill = setTimeout(() => {
+    console.error("[shutdown] timeout 25s, forzando exit");
+    process.exit(1);
+  }, 25000);
+  hardKill.unref?.();
+
+  try {
+    /* 1. Dejar de aceptar nuevas conexiones HTTP. */
+    if (server) {
+      server.close(() => console.log("[shutdown] server.close OK"));
+      /* 2. Cerrar keep-alive existentes para que server.close() complete. */
+      for (const conn of activeConnections) {
+        try { conn.end(); } catch (_) {}
       }
-      process.exit(0);
-    });
-  } else {
-    massMailEngine.stop();
-    if (pool) {
-      await pool.end();
+      /* Margen 2s para que end() drene; luego destroy duro. */
+      setTimeout(() => {
+        for (const conn of activeConnections) {
+          try { conn.destroy(); } catch (_) {}
+        }
+      }, 2000).unref?.();
     }
+    /* 3. Drenar motor (espera ciclo activo, max 10s). */
+    const drainResult = await massMailEngine.stop({ maxDrainMs: 10000 });
+    console.log(`[shutdown] motor drenado: drained=${drainResult.drained} waited=${drainResult.waitedMs}ms`);
+    /* 4. Cerrar pool DB si existiera. */
+    if (pool) await pool.end();
+    console.log("[shutdown] OK, exit 0");
+    clearTimeout(hardKill);
     process.exit(0);
+  } catch (e) {
+    console.error("[shutdown] error:", e.message);
+    process.exit(1);
   }
 };
 
-process.on("SIGTERM", gracefulShutdown);
-process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 /* P0-F audit 2026-04-30: handlers globales de errores no capturados.
  * Sin esto, una promise rechazada en setInterval (backup, scheduler,

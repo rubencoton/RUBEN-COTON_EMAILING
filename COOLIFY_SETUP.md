@@ -39,9 +39,13 @@ En la app de emailing → **Environment Variables** → añade:
 ### Auth (OBLIGATORIO)
 
 ```
-APP_ACCESS_PASSWORD=+artesbuho26
-APP_ACCESS_SECRET=cambia-este-secreto-en-produccion
+APP_ACCESS_PASSWORD=<tu-password-aqui>
+APP_ACCESS_SECRET=<tu-secreto-largo-aleatorio-aqui>
 ```
+
+⚠️ **No comitees jamás la contraseña real**. Estos valores se configuran
+desde la UI de Coolify (Environment Variables) o en el `.env` local
+(que está en `.gitignore`).
 
 ### Google Sheets + Drive (OBLIGATORIO para sync + backup)
 

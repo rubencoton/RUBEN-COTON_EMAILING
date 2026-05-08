@@ -21,6 +21,9 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV TZ=Europe/Madrid
+# BLINDAJE 2026-05-08: max-old-space-size=1024 alineado con mem_limit=1200m
+# del docker-compose.yml. Si Node intenta superar 1024MB de heap, V8 lanza
+# OOM antes de que Docker mate el contenedor (mejor: stack trace en logs).
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 CMD ["node", "src/server.js"]

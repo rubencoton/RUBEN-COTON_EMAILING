@@ -116,3 +116,32 @@ detección de fricciones reales operando con tráfico de producción.
       - `06c9a61` feat(plantillas): selector + botón guardar como plantilla
       - `36e5db7` feat: favicon RUBEN COTON (logo RRSS)
       - `459312e` feat(plantillas): seleccionar = importar TODO + Vista previa
+
+## HITO 8 - BLINDAJE DEPLOY + GRACEFUL SHUTDOWN (2026-05-08) ✅
+
+Auditoría adicional: 9 riesgos (3🔴 / 3🟠 / 3🟡), 7 fixes aplicados sin
+tocar comportamiento del motor en caliente. Aplicados con producción
+enviando, sin downtime perceptible.
+
+### Resiliencia ante deploy
+- [x] `saveState()` atómica (tmp+rename) — cap counter no se corrompe.
+- [x] `stop()` async drena ciclo activo en curso (max 10s).
+- [x] Tracking de conexiones HTTP keep-alive activas.
+- [x] `gracefulShutdown` reescrito: server.close → cerrar keep-alive →
+      drenar motor → exit. Hard-kill seguridad a 25s.
+- [x] Flag `shuttingDown` previene re-entrada SIGTERM doble.
+
+### Container hardening
+- [x] `mem_limit: 1200m` + `memswap_limit: 1200m` en compose.
+- [x] `stop_grace_period: 30s` (vs default 10s).
+- [x] Healthcheck con `wget` (no spawn Node cada 30s).
+- [x] `--max-old-space-size=1024` alineado con `mem_limit`.
+
+### Seguridad y docs
+- [x] Password real reemplazada por placeholder en COOLIFY_SETUP.md.
+
+### Pendientes (borradores próxima iteración)
+- [ ] Persistir snapshot jobs al dataStore (refactor mayor).
+- [ ] Dockerfile USER no-root (requiere migrar permisos volumen).
+- [ ] Coolify UI → "Deployment Strategy: Rolling" (manual, requiere acceso).
+- [ ] Rotar `APP_ACCESS_PASSWORD` (quedó en git history).
