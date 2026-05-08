@@ -1078,6 +1078,89 @@ const updateCampaignSortIndicators = () => {
   });
 };
 
+/* P1 FEAT 2026-05-08 (peticion usuario): scorecard por campaña.
+   Calcula nota A/B/C/D/F + diagnóstico breve diciendo qué falla:
+   contactos (bounce alto), asunto (apertura baja), copy (CTOR bajo)…
+   Devuelve null si la campaña no está completada/enviada. */
+const getCampaignScorecard = (c) => {
+  if (!c || !["sent", "completed"].includes(c.status)) return null;
+  const s = c.stats || {};
+  const total = s.totalRecipients || s.total || 0;
+  const sent = s.sent || 0;
+  if (sent === 0) return null;
+  const opened = s.openedUnique || s.opened || 0;
+  const clicked = s.clickedUnique || s.clicked || 0;
+  const bounced = s.bounced || 0;
+  const replied = s.replied || 0;
+  const complained = s.complained || 0;
+
+  /* Tasas */
+  const openRate   = sent > 0 ? (opened / sent) * 100 : 0;
+  const clickRate  = sent > 0 ? (clicked / sent) * 100 : 0;
+  const ctor       = opened > 0 ? (clicked / opened) * 100 : 0;
+  const replyRate  = sent > 0 ? (replied / sent) * 100 : 0;
+  const bounceRate = sent > 0 ? (bounced / sent) * 100 : 0;
+  const spamRate   = sent > 0 ? (complained / sent) * 100 : 0;
+
+  /* Puntuación 0-100 ponderada por benchmarks de email marketing.
+     Pesos: open 30, click 25, ctor 15, reply 10, anti-bounce 15, anti-spam 5. */
+  const scoreOpen    = Math.min(100, openRate / 20 * 100);   /* 20% open = 100pt */
+  const scoreClick   = Math.min(100, clickRate / 5 * 100);   /* 5% click = 100pt */
+  const scoreCtor    = Math.min(100, ctor / 25 * 100);       /* 25% ctor = 100pt */
+  const scoreReply   = Math.min(100, replyRate / 2 * 100);   /* 2% reply = 100pt */
+  const scoreBounce  = bounceRate >= 8 ? 0 : Math.max(0, 100 - bounceRate * 12);
+  const scoreSpam    = spamRate >= 0.5 ? 0 : Math.max(0, 100 - spamRate * 200);
+  const score = Math.round(
+    scoreOpen   * 0.30 +
+    scoreClick  * 0.25 +
+    scoreCtor   * 0.15 +
+    scoreReply  * 0.10 +
+    scoreBounce * 0.15 +
+    scoreSpam   * 0.05
+  );
+
+  /* Letra y color */
+  let grade, gradeColor, gradeBg;
+  if (score >= 80)      { grade = "A"; gradeColor = "#065f46"; gradeBg = "#d1fae5"; }
+  else if (score >= 65) { grade = "B"; gradeColor = "#1e40af"; gradeBg = "#dbeafe"; }
+  else if (score >= 50) { grade = "C"; gradeColor = "#92400e"; gradeBg = "#fef3c7"; }
+  else if (score >= 35) { grade = "D"; gradeColor = "#9a3412"; gradeBg = "#ffedd5"; }
+  else                   { grade = "F"; gradeColor = "#991b1b"; gradeBg = "#fee2e2"; }
+
+  /* Diagnóstico: priorizamos el problema MÁS GRAVE.
+     Orden: spam > bounce > open > click > ctor > reply > all good. */
+  const issues = [];
+  if (spamRate > 0.1) {
+    issues.push({ priority: 1, msg: `🚨 ${spamRate.toFixed(2)}% queja spam — revisa el copy (palabras como GRATIS, !!!)` });
+  }
+  if (bounceRate >= 5) {
+    issues.push({ priority: 2, msg: `⚠️ ${bounceRate.toFixed(1)}% rebotes — limpia la lista de contactos (emails inválidos)` });
+  } else if (bounceRate >= 3) {
+    issues.push({ priority: 3, msg: `${bounceRate.toFixed(1)}% rebotes — algunos emails inválidos en la lista` });
+  }
+  if (openRate < 10 && sent >= 50) {
+    issues.push({ priority: 2, msg: `📭 ${openRate.toFixed(1)}% aperturas — el asunto no engancha (prueba A/B)` });
+  } else if (openRate < 15 && sent >= 50) {
+    issues.push({ priority: 4, msg: `${openRate.toFixed(1)}% aperturas — el asunto se puede mejorar` });
+  }
+  if (opened >= 20 && ctor < 10) {
+    issues.push({ priority: 3, msg: `🖱 CTOR ${ctor.toFixed(1)}% — el email se abre pero no convierte. Revisa CTA y diseño` });
+  }
+  if (clicked >= 5 && replyRate === 0) {
+    issues.push({ priority: 5, msg: `💬 0 respuestas — añade pregunta directa o llamada a responder` });
+  }
+  if (sent < 50 && total < 100) {
+    issues.push({ priority: 6, msg: `📊 Lista pequeña (${total}) — resultados poco representativos` });
+  }
+
+  issues.sort((a, b) => a.priority - b.priority);
+  const diagnostic = issues.length
+    ? issues.slice(0, 2).map(i => i.msg).join(" · ")
+    : "✅ Excelente performance — sigue con esta línea";
+
+  return { score, grade, gradeColor, gradeBg, diagnostic, openRate, clickRate, ctor, replyRate, bounceRate, spamRate };
+};
+
 const renderCampaigns = (campaigns) => {
   initCampaignSortListener();
   if (campaignsSortState.key && Array.isArray(campaigns)) {
@@ -1239,16 +1322,27 @@ const renderCampaigns = (campaigns) => {
       if (c.completedAt) finStr = fmtFecha(c.completedAt);
       else if (c.status === "sending" || c.status === "queued" || c.status === "paused") finStr = "<span style='color:#FF6B00;font-weight:700'>en curso</span>";
       else finStr = "—";
+      /* P1 FEAT 2026-05-08 (peticion usuario): scorecard A-F + diagnóstico
+         para campañas completadas. Aparece como pill al lado del nombre +
+         diagnóstico en línea siguiente. */
+      const scorecard = getCampaignScorecard(c);
+      const scorecardBadge = scorecard
+        ? `<span title="Puntuación basada en aperturas, clics, CTOR, respuestas, rebotes y spam" style="display:inline-block;background:${scorecard.gradeBg};color:${scorecard.gradeColor};padding:2px 9px;border-radius:10px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.3px">${scorecard.grade} · ${scorecard.score}/100</span>`
+        : "";
+      const scorecardDiag = scorecard
+        ? `<div style="font-size:10.5px;color:${scorecard.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scorecard.diagnostic)}</div>`
+        : "";
       return `
       <tr>
         <td style="text-align:center;vertical-align:middle;font-weight:900;color:#FF6B00;letter-spacing:0.5px;font-size:13px">#${numLabel}</td>
         <td style="vertical-align:middle">
-          <strong>${esc(c.name)}</strong>
+          <strong>${esc(c.name)}</strong>${scorecardBadge}
           <div style="font-size:10.5px;color:#64748b;margin-top:3px;line-height:1.4">
             <span title="Fecha y hora de lanzamiento">▶ ${inicioStr}</span>
             &nbsp;·&nbsp;
             <span title="Fecha y hora de finalizacion">■ ${finStr}</span>
           </div>
+          ${scorecardDiag}
         </td>
         <td style="text-align:center;vertical-align:middle">${statusBadge(c.status, c.queuePosition)}</td>
         <td style="text-align:center;vertical-align:middle;font-size:22px;font-weight:900;color:#111;letter-spacing:-0.5px">${total.toLocaleString("es-ES")}</td>
@@ -1684,12 +1778,17 @@ const refreshPanel = async () => {
             };
             const inicioI = fmtFechaI(c.sentAt);
             const finI = c.completedAt ? fmtFechaI(c.completedAt) : (["sending","queued","paused"].includes(c.status) ? "en curso" : "—");
+            /* P1 FEAT 2026-05-08: scorecard también en dashboard de inicio */
+            const scI = getCampaignScorecard(c);
+            const scBadgeI = scI ? `<span title="Puntuación campaña" style="display:inline-block;background:${scI.gradeBg};color:${scI.gradeColor};padding:2px 9px;border-radius:10px;font-weight:900;font-size:11px;margin-left:6px;letter-spacing:0.3px">${scI.grade} · ${scI.score}</span>` : "";
+            const scDiagI = scI ? `<div style="font-size:10.5px;color:${scI.gradeColor};margin-top:3px;line-height:1.4;font-style:italic">${esc(scI.diagnostic)}</div>` : "";
             return `
               <tr style="border-bottom:1px solid #f1f5f9">
                 <td style="padding:10px 6px;vertical-align:middle;text-align:center;font-weight:900;color:#FF6B00;font-size:13px;letter-spacing:0.5px">#${numLabelI}</td>
                 <td style="padding:10px 6px;vertical-align:middle">
-                  <strong>${esc(c.name || "(sin nombre)")}</strong>
+                  <strong>${esc(c.name || "(sin nombre)")}</strong>${scBadgeI}
                   <div class="muted" style="font-size:10.5px;margin-top:3px;line-height:1.4">▶ ${inicioI} · ■ ${finI}</div>
+                  ${scDiagI}
                 </td>
                 <td style="padding:10px 6px;text-align:center;vertical-align:middle">
                   ${(() => {

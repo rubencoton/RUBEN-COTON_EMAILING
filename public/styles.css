@@ -2390,3 +2390,67 @@ h3 {
   .td-acciones { min-width: 130px; max-width: 100%; padding: 6px !important; }
   .campaign-actions .act-btn { font-size: 10.5px; padding: 5px 6px; min-height: 26px; }
 }
+
+/* ═══════════════════════════════════════
+   P1 FEAT 2026-05-08 (peticion usuario "que se ajuste mejor a las pantallas")
+   Reduce padding general, hace tablas más compactas, evita scroll horizontal
+   en campañas, KPIs en una sola línea cuando hay espacio.
+   ═══════════════════════════════════════ */
+
+/* Padding general más compacto */
+.app-content {
+  padding: 16px 18px;
+  gap: 14px;
+}
+@media (max-width: 1366px) {
+  .app-content { padding: 14px 14px; gap: 12px; }
+}
+
+/* Hero (header) más compacto */
+.hero { padding: 14px 18px; }
+.hero-top { margin-bottom: 8px; }
+.hero h1 { font-size: 22px; }
+.hero .subtitle { font-size: 13px; margin-top: 2px; }
+
+/* KPI strip: chips más compactos para que entren más en la línea */
+.kpi-strip .chip { padding: 6px 10px; min-width: 92px; }
+.kpi-strip .chip-label { font-size: 9px; }
+.kpi-strip .chip-value > div:first-child { font-size: 13px; }
+
+/* Tabla genérica más compacta */
+.table thead th { padding: 9px 10px; font-size: 11px; }
+.table tbody td { padding: 9px 10px; font-size: 13px; line-height: 1.35; }
+
+/* Panels más compactos */
+.panel { padding: 16px 18px !important; }
+@media (max-width: 1366px) {
+  .panel { padding: 14px 14px !important; }
+}
+
+/* TABLA CAMPAÑAS: ancho fluido sin scroll horizontal */
+#campaignsTable { table-layout: auto; }
+#campaignsTable thead th { padding: 9px 8px; font-size: 11px; white-space: nowrap; }
+#campaignsTable tbody td { padding: 8px 8px; }
+
+/* Pantallas estándar: que toda la tabla quepa */
+@media (min-width: 1280px) {
+  #campaignsTable { font-size: 12.5px; }
+  #campaignsTable thead th { padding: 8px 6px; font-size: 10.5px; letter-spacing: 0.4px; }
+  #campaignsTable tbody td { padding: 7px 6px; }
+}
+
+/* Pantallas pequeñas: tabla scroll lateral suave */
+@media (max-width: 1100px) {
+  .panel { overflow-x: auto; }
+  #campaignsTable { min-width: 980px; }
+}
+
+/* Eliminar margen excesivo entre secciones del dashboard */
+.split-grid { gap: 16px; }
+
+/* Sub-tabs Plantillas: estilo tighter */
+.tpl-section-tabs { margin-bottom: 12px !important; }
+
+/* Sidebar tab text más compacto */
+.tab { padding: 9px 12px; font-size: 13px; }
+.tab-icon { width: 16px; height: 16px; }
