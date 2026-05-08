@@ -18,7 +18,12 @@
 
 const { clients, isGoogleReady } = require("./googleHub");
 
-const CHECK_INTERVAL_MS = Number(process.env.REPLY_TRACKER_INTERVAL_MS) || 10 * 60 * 1000; /* 10 min */
+/* P1 UX 2026-05-08 (petición usuario): bajado de 10min → 2min para que
+ * los bounces (Mail Delivery Subsystem) se vayan a papelera con menos
+ * latencia. Antes, se acumulaban 30+ bounces en INBOX entre scan y scan
+ * saturando la bandeja de manager@. Coste: ~30 llamadas/h a Gmail API,
+ * muy por debajo del rate limit (250 quota units/usuario/seg). */
+const CHECK_INTERVAL_MS = Number(process.env.REPLY_TRACKER_INTERVAL_MS) || 2 * 60 * 1000; /* 2 min */
 const LOOKBACK_DAYS = Number(process.env.REPLY_TRACKER_LOOKBACK_DAYS) || 7;
 
 let _ticker = null;
@@ -298,6 +303,13 @@ function start({ dataStore }) {
   console.log(`[replyTracker] arrancado (scan cada ${Math.round(CHECK_INTERVAL_MS/60000)} min, lookback ${LOOKBACK_DAYS}d)`);
 }
 
+/* P1 UX 2026-05-08: scan on-demand. Permite gatillarlo manualmente al
+ * arrancar la app (limpia bounces acumulados en el restart anterior)
+ * o desde un endpoint admin si hace falta. Idempotente vía guardedScan. */
+async function runOnce() {
+  return guardedScan();
+}
+
 function stop() {
   if (_ticker) clearInterval(_ticker);
   if (_firstTimer) clearTimeout(_firstTimer);
@@ -305,4 +317,4 @@ function stop() {
   _firstTimer = null;
 }
 
-module.exports = { start, stop, scanReplies };
+module.exports = { start, stop, scanReplies, runOnce };
