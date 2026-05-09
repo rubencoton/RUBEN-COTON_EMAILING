@@ -877,11 +877,12 @@ class DataStore {
      *   - quitar limite slice(0,8) -> mostrar TODAS (max 30 prudente)
      *   - ordenar por createdAt asc (FIFO cronologico, primera creada arriba)
      *   - exponer campaign.number, sentAt, completedAt, openedUnique,
-     *     clickedUnique para que el frontend renderice todo. */
+     *     clickedUnique para que el frontend renderice todo.
+     * P0 FIX 2026-05-09 (bug usuario "inicio solo muestra 34 de 82 campañas"):
+     *   - eliminado slice(0,30). Se muestran TODAS las campañas activas. */
     const recentCampaigns = activeCampaigns
       .slice()
       .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-      .slice(0, 30)
       .map((c) => ({
         id: c.id,
         number: c.number || null,
