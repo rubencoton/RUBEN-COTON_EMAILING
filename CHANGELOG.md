@@ -6,6 +6,49 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 
 ---
 
+## [2026-05-08] — PDF informes con fidelidad A4 (puppeteer-core + chromium)
+
+### Contexto
+
+Petición usuario: "los PDFs de informes no respetan A4 210x297mm, la paginación está mal".
+
+### Causa raíz
+
+`src/pdfGen.js` usaba **Google Drive Docs** para convertir HTML→Doc→PDF. El propio comentario del archivo lo admitía: "Google Docs no respeta @media print ni page-breaks custom con 100% fidelidad". Resultado: dimensiones aleatorias, sin paginación correcta, headers/footers de print ignorados, colores de fondo perdidos.
+
+### Cambiado
+
+#### `src/pdfGen.js` — reescrito completo
+
+- Reemplazado Drive Docs por **puppeteer-core + chromium del sistema**.
+- `page.pdf({ preferCSSPageSize: true })` respeta el `@page { size: A4 }` del CSS al 100%.
+- `printBackground: true` mantiene cabeceros negros y KPIs con color.
+- `emulateMediaType("print")` activa `@media print` correctamente.
+- Args Chromium optimizados: `--single-process`, `--disable-dev-shm-usage`, `--no-sandbox` para cumplir con el `mem_limit=1200m` del compose.
+- Browser se lanza por request y se cierra siempre en `finally` (sin procesos huérfanos).
+- Si puppeteer falla, retorna `null` → endpoints sirven HTML auto-imprimible (red de seguridad existente).
+
+#### `package.json`
+- Añadido `puppeteer-core ^23.11.1` (5MB, sin chromium incluido).
+
+#### `Dockerfile`
+- Añadido `apk add chromium nss freetype harfbuzz ttf-freefont` (~50MB).
+- Variables `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser` y `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true`.
+
+### Resultado para el usuario
+
+- PDFs ahora con dimensiones **exactas 210x297mm** (DIN A4).
+- Paginación con numeración "Página X de Y" en footer.
+- Cabeceros negros, KPIs con color, page-breaks limpios entre secciones.
+- Portada y ToC ocupan página completa cada una.
+
+### Riesgos asumidos
+
+- +50MB en imagen Docker (Chromium Alpine).
+- Pico de memoria ~150MB durante render (cabe en 1200MB del limit).
+
+---
+
 ## [2026-05-08] — Tachado automático de filas REBOTADO/BAJA en Sheets
 
 ### Contexto

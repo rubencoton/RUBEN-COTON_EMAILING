@@ -1,69 +1,90 @@
 "use strict";
 
 /**
- * pdfGen — convierte HTML a PDF usando Google Drive API (Docs conversion).
+ * pdfGen — convierte HTML a PDF con fidelidad CSS print.
  *
- * Flujo:
- *  1. Sube el HTML a Drive como Google Doc (mimeType doc → convierte auto).
- *  2. Exporta ese Doc como PDF (files.export con mimeType pdf).
- *  3. Borra el Doc temporal.
+ * P0 REWRITE 2026-05-08 (peticion usuario "los PDFs deben respetar
+ * dimensiones A4 210x297mm con paginacion correcta"):
  *
- * Ventajas vs Puppeteer:
- *  - No requiere chromium (200MB menos de disk).
- *  - No requiere procesos headless extra (sin OOM/restart risk).
- *  - Usa la cuenta manager@ que ya tenemos conectada.
+ * Antes: Drive Docs convertia HTML -> Doc -> PDF, lo que ignoraba
+ * @media print, @page A4, page-breaks, headers/footers de print, etc.
+ * Resultado: PDFs con dimensiones aleatorias, sin paginacion correcta.
  *
- * Limitaciones:
- *  - Google Docs no respeta @media print ni page-breaks custom con 100%
- *    fidelidad. Para documentos internos y archivo es aceptable.
+ * Ahora: puppeteer-core + chromium del sistema (Alpine apk).
+ * page.pdf({ preferCSSPageSize: true }) respeta el @page del CSS al 100%.
+ * Las dimensiones A4 (210x297mm) se aplican exactas, los page-breaks
+ * funcionan, las @page :first y los counters de paginacion se honran.
+ *
+ * Memoria: chromium ~150MB por proceso. Con --single-process y
+ * --disable-dev-shm-usage encaja en el mem_limit=1200m del compose.
+ * Lanzamos browser nuevo por request y lo cerramos en finally para no
+ * acumular procesos huerfanos.
+ *
+ * Fallback: si puppeteer falla (chromium no encontrado, OOM), retorna
+ * null y el endpoint sirve el HTML con auto-print (red de seguridad).
  */
 
-const { clients, isGoogleReady } = require("./googleHub");
-const { Readable } = require("stream");
-const crypto = require("crypto");
+const puppeteer = require("puppeteer-core");
+
+const CHROMIUM_PATH =
+  process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser";
+
+const LAUNCH_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",   /* /dev/shm puede ser pequeno en Docker -> tmpfs */
+  "--disable-gpu",
+  "--single-process",          /* mas barato en RAM, suficiente para 1 PDF */
+  "--no-zygote",
+  "--disable-extensions",
+  "--disable-background-networking",
+  "--disable-default-apps",
+  "--disable-sync",
+  "--mute-audio",
+  "--no-first-run"
+];
 
 async function htmlToPdf(html, opts = {}) {
-  if (!isGoogleReady()) {
-    console.warn("[pdfGen] Google no configurado, PDF omitido.");
-    return null;
-  }
-  const drive = clients.drive();
-  const tmpName = `_temp_${Date.now()}_${crypto.randomBytes(4).toString("hex")}.html`;
-  let tempId = null;
+  let browser = null;
   try {
-    /* 1) Crear Google Doc a partir del HTML (Drive hace la conversion) */
-    const docRes = await drive.files.create({
-      requestBody: {
-        name: tmpName,
-        mimeType: "application/vnd.google-apps.document"
-      },
-      media: {
-        mimeType: "text/html",
-        body: Readable.from(Buffer.from(html, "utf8"))
-      },
-      fields: "id,name"
+    browser = await puppeteer.launch({
+      executablePath: CHROMIUM_PATH,
+      headless: "new",
+      args: LAUNCH_ARGS,
+      timeout: 30000
     });
-    tempId = docRes.data.id;
+    const page = await browser.newPage();
+    /* setContent espera 'networkidle0' para que toda imagen/font cargue.
+     * Timeout 30s por seguridad (algunos informes tienen muchos KPIs). */
+    await page.setContent(html, {
+      waitUntil: ["load", "domcontentloaded", "networkidle0"],
+      timeout: 30000
+    });
+    /* Forzar emulacion print para que @media print aplique */
+    await page.emulateMediaType("print");
 
-    /* 2) Exportar como PDF */
-    const pdfRes = await drive.files.export(
-      { fileId: tempId, mimeType: "application/pdf" },
-      { responseType: "arraybuffer" }
-    );
-    return Buffer.from(pdfRes.data);
+    /* preferCSSPageSize=true -> respeta @page { size: A4 } del CSS.
+     * printBackground=true -> respeta colores de fondo (cabeceros negros,
+     * KPIs, etc) en el PDF (sin esto sale todo blanco).
+     * margin se sobreescribe por @page del CSS si preferCSSPageSize=true. */
+    const pdf = await page.pdf({
+      format: "A4",                /* fallback si CSS no define @page */
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: { top: "15mm", right: "14mm", bottom: "18mm", left: "14mm" },
+      displayHeaderFooter: false   /* el CSS @page ya define footer */
+    });
+    return pdf;
   } catch (err) {
-    console.error("[pdfGen] Error convirtiendo HTML a PDF:", err.message);
+    console.error("[pdfGen] puppeteer fallo:", err.message);
     return null;
   } finally {
-    /* 3) Limpiar el Doc temporal. No bloqueante. */
-    if (tempId) {
-      try {
-        await drive.files.delete({ fileId: tempId });
-      } catch (_e) { /* no-op */ }
+    if (browser) {
+      try { await browser.close(); } catch (_e) { /* no-op */ }
     }
   }
 }
 
-async function close() { /* no-op, no singletons que cerrar */ }
+async function close() { /* no-op, no singleton browser */ }
 
 module.exports = { htmlToPdf, close };

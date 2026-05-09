@@ -8,6 +8,25 @@ RUN npm ci --omit=dev --prefer-offline --no-audit --no-fund \
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
+
+# P0 FEAT 2026-05-08 (peticion usuario "PDFs deben respetar A4 210x297mm"):
+# Chromium + libs minimas para que puppeteer-core renderice HTML->PDF con
+# fidelidad CSS print (Drive Docs no respetaba @page ni page-breaks).
+# Alpine chromium ~50MB. ttf-freefont para fonts en print.
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+ && rm -rf /var/cache/apk/*
+
+# Decirle a puppeteer-core donde esta chromium del sistema
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src

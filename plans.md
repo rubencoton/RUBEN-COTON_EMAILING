@@ -44,6 +44,7 @@
 - [x] (2026-05-08) `importContacts` deduplica por (email+source) en vez de email global. Sheets se reflejan literales — un email en 2 pestañas → 2 contactos.
 - [x] (2026-05-08) Dashboard: Puntuación global 0-10 + diagnóstico IA (alertas + wins) en el resumen de campañas en proceso.
 - [x] (2026-05-08) sheetsWriteback: tachado de fila completa (strikethrough + bg gris) cuando estado=rebotado/unsubscribed. Motor ya excluía estos contactos de envíos; ahora también queda visible en el Sheet.
+- [x] (2026-05-08) PDFs informes ahora respetan A4 210x297mm con paginación correcta. Reemplazado motor Drive Docs por puppeteer-core + chromium Alpine. preferCSSPageSize honra @page del CSS.
 
 ### Pendientes detectados en audit 2026-05-08 (estado tras hardening)
 - [x] (2026-05-08) **CRITICO** `sendCampaignLocks`: ya tenía TTL 60s + purgeSendLocks. Añadido `.unref()` en cleanup setTimeout.
