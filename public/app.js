@@ -1497,11 +1497,15 @@ const getCampaignScorecard = (c) => {
 
 const renderCampaigns = (campaigns) => {
   initCampaignSortListener();
-  if (campaignsSortState.key && Array.isArray(campaigns)) {
-    const dir = campaignsSortState.dir === "desc" ? -1 : 1;
+  if (Array.isArray(campaigns)) {
+    /* P0 UX 2026-05-09: orden base SIEMPRE número ASC (más antigua arriba).
+     * Si el usuario ha pulsado una cabecera, aplica su sort encima. */
+    const sortKey = campaignsSortState.key || "number";
+    const sortDir = campaignsSortState.key ? campaignsSortState.dir : "asc";
+    const dir = sortDir === "desc" ? -1 : 1;
     campaigns = [...campaigns].sort((a, b) => {
-      const va = campaignSortValue(a, campaignsSortState.key);
-      const vb = campaignSortValue(b, campaignsSortState.key);
+      const va = campaignSortValue(a, sortKey);
+      const vb = campaignSortValue(b, sortKey);
       if (typeof va === "string" || typeof vb === "string") {
         return String(va).localeCompare(String(vb)) * dir;
       }
