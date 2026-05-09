@@ -1328,7 +1328,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* Estado de ordenación de la tabla "Estado campañas" — petición usuario 2026-05-05.
  * Sticky en HTML/CSS; aquí sólo sort. Persiste entre re-renders del polling. */
-const campaignsSortState = window.__campaignsSortState || (window.__campaignsSortState = { key: null, dir: "desc" });
+/* P0 UX 2026-05-09 (peticion usuario): orden por defecto = más antigua arriba
+ * (número ASC), igual que el dashboard. El usuario puede cambiar pulsando
+ * cualquier cabecera de la tabla. */
+const campaignsSortState = window.__campaignsSortState || (window.__campaignsSortState = { key: "number", dir: "asc" });
 const campaignSortValue = (c, key) => {
   const st = c.stats || {};
   const total = st.total || 0;
