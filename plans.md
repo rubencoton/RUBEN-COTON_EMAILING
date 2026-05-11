@@ -114,6 +114,7 @@ detección de fricciones reales operando con tráfico de producción.
 - [x] Cap subido 1500 → 1600 → 1650 (Gmail estabilizado, sin más rebotes).
 - [x] Cap subido 1650 → 1700 → 1900 (2026-05-09, sin rebotes, Gmail estable).
 - [x] Cap bajado 1900 → 1800 (2026-05-09, Gmail devolvió "límite de mensajes alcanzado").
+- [x] Cap bajado 1800 → 1700 (2026-05-09, conservar reputación cuenta Gmail).
 - [x] DNS `emailing.rubencoton.com` arreglado vía Hostinger API (A record).
 
 ### Pre-header (texto gris junto al asunto)
