@@ -550,22 +550,13 @@ const _syncCampaignsWithEngineInner = () => {
     console.log(`[sync] ${recreated.length} jobs recreados auto tras restart:`, JSON.stringify(recreated.slice(0, 5)));
   }
 
-  /* P0 BLINDAJE 2026-05-05 (bug usuario "tras deploy el orden de envio se altera"):
-   * tras cada sync, fuerza el orden FIFO cronologico (campañas creadas
-   * antes -> primero en la cola). Idempotente y barato: solo reordena el
-   * array `queue` interno del motor. Garantiza que aunque la cola se haya
-   * desorganizado por restarts, retries o throttles, vuelve a su estado
-   * canonico FIFO. */
-  try {
-    const desiredOrder = campaigns
-      .filter((c) => c.jobId && (c.status === "sending" || c.status === "queued" || c.status === "paused"))
-      .map((c) => c.jobId);
-    if (typeof massMailEngine.reorderQueue === "function" && desiredOrder.length > 0) {
-      massMailEngine.reorderQueue(desiredOrder);
-    }
-  } catch (e) {
-    console.warn(`[sync] reorderQueue fallo: ${e.message}`);
-  }
+  /* FIX 2026-05-11: se elimina el reorderQueue FIFO forzado en cada sync.
+   * Causa: sobreescribia el orden elegido por el usuario con los botones ▲▼
+   * inmediatamente despues de aplicarlo. Los jobs ya se recrean en FIFO
+   * al reiniciar (campaigns ordenados por createdAt asc antes del enqueue),
+   * por lo que no es necesario forzar FIFO en cada ciclo. El orden del motor
+   * es la fuente de verdad — no se altera salvo peticion explicita del usuario
+   * via POST /api/engine/queue/reorder. */
 };
 
 const buildRuntimeStatus = async () => {
