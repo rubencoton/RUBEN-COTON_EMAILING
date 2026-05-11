@@ -961,10 +961,15 @@ const createMassMailEngine = (config) => {
       } catch (_e) { /* nunca fallar el send por re-check */ }
     }
 
-    /* P0 feature 2026-05-04: si la campaña/job está pausada, re-encolar
-     * al final y saltar. La cola sigue procesando OTROS jobs activos. */
+    /* P0 feature 2026-05-04: si la campaña/job está pausada, guardar en
+     * pausedJobQueues (no al final de cola). Así el motor salta inmediatamente
+     * al siguiente job sin ciclar por items pausados uno a uno.
+     * P0 FIX 2026-05-09: antes re-encolaba al final → lentísimo con 6000+
+     * items pendientes. Ahora se guardan en buffer y se reinyectan en posición
+     * al reanudar. */
     if (pausedJobs.has(job.id)) {
-      queue.push({ jobId: job.id, recipientIndex: item.recipientIndex });
+      if (!pausedJobQueues.has(job.id)) pausedJobQueues.set(job.id, []);
+      pausedJobQueues.get(job.id).push({ jobId: job.id, recipientIndex: item.recipientIndex });
       return;
     }
 
@@ -1869,22 +1874,71 @@ const createMassMailEngine = (config) => {
 
   /* P0 feature 2026-05-04: pausar/reanudar UNA campaña concreta sin
    * parar todo el motor. Útil para campañas largas de 1000+ recipients
-   * cuando hay que detenerlas a mitad sin perder los pendientes. */
+   * cuando hay que detenerlas a mitad sin perder los pendientes.
+   * P0 FIX 2026-05-09 (peticion usuario "al pausar debe saltar al siguiente"):
+   *   pauseJob  → extrae TODOS los items del job de la cola principal y los
+   *               guarda en pausedJobQueues. El motor salta inmediatamente al
+   *               siguiente job sin ciclar.
+   *   resumeJob → reinyecta los items guardados en la posicion correcta segun
+   *               orden de creacion del job (FIFO). */
   const pausedJobs = new Set();
+  const pausedJobQueues = new Map(); /* jobId -> [{jobId, recipientIndex}] */
+
   const pauseJob = (jobId) => {
     if (!jobs.has(jobId)) return null;
-    pausedJobs.add(jobId);
     const job = jobs.get(jobId);
-    if (job) job.status = "paused";
-    return { jobId, paused: true };
+    if (!job) return null;
+    pausedJobs.add(jobId);
+    /* Extraer TODOS los items de este job de la cola principal de golpe */
+    const saved = [];
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (queue[i].jobId === jobId) {
+        saved.unshift(queue.splice(i, 1)[0]);
+      }
+    }
+    pausedJobQueues.set(jobId, saved);
+    job.status = "paused";
+    console.log(`[massMail] pauseJob ${job.name}: ${saved.length} items extraídos, cola=${queue.length}`);
+    return { jobId, paused: true, savedItems: saved.length };
   };
+
   const resumeJob = (jobId) => {
     if (!jobs.has(jobId)) return null;
     pausedJobs.delete(jobId);
     const job = jobs.get(jobId);
-    if (job && job.status === "paused") job.status = "running";
-    return { jobId, paused: false };
+    if (!job) return null;
+
+    /* Recuperar items guardados (incluye los capturados mid-flight en processNext) */
+    const savedItems = pausedJobQueues.get(jobId) || [];
+    pausedJobQueues.delete(jobId);
+
+    if (savedItems.length > 0) {
+      /* Reinsertar en posicion correcta: despues de todos los jobs creados
+       * ANTES que este, antes de todos los jobs creados DESPUES. */
+      const resumedTime = new Date(job.sentAt || job.createdAt || 0).getTime();
+      let insertIdx = queue.length; /* default: al final */
+      const seen = new Set();
+      for (let i = 0; i < queue.length; i++) {
+        const qjid = queue[i].jobId;
+        if (!seen.has(qjid)) {
+          seen.add(qjid);
+          const qjob = jobs.get(qjid);
+          if (qjob) {
+            const qtime = new Date(qjob.sentAt || qjob.createdAt || 0).getTime();
+            if (qtime > resumedTime) { insertIdx = i; break; }
+          }
+        }
+      }
+      queue.splice(insertIdx, 0, ...savedItems);
+    }
+
+    /* Status: running si está al frente de la cola, queued si espera */
+    const isFirst = queue.length > 0 && queue[0].jobId === jobId;
+    job.status = isFirst ? "running" : "queued";
+    console.log(`[massMail] resumeJob ${job.name}: ${savedItems.length} items reinsertados, status=${job.status}, cola=${queue.length}`);
+    return { jobId, paused: false, reinsertedItems: savedItems.length };
   };
+
   const isJobPaused = (jobId) => pausedJobs.has(jobId);
 
   const clearAllQueue = () => {
