@@ -2768,6 +2768,27 @@ app.post("/api/admin/assign-campaign-numbers", (_req, res) => {
  * Llamado manualmente cuando el orden se ha alterado tras un deploy.
  * Internamente dispara syncCampaignsWithEngine que ya hace el reorder.
  * Devuelve el orden resultante para verificacion. */
+/* P0 FEAT 2026-05-09 (peticion usuario "elegir el orden en la cola"):
+ * Acepta un array de jobIds en el orden deseado y reordena la cola interna.
+ * Solo mueve jobs que esten en cola (queued/paused); el job activo (running)
+ * permanece al frente. */
+app.post("/api/engine/queue/reorder", (req, res) => {
+  try {
+    const { order } = req.body || {};
+    if (!Array.isArray(order) || order.length === 0) {
+      return apiError(res, 400, "order debe ser array de jobIds");
+    }
+    massMailEngine.reorderQueue(order);
+    const status = massMailEngine.getStatus();
+    return apiOk(res, {
+      queueOrder: status.queueOrder,
+      jobs: (status.jobs || []).map((j) => ({ id: j.id, name: j.name, position: j.queuePosition, status: j.status }))
+    });
+  } catch (e) {
+    return apiError(res, 500, e.message);
+  }
+});
+
 app.post("/api/admin/reorder-queue-fifo", (_req, res) => {
   try {
     syncCampaignsWithEngine();

@@ -1641,6 +1641,10 @@ const renderCampaigns = (campaigns) => {
       const canPause = c.status === "sending" || c.status === "queued";
       const canResume = c.status === "paused";
       const canCancel = ["sending", "queued", "paused"].includes(c.status);
+      /* P0 FEAT 2026-05-09 (peticion usuario "elegir orden en la cola"):
+       * Solo se puede reordenar si está en cola (queued/paused), no si
+       * está enviando activamente (la campaña activa siempre va primero). */
+      const canReorder = c.status === "queued" || c.status === "paused";
       /* PETICION USUARIO 2026-05-05: numero + fecha inicio + fecha fin.
        * Inicio = sentAt (cuando se lanzo la campaña). Fin = completedAt (cuando
        * se acabo de enviar). Si aun esta sending, mostrar "en curso". */
@@ -1701,6 +1705,10 @@ const renderCampaigns = (campaigns) => {
             ${canSend ? `<button class="mini-btn act-btn act-send" data-send-campaign="${esc(c.id)}" type="button">🚀 Enviar</button>` : ""}
             ${canPause ? `<button class="mini-btn act-btn act-pause" data-pause-campaign="${esc(c.id)}" type="button" style="background:#f59e0b;color:#fff">⏸ Pausar</button>` : ""}
             ${canResume ? `<button class="mini-btn act-btn act-resume" data-resume-campaign="${esc(c.id)}" type="button" style="background:#10b981;color:#fff">▶ Reanudar</button>` : ""}
+            ${canReorder ? `<div style="display:flex;gap:4px">
+              <button class="mini-btn act-btn" data-queue-up="${esc(c.id)}" type="button" title="Subir en la cola" style="flex:1;background:#6366f1;color:#fff;font-size:15px;padding:4px 0">▲</button>
+              <button class="mini-btn act-btn" data-queue-down="${esc(c.id)}" type="button" title="Bajar en la cola" style="flex:1;background:#6366f1;color:#fff;font-size:15px;padding:4px 0">▼</button>
+            </div>` : ""}
             ${canCancel ? `<button class="mini-btn act-btn act-cancel" data-cancel-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button" style="background:#dc2626;color:#fff">⛔ Cancelar</button>` : ""}
             <a class="mini-btn act-btn act-report" href="/campaigns/${esc(c.id)}/report" target="_blank" style="text-align:center">📄 Informe</a>
             <button class="mini-btn act-btn act-delete" data-delete-campaign="${esc(c.id)}" data-campaign-name="${esc(c.name || "")}" type="button">🗑 Eliminar</button>
@@ -1738,6 +1746,39 @@ const renderCampaigns = (campaigns) => {
       }
     });
   });
+
+  /* P0 FEAT 2026-05-09: reordenar cola con botones ▲▼ */
+  const reorderQueueMove = async (campaignId, direction) => {
+    /* Obtener campañas en cola ordenadas por queuePosition real del motor */
+    const inQueue = (state.campaigns || [])
+      .filter(c => ["sending", "queued", "paused"].includes(c.status))
+      .sort((a, b) => {
+        const pa = a.queuePosition == null ? 999 : a.queuePosition;
+        const pb = b.queuePosition == null ? 999 : b.queuePosition;
+        return pa - pb;
+      });
+    const idx = inQueue.findIndex(c => c.id === campaignId);
+    if (idx < 0) return;
+    /* La campaña activa (sending, pos 0) no se puede desplazar */
+    const minMovable = inQueue.findIndex(c => c.status !== "sending");
+    if (minMovable < 0) return;
+    if (direction === "up") {
+      if (idx <= minMovable) return; /* ya es la primera en cola */
+      [inQueue[idx], inQueue[idx - 1]] = [inQueue[idx - 1], inQueue[idx]];
+    } else {
+      if (idx >= inQueue.length - 1) return; /* ya es la última */
+      [inQueue[idx], inQueue[idx + 1]] = [inQueue[idx + 1], inQueue[idx]];
+    }
+    const newOrder = inQueue.map(c => c.id);
+    try {
+      await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
+      await refreshCampaigns();
+    } catch (e) {
+      rubenCotonAlert({ title: "Error al reordenar", body: humanizeError(e), icon: "❌", tone: "error" });
+    }
+  };
+  qsa("[data-queue-up]").forEach(btn => btn.addEventListener("click", () => reorderQueueMove(btn.dataset.queueUp, "up")));
+  qsa("[data-queue-down]").forEach(btn => btn.addEventListener("click", () => reorderQueueMove(btn.dataset.queueDown, "down")));
 
   /* P0 feature 2026-05-04: pause/resume/cancel handlers */
   qsa("[data-pause-campaign]").forEach((button) => {
