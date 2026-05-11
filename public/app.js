@@ -1747,9 +1747,12 @@ const renderCampaigns = (campaigns) => {
     });
   });
 
-  /* P0 FEAT 2026-05-09: reordenar cola con botones ▲▼ */
+  /* P0 FEAT 2026-05-09: reordenar cola con botones ▲▼
+   * FIX 2026-05-09: usar queueOrder devuelto por el API (fuente de verdad)
+   * en vez de queuePosition de state.campaigns (puede estar desactualizado). */
   const reorderQueueMove = async (campaignId, direction) => {
-    /* Obtener campañas en cola ordenadas por queuePosition real del motor */
+    /* Construir orden actual desde queuePosition en state.campaigns.
+     * Campaña activa (sending) siempre en posición 0 — no se mueve. */
     const inQueue = (state.campaigns || [])
       .filter(c => ["sending", "queued", "paused"].includes(c.status))
       .sort((a, b) => {
@@ -1759,19 +1762,27 @@ const renderCampaigns = (campaigns) => {
       });
     const idx = inQueue.findIndex(c => c.id === campaignId);
     if (idx < 0) return;
-    /* La campaña activa (sending, pos 0) no se puede desplazar */
     const minMovable = inQueue.findIndex(c => c.status !== "sending");
     if (minMovable < 0) return;
     if (direction === "up") {
-      if (idx <= minMovable) return; /* ya es la primera en cola */
+      if (idx <= minMovable) return;
       [inQueue[idx], inQueue[idx - 1]] = [inQueue[idx - 1], inQueue[idx]];
     } else {
-      if (idx >= inQueue.length - 1) return; /* ya es la última */
+      if (idx >= inQueue.length - 1) return;
       [inQueue[idx], inQueue[idx + 1]] = [inQueue[idx + 1], inQueue[idx]];
     }
     const newOrder = inQueue.map(c => c.id);
     try {
-      await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
+      const result = await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
+      /* Actualizar queuePosition en state.campaigns desde el response del motor
+       * (sincrono, no esperar al siguiente polling) */
+      if (result && Array.isArray(result.jobs)) {
+        const posMap = {};
+        result.jobs.forEach(j => { posMap[j.id] = j.position; });
+        (state.campaigns || []).forEach(c => {
+          if (posMap[c.id] !== undefined) c.queuePosition = posMap[c.id];
+        });
+      }
       await refreshCampaigns();
     } catch (e) {
       rubenCotonAlert({ title: "Error al reordenar", body: humanizeError(e), icon: "❌", tone: "error" });

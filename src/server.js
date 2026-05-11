@@ -2779,6 +2779,9 @@ app.post("/api/engine/queue/reorder", (req, res) => {
       return apiError(res, 400, "order debe ser array de jobIds");
     }
     massMailEngine.reorderQueue(order);
+    /* Sincronizar queuePosition al dataStore AHORA (sincrono) para que el
+     * siguiente GET /api/campaigns ya devuelva las posiciones actualizadas. */
+    try { syncCampaignsWithEngine(); } catch (_e) {}
     const status = massMailEngine.getStatus();
     return apiOk(res, {
       queueOrder: status.queueOrder,
