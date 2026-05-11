@@ -1771,16 +1771,18 @@ const renderCampaigns = (campaigns) => {
       if (idx >= inQueue.length - 1) return;
       [inQueue[idx], inQueue[idx + 1]] = [inQueue[idx + 1], inQueue[idx]];
     }
-    const newOrder = inQueue.map(c => c.id);
+    /* IMPORTANTE: el motor usa jobId (job_xxx), no campaignId (cmp_xxx) */
+    const newOrder = inQueue.map(c => c.jobId).filter(Boolean);
+    if (newOrder.length === 0) return;
     try {
       const result = await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
-      /* Actualizar queuePosition en state.campaigns desde el response del motor
-       * (sincrono, no esperar al siguiente polling) */
+      /* Actualizar queuePosition en state.campaigns desde el response del motor */
       if (result && Array.isArray(result.jobs)) {
         const posMap = {};
-        result.jobs.forEach(j => { posMap[j.id] = j.position; });
+        result.jobs.forEach(j => { posMap[j.id] = j.position; }); /* j.id = job_xxx */
         (state.campaigns || []).forEach(c => {
-          if (posMap[c.id] !== undefined) c.queuePosition = posMap[c.id];
+          /* c.jobId = job_xxx — usar jobId para buscar en posMap */
+          if (c.jobId && posMap[c.jobId] !== undefined) c.queuePosition = posMap[c.jobId];
         });
       }
       await refreshCampaigns();
