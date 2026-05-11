@@ -2768,24 +2768,63 @@ app.post("/api/admin/assign-campaign-numbers", (_req, res) => {
  * Llamado manualmente cuando el orden se ha alterado tras un deploy.
  * Internamente dispara syncCampaignsWithEngine que ya hace el reorder.
  * Devuelve el orden resultante para verificacion. */
-/* P0 FEAT 2026-05-09 (peticion usuario "elegir el orden en la cola"):
- * Acepta un array de jobIds en el orden deseado y reordena la cola interna.
- * Solo mueve jobs que esten en cola (queued/paused); el job activo (running)
- * permanece al frente. */
+/* GET /api/engine/queue — devuelve la cola actual en orden real (fuente de
+ * verdad del motor). Cada entrada incluye campaignId para que el frontend no
+ * tenga que resolver jobId → campaignId por su cuenta. */
+app.get("/api/engine/queue", (_req, res) => {
+  try {
+    const status = massMailEngine.getStatus();
+    const queueOrder = Array.isArray(status.queueOrder) ? status.queueOrder : [];
+    const allCampaigns = dataStore.listCampaigns();
+    const campaignByJob = {};
+    allCampaigns.forEach((c) => { if (c.jobId) campaignByJob[c.jobId] = c; });
+    const jobStatusMap = {};
+    (status.jobs || []).forEach((j) => { jobStatusMap[j.id] = j; });
+    const queue = queueOrder.map((jobId, idx) => {
+      const c = campaignByJob[jobId];
+      if (!c) return null;
+      const j = jobStatusMap[jobId];
+      return {
+        campaignId: c.id,
+        jobId,
+        name: c.name,
+        status: j ? j.status : c.status,
+        queuePosition: idx
+      };
+    }).filter(Boolean);
+    return apiOk(res, { queue });
+  } catch (e) {
+    return apiError(res, 500, e.message);
+  }
+});
+
+/* POST /api/engine/queue/reorder — acepta campaignIds (cmp_xxx) en el nuevo
+ * orden deseado. El servidor resuelve internamente a jobIds para el motor.
+ * Robusto ante jobId nulo o campanas que ya no esten en cola. */
 app.post("/api/engine/queue/reorder", (req, res) => {
   try {
     const { order } = req.body || {};
     if (!Array.isArray(order) || order.length === 0) {
-      return apiError(res, 400, "order debe ser array de jobIds");
+      return apiError(res, 400, "order debe ser array de campaignIds");
     }
-    massMailEngine.reorderQueue(order);
-    /* Sincronizar queuePosition al dataStore AHORA (sincrono) para que el
-     * siguiente GET /api/campaigns ya devuelva las posiciones actualizadas. */
+    /* Resolver campaignIds → jobIds via dataStore */
+    const allCampaigns = dataStore.listCampaigns();
+    const jobBycamp = {};
+    allCampaigns.forEach((c) => { if (c.id && c.jobId) jobBycamp[c.id] = c.jobId; });
+    const jobIdOrder = order.map((cmpId) => jobBycamp[cmpId]).filter(Boolean);
+    if (jobIdOrder.length === 0) {
+      return apiError(res, 400, "Ningun campaignId tiene jobId activo");
+    }
+    massMailEngine.reorderQueue(jobIdOrder);
+    /* Sincronizar queuePosition al dataStore AHORA (sincrono) */
     try { syncCampaignsWithEngine(); } catch (_e) {}
     const status = massMailEngine.getStatus();
+    const queueOrder = Array.isArray(status.queueOrder) ? status.queueOrder : [];
+    /* Devolver orden resultante en terminos de campaignIds */
+    const campaignByJob2 = {};
+    allCampaigns.forEach((c) => { if (c.jobId) campaignByJob2[c.jobId] = c.id; });
     return apiOk(res, {
-      queueOrder: status.queueOrder,
-      jobs: (status.jobs || []).map((j) => ({ id: j.id, name: j.name, position: j.queuePosition, status: j.status }))
+      queueOrder: queueOrder.map((jid) => campaignByJob2[jid] || jid)
     });
   } catch (e) {
     return apiError(res, 500, e.message);

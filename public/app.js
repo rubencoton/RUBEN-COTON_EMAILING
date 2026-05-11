@@ -1644,7 +1644,7 @@ const renderCampaigns = (campaigns) => {
       /* P0 FEAT 2026-05-09 (peticion usuario "elegir orden en la cola"):
        * Solo se puede reordenar si está en cola (queued/paused), no si
        * está enviando activamente (la campaña activa siempre va primero). */
-      const canReorder = c.status === "queued" || c.status === "paused";
+      const canReorder = c.status === "queued";
       /* PETICION USUARIO 2026-05-05: numero + fecha inicio + fecha fin.
        * Inicio = sentAt (cuando se lanzo la campaña). Fin = completedAt (cuando
        * se acabo de enviar). Si aun esta sending, mostrar "en curso". */
@@ -1748,43 +1748,36 @@ const renderCampaigns = (campaigns) => {
   });
 
   /* P0 FEAT 2026-05-09: reordenar cola con botones ▲▼
-   * FIX 2026-05-09: usar queueOrder devuelto por el API (fuente de verdad)
-   * en vez de queuePosition de state.campaigns (puede estar desactualizado). */
+   * FIX 2026-05-11: obtener orden REAL del motor via GET /api/engine/queue
+   * (fuente de verdad) en vez de queuePosition de state.campaigns que puede
+   * estar desactualizado o ser null. POST ahora acepta campaignIds — el
+   * servidor resuelve a jobIds internamente. */
   const reorderQueueMove = async (campaignId, direction) => {
-    /* Construir orden actual desde queuePosition en state.campaigns.
-     * Campaña activa (sending) siempre en posición 0 — no se mueve. */
-    const inQueue = (state.campaigns || [])
-      .filter(c => ["sending", "queued", "paused"].includes(c.status))
-      .sort((a, b) => {
-        const pa = a.queuePosition == null ? 999 : a.queuePosition;
-        const pb = b.queuePosition == null ? 999 : b.queuePosition;
-        return pa - pb;
-      });
-    const idx = inQueue.findIndex(c => c.id === campaignId);
-    if (idx < 0) return;
-    const minMovable = inQueue.findIndex(c => c.status !== "sending");
-    if (minMovable < 0) return;
-    if (direction === "up") {
-      if (idx <= minMovable) return;
-      [inQueue[idx], inQueue[idx - 1]] = [inQueue[idx - 1], inQueue[idx]];
-    } else {
-      if (idx >= inQueue.length - 1) return;
-      [inQueue[idx], inQueue[idx + 1]] = [inQueue[idx + 1], inQueue[idx]];
-    }
-    /* IMPORTANTE: el motor usa jobId (job_xxx), no campaignId (cmp_xxx) */
-    const newOrder = inQueue.map(c => c.jobId).filter(Boolean);
-    if (newOrder.length === 0) return;
     try {
-      const result = await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
-      /* Actualizar queuePosition en state.campaigns desde el response del motor */
-      if (result && Array.isArray(result.jobs)) {
-        const posMap = {};
-        result.jobs.forEach(j => { posMap[j.id] = j.position; }); /* j.id = job_xxx */
-        (state.campaigns || []).forEach(c => {
-          /* c.jobId = job_xxx — usar jobId para buscar en posMap */
-          if (c.jobId && posMap[c.jobId] !== undefined) c.queuePosition = posMap[c.jobId];
-        });
+      /* 1. Pedir orden real al motor */
+      const queueData = await api("/api/engine/queue");
+      const inQueue = Array.isArray(queueData.queue) ? [...queueData.queue] : [];
+      if (inQueue.length === 0) return;
+
+      /* 2. Localizar la campaña */
+      const idx = inQueue.findIndex(q => q.campaignId === campaignId);
+      if (idx < 0) return;
+
+      /* 3. El running no se mueve — primer movable es el primer no-running */
+      const minMovable = inQueue.findIndex(q => q.status !== "running");
+      if (minMovable < 0) return;
+
+      if (direction === "up") {
+        if (idx <= minMovable) return;
+        [inQueue[idx], inQueue[idx - 1]] = [inQueue[idx - 1], inQueue[idx]];
+      } else {
+        if (idx >= inQueue.length - 1) return;
+        [inQueue[idx], inQueue[idx + 1]] = [inQueue[idx + 1], inQueue[idx]];
       }
+
+      /* 4. Enviar nuevo orden como campaignIds (el servidor convierte a jobIds) */
+      const newOrder = inQueue.map(q => q.campaignId);
+      await api("/api/engine/queue/reorder", { method: "POST", body: JSON.stringify({ order: newOrder }) });
       await refreshCampaigns();
     } catch (e) {
       rubenCotonAlert({ title: "Error al reordenar", body: humanizeError(e), icon: "❌", tone: "error" });
