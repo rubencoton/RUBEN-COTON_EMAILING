@@ -206,7 +206,20 @@ cuentas con bounce > 5-10% → reducción cuota automática.
       bloqueada por "demasiados destinatarios externos únicos". 17h espera.
 - [x] Motor pausado vía `POST /api/mass-mail/pause` para evitar reintentos
       en cola contra Gmail bloqueado.
-- [ ] **Mañana 06:00:** reanudar con cap 1200, rate `8-13:3,13-14:2,14-18:2,18-20:1`.
+- [ ] **Mañana 19:30:** reanudar con cap 1200, rate `8-13:3,13-14:2,14-18:2,18-20:1`.
 - [ ] Considerar segunda cuenta Workspace para rotar envíos (futuro).
 - [ ] Limpiar contactos con calidad dudosa (re-validar bd con
       `validateEmailQuality` retroactivo).
+
+### Sistema sentinel anti-ban Gmail (auto-detección + auto-pausa)
+- [x] Detección errores oficiales Gmail en catch del motor:
+      `user-rate limit`, `daily sending quota`, `limite de mensajes`,
+      códigos `5.4.5`, `550-5.4.5`, `454-4.7.0`.
+- [x] Al detectar: `__gmailBlockUntil = now + 24h`, motor `paused = true`,
+      persistido a `data/mail-state.json` (sobrevive restart container).
+- [x] Recipient se re-encola al FRENTE (unshift) para reintento tras 24h —
+      NO contado como bounce porque el email puede ser válido.
+- [x] Auto-resume al expirar `__gmailBlockUntil` (check al inicio de cada tick).
+- [x] Endpoints admin: `GET /api/anti-ban/status`, `POST /api/anti-ban/clear`,
+      `POST /api/anti-ban/block?hours=N`.
+- [x] Historial: eventos `gmail_block`, `gmail_block_expired`, `gmail_block_manual`.

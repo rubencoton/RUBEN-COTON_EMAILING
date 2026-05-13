@@ -3987,6 +3987,31 @@ app.post("/api/mass-mail/resume", (_req, res) => {
   return apiOk(res, { paused });
 });
 
+/* ANTI-BAN 2026-05-13: gestion bloqueo Gmail. */
+app.get("/api/anti-ban/status", (_req, res) => {
+  try {
+    const status = typeof massMailEngine.getGmailBlockStatus === "function"
+      ? massMailEngine.getGmailBlockStatus() : { active: false };
+    return apiOk(res, status);
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+app.post("/api/anti-ban/clear", (_req, res) => {
+  try {
+    if (typeof massMailEngine.clearGmailBlock === "function") massMailEngine.clearGmailBlock();
+    return apiOk(res, { cleared: true });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+app.post("/api/anti-ban/block", (req, res) => {
+  try {
+    const hours = Math.max(1, Math.min(72, Number(req.body && req.body.hours) || 24));
+    if (typeof massMailEngine.setGmailBlock === "function") {
+      const until = massMailEngine.setGmailBlock(hours * 60 * 60 * 1000);
+      return apiOk(res, { blockedUntil: until, hours });
+    }
+    return apiError(res, 500, "setGmailBlock no disponible");
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
 /* ── Google Sheets sync endpoints ── */
 app.get("/api/sheets/status", (_req, res) => {
   return res.json(sheetsSync.getStatus());

@@ -482,6 +482,10 @@ const createMassMailEngine = (config) => {
   const fsLib = require("fs");
   const pathLib = require("path");
   const STATE_FILE = pathLib.join(__dirname, "..", "data", "mail-state.json");
+  /* ANTI-BAN 2026-05-13: si Gmail bloquea la cuenta, guardamos timestamp de
+   * desbloqueo. El motor permanece pausado hasta que pase ese momento, incluso
+   * tras restart de container. NULL = sin bloqueo activo. */
+  let __gmailBlockUntil = null;
   const loadState = () => {
     try {
       if (fsLib.existsSync(STATE_FILE)) {
@@ -489,6 +493,11 @@ const createMassMailEngine = (config) => {
         if (Array.isArray(j.sendTimestamps)) {
           const cutoff = Date.now() - 24 * 60 * 60 * 1000;
           for (const t of j.sendTimestamps) if (t > cutoff) sendTimestamps.push(t);
+        }
+        if (typeof j.gmailBlockUntil === "number" && j.gmailBlockUntil > Date.now()) {
+          __gmailBlockUntil = j.gmailBlockUntil;
+          paused = true;
+          console.warn(`[anti-ban] Estado: motor pausado por bloqueo Gmail hasta ${new Date(__gmailBlockUntil).toISOString()}`);
         }
         return j;
       }
@@ -513,7 +522,8 @@ const createMassMailEngine = (config) => {
       const tmpFile = STATE_FILE + ".tmp." + process.pid;
       const payload = JSON.stringify({
         sendTimestamps,
-        warmupStartDate: persistedState.warmupStartDate
+        warmupStartDate: persistedState.warmupStartDate,
+        gmailBlockUntil: __gmailBlockUntil
       }, null, 2);
       await fsLib.promises.writeFile(tmpFile, payload, "utf-8");
       await fsLib.promises.rename(tmpFile, STATE_FILE); /* atómico en POSIX */
@@ -536,7 +546,8 @@ const createMassMailEngine = (config) => {
       const tmpFile = STATE_FILE + ".tmp." + process.pid;
       const payload = JSON.stringify({
         sendTimestamps,
-        warmupStartDate: persistedState.warmupStartDate
+        warmupStartDate: persistedState.warmupStartDate,
+        gmailBlockUntil: __gmailBlockUntil
       }, null, 2);
       fsLib.writeFileSync(tmpFile, payload, "utf-8");
       fsLib.renameSync(tmpFile, STATE_FILE);
@@ -876,6 +887,19 @@ const createMassMailEngine = (config) => {
   let __throttleHit = false;
 
   const processNext = async () => {
+    /* ANTI-BAN 2026-05-13: si hay bloqueo Gmail activo, verificar expiracion.
+     * Si ya paso el momento -> auto-resume. Si no -> mantener paused. */
+    if (__gmailBlockUntil) {
+      if (Date.now() >= __gmailBlockUntil) {
+        console.log(`[anti-ban] Bloqueo Gmail expirado. Reanudando motor automaticamente.`);
+        __gmailBlockUntil = null;
+        paused = false;
+        try { saveState(); } catch (_e) {}
+        try { addHistory({ type: "gmail_block_expired", jobId: "", email: "", error: "" }); } catch (_e) {}
+      } else {
+        return; /* seguimos en pausa por bloqueo Gmail */
+      }
+    }
     if (!enabled || paused || processing || queue.length === 0) {
       return;
     }
@@ -1295,6 +1319,45 @@ const createMassMailEngine = (config) => {
        * bounce y NO reintentamos. Los 4xx son temporales → retry. */
       const errMsg = String(error.message || "").toLowerCase();
       const smtpCode = error.responseCode || error.code || "";
+
+      /* ANTI-BAN GMAIL 2026-05-13: deteccion de bloqueo Workspace/Gmail.
+       * Mensajes tipicos cuando Google bloquea la cuenta:
+       *  - "user-rate limit exceeded"
+       *  - "exceeded daily sending quota"
+       *  - "limit of messages you can send"
+       *  - "5.4.5 daily sending quota exceeded"
+       *  - "limites para usuarios" (workspace ES)
+       * Accion: pausar motor INMEDIATAMENTE 24h. NO reintentar. NO seguir
+       * gastando intentos contra Gmail bloqueado (cada error mas penaliza). */
+      const isGmailQuotaBlock =
+        /user.rate limit|daily sending quota|limit of messages|sending quota exceeded|limit.*messages.*you can send|límite de mensajes|limites para usuarios|too many recipients/i.test(errMsg) ||
+        String(smtpCode) === "5.4.5" ||
+        String(smtpCode) === "550-5.4.5" ||
+        String(smtpCode) === "454-4.7.0";
+      if (isGmailQuotaBlock) {
+        console.error(`[anti-ban] BLOQUEO GMAIL DETECTADO: ${errMsg.slice(0, 200)} | code=${smtpCode}`);
+        /* Pausar motor global (NO solo el job) y registrar el bloqueo. */
+        try { paused = true; } catch (_e) {}
+        try {
+          if (typeof saveState === "function") {
+            __gmailBlockUntil = Date.now() + (24 * 60 * 60 * 1000); /* 24h */
+            saveState();
+          }
+        } catch (_e) {}
+        /* Re-encolar este recipient para reintento tras la pausa de 24h.
+         * NO contamos como bounce porque la direccion puede ser valida. */
+        recipient.status = "queued_retry";
+        queue.unshift({ jobId: job.id, recipientIndex: item.recipientIndex });
+        addHistory({
+          type: "gmail_block",
+          jobId: job.id,
+          email: recipient.email,
+          error: errMsg.slice(0, 200),
+          code: String(smtpCode)
+        });
+        recalcJobStatus(job);
+        return false;
+      }
       const isPermanentBounce =
         /^5\d\d/.test(String(smtpCode)) ||
         /user unknown|does not exist|no such user|invalid recipient|mailbox.*full|mailbox.*unavailable|address rejected|no mx|domain.*not.*found|recipient address rejected|relay denied/i.test(errMsg);
@@ -2015,6 +2078,27 @@ const createMassMailEngine = (config) => {
     for (const r of ranked) queue.push(r.item);
   };
 
+  /* ANTI-BAN 2026-05-13: getters/setters para gestionar bloqueo Gmail. */
+  const getGmailBlockStatus = () => ({
+    active: __gmailBlockUntil !== null && __gmailBlockUntil > Date.now(),
+    until: __gmailBlockUntil,
+    remainingMs: __gmailBlockUntil ? Math.max(0, __gmailBlockUntil - Date.now()) : 0
+  });
+  const clearGmailBlock = () => {
+    __gmailBlockUntil = null;
+    paused = false;
+    try { saveState(); } catch (_e) {}
+    addHistory({ type: "gmail_block_cleared_manual", jobId: "", email: "", error: "" });
+    return true;
+  };
+  const setGmailBlock = (durationMs) => {
+    __gmailBlockUntil = Date.now() + Math.max(0, Number(durationMs) || (24 * 60 * 60 * 1000));
+    paused = true;
+    try { saveState(); } catch (_e) {}
+    addHistory({ type: "gmail_block_manual", jobId: "", email: "", error: `until=${new Date(__gmailBlockUntil).toISOString()}` });
+    return __gmailBlockUntil;
+  };
+
   return {
     start,
     stop,
@@ -2034,7 +2118,11 @@ const createMassMailEngine = (config) => {
     getDailyCapStatus,
     getDailyUsed,
     getDailyRemaining,
-    isDailyCapReached
+    isDailyCapReached,
+    /* Anti-ban Gmail */
+    getGmailBlockStatus,
+    clearGmailBlock,
+    setGmailBlock
   };
 };
 
