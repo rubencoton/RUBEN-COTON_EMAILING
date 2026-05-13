@@ -115,6 +115,7 @@ detección de fricciones reales operando con tráfico de producción.
 - [x] Cap subido 1650 → 1700 → 1900 (2026-05-09, sin rebotes, Gmail estable).
 - [x] Cap bajado 1900 → 1800 (2026-05-09, Gmail devolvió "límite de mensajes alcanzado").
 - [x] Cap bajado 1800 → 1700 (2026-05-09, conservar reputación cuenta Gmail).
+- [x] Cap bajado 1700 → 1500 (2026-05-13, Gmail devolvió "límite de mensajes alcanzado" a los 1637).
 - [x] DNS `emailing.rubencoton.com` arreglado vía Hostinger API (A record).
 
 ### Pre-header (texto gris junto al asunto)
@@ -175,3 +176,27 @@ enviando, sin downtime perceptible.
 - [ ] Dockerfile USER no-root (requiere migrar permisos volumen).
 - [ ] Coolify UI → "Deployment Strategy: Rolling" (manual, requiere acceso).
 - [ ] Rotar `APP_ACCESS_PASSWORD` (quedó en git history).
+
+## HITO 9 - ANTI-BLOQUEO GMAIL (2026-05-13)
+
+Análisis tras 3º bloqueo Gmail "límite de mensajes alcanzado". Detectado
+**bounce rate 11,34%** (1.010 bounces / 8.908 enviados). Gmail penaliza
+cuentas con bounce > 5-10% → reducción cuota automática.
+
+### Filtros de calidad en import (`dataStore.validateEmailQuality`)
+- [x] Bloqueo typos de dominios populares (gmial→gmail, hotmial→hotmail, yahooo→yahoo).
+- [x] Bloqueo TLDs invalidas (.con, .cm, .vom).
+- [x] Bloqueo role-based emails (info@, admin@, noreply@, postmaster@, abuse@).
+- [x] Validación local-part (mínimo 2 chars, sin puntos dobles, sin puntos en bordes).
+- [x] TLD mínimo 2 caracteres.
+
+### Circuit breaker en motor (massMailEngine)
+- [x] Rolling window 100 últimos resultados por job (sent/bounce).
+- [x] Si bounce rate > 8% con muestra ≥ 30 → pauseJob() automático.
+- [x] `job.autoPausedReason = "bounce_rate_XX.X pct"` para diagnóstico.
+- [x] Evento `circuit_breaker` registrado en history del motor.
+
+### Rate más conservador (Coolify env)
+- [x] `MAIL_RATE_SCHEDULE` cambiado: `8-13:10,13-14:3,14-18:4,18-20:1`
+      → `8-13:5,13-14:2,14-18:3,18-20:1` (50% reducción hora pico).
+- [x] Cap diario bajado 1700 → 1500 alineado con nuevo rate.

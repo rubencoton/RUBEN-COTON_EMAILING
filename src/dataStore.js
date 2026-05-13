@@ -16,6 +16,54 @@ const DATA_DIR = path.dirname(DATA_FILE);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/* ANTI-BOUNCE 2026-05-13: filtros calidad lista para reducir bounce rate.
+ * Gmail bloquea cuentas con bounce > 5-10%. Filtramos en import.
+ *
+ * 1. Typos de dominios populares (gmial→gmail, hotmial→hotmail, etc.)
+ * 2. Extensiones inválidas (.con, .cm, .og en vez de .org)
+ * 3. Role-based emails (info@, admin@, noreply@) — alta tasa rebote/spam
+ * 4. Caracteres invalidos en local-part */
+const DOMAIN_TYPOS = new Set([
+  "gmial.com", "gmai.com", "gmali.com", "gmaill.com", "gmial.es", "gnail.com",
+  "hotmial.com", "hotmai.com", "hotmaill.com", "hotnail.com",
+  "yahooo.com", "yaho.com", "yahho.com",
+  "outlok.com", "outloo.com", "outloook.com",
+  "icoud.com", "iclod.com",
+]);
+const INVALID_TLDS = new Set([".con", ".cm", ".og", ".vom", ".xom", ".coom"]);
+const ROLE_BASED_LOCALS = new Set([
+  "noreply", "no-reply", "donotreply", "do-not-reply",
+  "postmaster", "abuse", "spam", "junk",
+  "mailer-daemon", "mailerdaemon", "bounce", "bounces",
+]);
+/* Devuelve {valid, reason} para una email. */
+const validateEmailQuality = (email) => {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return { valid: false, reason: "empty" };
+  if (!EMAIL_REGEX.test(e)) return { valid: false, reason: "invalid_format" };
+  const [local, domain] = e.split("@");
+  if (!local || !domain) return { valid: false, reason: "invalid_format" };
+  /* Local-part muy corto o muy largo */
+  if (local.length < 2) return { valid: false, reason: "local_too_short" };
+  if (local.length > 64) return { valid: false, reason: "local_too_long" };
+  /* Caracteres invalidos */
+  if (/[.]{2,}/.test(local)) return { valid: false, reason: "consecutive_dots" };
+  if (local.startsWith(".") || local.endsWith(".")) return { valid: false, reason: "dot_edge" };
+  /* Role-based */
+  if (ROLE_BASED_LOCALS.has(local)) return { valid: false, reason: "role_based" };
+  /* TLDs invalidas */
+  for (const bad of INVALID_TLDS) {
+    if (domain.endsWith(bad)) return { valid: false, reason: "invalid_tld" };
+  }
+  /* Typos de dominios populares */
+  if (DOMAIN_TYPOS.has(domain)) return { valid: false, reason: "domain_typo" };
+  /* TLD demasiado corta (1 letra) */
+  const parts = domain.split(".");
+  if (parts.length < 2) return { valid: false, reason: "no_tld" };
+  if (parts[parts.length - 1].length < 2) return { valid: false, reason: "tld_too_short" };
+  return { valid: true };
+};
+
 const nowIso = () => new Date().toISOString();
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
@@ -1014,8 +1062,10 @@ class DataStore {
   createOrUpdateContact(input, mode = "upsert") {
     return this.mutate((store) => {
       const email = normalizeEmail(input.email);
-      if (!EMAIL_REGEX.test(email)) {
-        throw new Error("Email no valido");
+      /* ANTI-BOUNCE 2026-05-13: validacion estricta calidad email. */
+      const quality = validateEmailQuality(email);
+      if (!quality.valid) {
+        throw new Error(`Email no valido: ${quality.reason}`);
       }
 
       const now = nowIso();
@@ -1176,9 +1226,14 @@ class DataStore {
           });
 
           const email = normalizeEmail(built.email);
-          if (!EMAIL_REGEX.test(email)) {
+          /* ANTI-BOUNCE 2026-05-13: validacion de calidad para reducir
+           * bounce rate. Bloquea typos dominio (gmial→gmail), TLDs invalidas
+           * (.con), role-based emails (info@,admin@), local-part malformado.
+           * Reduce significativamente los bounces antes de gastar Gmail API. */
+          const quality = validateEmailQuality(email);
+          if (!quality.valid) {
             report.invalid += 1;
-            report.errors.push({ row: index + 1, reason: "email_invalido", value: email });
+            report.errors.push({ row: index + 1, reason: quality.reason, value: email });
             return;
           }
 

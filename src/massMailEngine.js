@@ -1275,6 +1275,10 @@ const createMassMailEngine = (config) => {
 
       job.sent += 1;
       job.queued = Math.max(0, job.queued - 1);
+      /* ANTI-BOUNCE 2026-05-13: tracking rolling window para circuit breaker. */
+      if (!Array.isArray(job._recentResults)) job._recentResults = [];
+      job._recentResults.push("sent");
+      if (job._recentResults.length > 100) job._recentResults.shift();
 
       addHistory({
         type: "sent",
@@ -1301,6 +1305,29 @@ const createMassMailEngine = (config) => {
         writebackForEmail(config.dataStoreRef, recipient.email, "rebotado");
         job.failed += 1;
         job.queued = Math.max(0, job.queued - 1);
+        /* ANTI-BOUNCE 2026-05-13: CIRCUIT BREAKER por bounce rate.
+         * Si en los ultimos 100 envios bounce > 8%, pausamos el job auto
+         * para no quemar mas reputacion. Minimo 30 envios para muestra
+         * significativa. El usuario debe revisar la lista y reanudar manual. */
+        if (!Array.isArray(job._recentResults)) job._recentResults = [];
+        job._recentResults.push("bounce");
+        if (job._recentResults.length > 100) job._recentResults.shift();
+        const sample = job._recentResults.length;
+        if (sample >= 30) {
+          const bounces = job._recentResults.filter((x) => x === "bounce").length;
+          const rate = bounces / sample;
+          if (rate > 0.08 && !pausedJobs.has(job.id)) {
+            console.warn(`[massMail] CIRCUIT BREAKER: job ${job.name} bounce rate ${(rate * 100).toFixed(1)}% (${bounces}/${sample}). Pausando auto.`);
+            job.autoPausedReason = `bounce_rate_${(rate * 100).toFixed(1)}pct`;
+            try { pauseJob(job.id); } catch (_e) {}
+            addHistory({
+              type: "circuit_breaker",
+              jobId: job.id,
+              email: "(N/A)",
+              error: `bounce_rate_${(rate * 100).toFixed(1)}pct_${bounces}of${sample}`
+            });
+          }
+        }
         addHistory({
           type: "bounce",
           jobId: job.id,
