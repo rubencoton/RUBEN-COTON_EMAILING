@@ -200,3 +200,13 @@ cuentas con bounce > 5-10% → reducción cuota automática.
 - [x] `MAIL_RATE_SCHEDULE` cambiado: `8-13:10,13-14:3,14-18:4,18-20:1`
       → `8-13:5,13-14:2,14-18:3,18-20:1` (50% reducción hora pico).
 - [x] Cap diario bajado 1700 → 1500 alineado con nuevo rate.
+
+### Bloqueo oficial Workspace 2026-05-13 (17h)
+- [x] Confirmado en Google Admin Console: cuenta `manager@rubencoton.com`
+      bloqueada por "demasiados destinatarios externos únicos". 17h espera.
+- [x] Motor pausado vía `POST /api/mass-mail/pause` para evitar reintentos
+      en cola contra Gmail bloqueado.
+- [ ] **Mañana 06:00:** reanudar con cap 1200, rate `8-13:3,13-14:2,14-18:2,18-20:1`.
+- [ ] Considerar segunda cuenta Workspace para rotar envíos (futuro).
+- [ ] Limpiar contactos con calidad dudosa (re-validar bd con
+      `validateEmailQuality` retroactivo).
