@@ -4003,10 +4003,20 @@ app.post("/api/anti-ban/clear", (_req, res) => {
 });
 app.post("/api/anti-ban/block", (req, res) => {
   try {
-    const hours = Math.max(1, Math.min(72, Number(req.body && req.body.hours) || 24));
+    /* Acepta `hours` (1-336 = 14 dias max) o `untilIso` (timestamp ISO). */
+    const body = req.body || {};
+    let durationMs;
+    if (body.untilIso) {
+      const t = Date.parse(body.untilIso);
+      if (!Number.isFinite(t) || t <= Date.now()) return apiError(res, 400, "untilIso invalido o en pasado");
+      durationMs = t - Date.now();
+    } else {
+      const hours = Math.max(1, Math.min(336, Number(body.hours) || 24));
+      durationMs = hours * 60 * 60 * 1000;
+    }
     if (typeof massMailEngine.setGmailBlock === "function") {
-      const until = massMailEngine.setGmailBlock(hours * 60 * 60 * 1000);
-      return apiOk(res, { blockedUntil: until, hours });
+      const until = massMailEngine.setGmailBlock(durationMs);
+      return apiOk(res, { blockedUntil: until, hoursRemaining: Math.round(durationMs / 3600000 * 10) / 10 });
     }
     return apiError(res, 500, "setGmailBlock no disponible");
   } catch (e) { return apiError(res, 500, e.message); }
