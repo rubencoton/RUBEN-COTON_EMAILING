@@ -211,6 +211,23 @@ cuentas con bounce > 5-10% → reducción cuota automática.
 - [ ] Limpiar contactos con calidad dudosa (re-validar bd con
       `validateEmailQuality` retroactivo).
 
+### Patrón orgánico de envío 2026-05-13 (definitivo)
+Reseteado tras bloqueo Workspace. Configuración orgánica para evitar
+patrón bot. Cap 1500/24h. Bloqueo hasta lunes 2026-05-18 08:00 Madrid.
+
+| Parametro | Valor | Justificacion |
+|-----------|-------|---------------|
+| `MAIL_DAILY_CAP` | 1500 | Margen sobre 2000/día Workspace |
+| `MAIL_RATE_SCHEDULE` | `8-20:2` | 2 emails/min CONSTANTE (no ráfagas) |
+| `MAIL_PER_DOMAIN_DELAY_MS` | 300000 | 5 min entre envíos al mismo dominio |
+| `MAIL_SEND_WINDOW_START/END` | 8 / 20 | Horario laboral 12h |
+| `MAIL_SEND_WINDOW_DAYS` | 0,1,2,3,4,5,6 | Todos los días |
+
+Ritmo real con jitter ±40%:
+- 1 email cada ~30s (entre 18s y 42s)
+- Pausas "café" cada 80-120 envíos (3-8 min)
+- Teorico día: 12h × 60min × 2/min = 1.440 (cap 1500 cubre)
+
 ### Sistema sentinel anti-ban Gmail (auto-detección + auto-pausa)
 - [x] Detección errores oficiales Gmail en catch del motor:
       `user-rate limit`, `daily sending quota`, `limite de mensajes`,
