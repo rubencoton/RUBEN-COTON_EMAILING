@@ -13,7 +13,7 @@ const archiver = require("archiver");
  * Persistencia 100% en store.json + backup auto a Drive (driveArchive.js).
  * Motivo: PG container saturaba disco VPS (ENOSPC repetidos). */
 const { createMassMailEngine } = require("./massMailEngine");
-const { DataStore } = require("./dataStore");
+const { DataStore, validateEmailQuality } = require("./dataStore");
 const sheetsSync = require("./sheetsSync");
 const aiRouter = require("./aiRouter");
 const aiHelpers = require("./aiHelpers");
@@ -4001,6 +4001,64 @@ app.post("/api/anti-ban/clear", (_req, res) => {
     return apiOk(res, { cleared: true });
   } catch (e) { return apiError(res, 500, e.message); }
 });
+/* ANTI-BAN 2026-05-13: auditoría calidad emails en BD (dry-run por defecto).
+ * Recorre todos los contactos y reporta cuantos NO pasan validateEmailQuality.
+ * Si ?apply=true, marca los inválidos como `status: bounced` para que el motor
+ * no les envíe (mismo flujo que un bounce real). */
+app.get("/api/anti-ban/audit-contacts", (req, res) => {
+  try {
+    const all = dataStore.listContacts({ limit: 999999 }) || [];
+    const buckets = {};
+    const samples = {};
+    let invalid = 0;
+    for (const c of all) {
+      const q = validateEmailQuality(c.email || "");
+      if (!q.valid) {
+        invalid++;
+        buckets[q.reason] = (buckets[q.reason] || 0) + 1;
+        if (!samples[q.reason]) samples[q.reason] = [];
+        if (samples[q.reason].length < 5) samples[q.reason].push(c.email);
+      }
+    }
+    return apiOk(res, {
+      total: all.length,
+      invalid,
+      pct: all.length ? Math.round((invalid / all.length) * 1000) / 10 : 0,
+      buckets,
+      samples
+    });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+app.post("/api/anti-ban/audit-contacts", (req, res) => {
+  try {
+    const all = dataStore.listContacts({ limit: 999999 }) || [];
+    let marked = 0;
+    const toMark = [];
+    for (const c of all) {
+      const q = validateEmailQuality(c.email || "");
+      if (!q.valid && c.status !== "bounced") {
+        toMark.push({ email: c.email, reason: q.reason });
+      }
+    }
+    /* Batch update via mutate único para no clonar el store 14k veces */
+    if (toMark.length > 0) {
+      dataStore.mutate((store) => {
+        const now = new Date().toISOString();
+        const reasonMap = new Map(toMark.map((t) => [t.email, t.reason]));
+        store.contacts.forEach((c) => {
+          if (reasonMap.has(c.email)) {
+            c.status = "bounced";
+            c.suppressionReason = "invalid_email_quality:" + reasonMap.get(c.email);
+            c.updatedAt = now;
+            marked++;
+          }
+        });
+      });
+    }
+    return apiOk(res, { marked, scanned: all.length });
+  } catch (e) { return apiError(res, 500, e.message); }
+});
+
 app.post("/api/anti-ban/block", (req, res) => {
   try {
     /* Acepta `hours` (1-336 = 14 dias max) o `untilIso` (timestamp ISO). */

@@ -2711,5 +2711,6 @@ class DataStore {
 module.exports = {
   DataStore,
   EMAIL_REGEX,
-  normalizeEmail
+  normalizeEmail,
+  validateEmailQuality
 };
